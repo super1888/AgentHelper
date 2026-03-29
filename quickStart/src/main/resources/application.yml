@@ -1,0 +1,12 @@
+spring:
+  main:
+    web-application-type: servlet
+  profiles:
+    active: dev
+  application:
+    name: AgentHelper
+  ai:
+    dashscope:
+      api-key: sk-c0351e8f4bb34a77bbf364c411932eeb
+
+
