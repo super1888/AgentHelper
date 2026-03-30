@@ -8,5 +8,8 @@ spring:
   ai:
     dashscope:
       api-key: sk-c0351e8f4bb34a77bbf364c411932eeb
-
+    openai:
+      api-key: sk-5F4MCbuBCDQy4kPhTohZV7jt9A8wo8oCGUvn0C8VsmvdByVr
+    deepseek:
+      api-key: sk-417d47721a134518aa10a22666fa04b9
 
