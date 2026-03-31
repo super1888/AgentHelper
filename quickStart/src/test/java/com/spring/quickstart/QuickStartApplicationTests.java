@@ -19,7 +19,9 @@ import com.spring.quickstart.model.dto.AssistantMessageDTO;
 import com.spring.quickstart.model.result.PoemOutputResult;
 import com.spring.quickstart.model.result.TextAnalysisResult;
 import com.spring.quickstart.tools.CalculatorTools;
+import com.spring.quickstart.tools.GetUserInfoTools;
 import com.spring.quickstart.tools.LocalTools;
+import com.spring.quickstart.tools.SendEmailTools;
 import com.spring.quickstart.tools.WeatherTools;
 import com.spring.quickstart.userMessage.MessageType;
 import jakarta.annotation.Resource;
@@ -32,6 +34,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import org.junit.jupiter.api.Test;
+import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.AssistantMessage.ToolCall;
 import org.springframework.ai.chat.messages.Message;
@@ -772,6 +775,26 @@ class QuickStartApplicationTests {
         conversationHistory.add(new UserMessage("从哪里开始？"));
         ChatResponse response3 = chatModel.call(new Prompt(conversationHistory));
         System.out.println(response3.getResult().getOutput().getText());
+
+    }
+
+    @Test
+    void Agent22() {
+        ChatModel chatModel = getChatModel.creatDashScopeChatModel();
+//        ChatClient chatClient = ChatClient.create(chatModel);
+//
+//        String content = chatClient.prompt("What day is tomorrow?").tools(new DateTimeTools()).call().content();
+//        System.out.println(content);
+        List<String> list = Arrays.asList("aa", "bb");
+        String[] array = list.toArray(new String[0]);
+        String response = ChatClient.create(chatModel)
+                .prompt("给张三发封邮件 标题内容你定一下 让他还钱")
+                .tools(new SendEmailTools())
+//                .toolNames(array)
+                .call()
+                .content();
+
+        System.out.println(response);
 
     }
 

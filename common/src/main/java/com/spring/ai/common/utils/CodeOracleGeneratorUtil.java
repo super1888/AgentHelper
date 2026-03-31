@@ -1,4 +1,4 @@
-package com.spring.quickstart.utils;
+package com.spring.ai.common.utils;
 
 //import com.baomidou.mybatisplus.annotation.DbType;
 //import com.baomidou.mybatisplus.core.toolkit.StringPool;
