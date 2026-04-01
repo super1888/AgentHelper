@@ -6,6 +6,8 @@
       <list>
         <option value="$PROJECT_DIR$/pom.xml" />
         <option value="$PROJECT_DIR$/quick-start-dashscope/pom.xml" />
+        <option value="$PROJECT_DIR$/interceptors/pom.xml" />
+        <option value="$PROJECT_DIR$/hooks/pom.xml" />
       </list>
     </option>
   </component>

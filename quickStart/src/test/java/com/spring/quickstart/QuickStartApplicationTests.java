@@ -8,21 +8,21 @@ import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import com.alibaba.cloud.ai.graph.exception.GraphRunnerException;
 import com.alibaba.cloud.ai.graph.streaming.OutputType;
 import com.alibaba.cloud.ai.graph.streaming.StreamingOutput;
+import com.spring.ai.hooks.custom.LoggingHook;
+import com.spring.ai.hooks.custom.MessageTrimmingHook;
+import com.spring.ai.hooks.custom.TextFilterHook;
+import com.spring.ai.interceptors.custom.ToolErrorInterceptor;
+import com.spring.ai.tools.custom.CalculatorTools;
+import com.spring.ai.tools.custom.LocalTools;
+import com.spring.ai.tools.custom.SendEmailTools;
+import com.spring.ai.tools.custom.WeatherTools;
 import com.spring.quickstart.agent.Agent;
 import com.spring.quickstart.chatModel.GetChatModel;
 import com.spring.quickstart.chatModel.GetDashScopeChatModel;
-import com.spring.quickstart.hooks.LoggingHook;
-import com.spring.quickstart.hooks.MessageTrimmingHook;
-import com.spring.quickstart.hooks.TextFilterHook;
-import com.spring.quickstart.interceptor.ToolErrorInterceptor;
 import com.spring.quickstart.model.dto.AgentInfoDTO;
 import com.spring.quickstart.model.dto.AssistantMessageDTO;
 import com.spring.quickstart.model.result.PoemOutputResult;
 import com.spring.quickstart.model.result.TextAnalysisResult;
-import com.spring.quickstart.tools.CalculatorTools;
-import com.spring.quickstart.tools.LocalTools;
-import com.spring.quickstart.tools.SendEmailTools;
-import com.spring.quickstart.tools.WeatherTools;
 import com.spring.quickstart.userMessage.MessageType;
 import jakarta.annotation.Resource;
 import java.net.MalformedURLException;
@@ -805,7 +805,6 @@ class QuickStartApplicationTests {
                 .threadId(threadId)
                 .addMetadata("user_id", "2")
                 .build();
-
 
         AgentInfoDTO agentInfoDTO = getAgent();
         ReactAgent reactAgent = null;

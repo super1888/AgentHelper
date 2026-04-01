@@ -1,8 +1,9 @@
-package com.spring.quickstart.tools;
+package com.spring.ai.tools.custom;
 
 
+import com.spring.ai.common.bean.dto.UserInfoDTO;
 import com.spring.ai.common.utils.EmailUtil;
-import com.spring.quickstart.model.dto.UserInfoDTO;
+
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;

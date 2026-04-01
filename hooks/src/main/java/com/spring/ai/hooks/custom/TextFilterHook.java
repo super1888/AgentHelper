@@ -1,20 +1,12 @@
-package com.spring.quickstart.hooks;
+package com.spring.ai.hooks.custom;
 
-import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.RunnableConfig;
 import com.alibaba.cloud.ai.graph.agent.hook.HookPosition;
 import com.alibaba.cloud.ai.graph.agent.hook.HookPositions;
-import com.alibaba.cloud.ai.graph.agent.hook.ModelHook;
 import com.alibaba.cloud.ai.graph.agent.hook.messages.AgentCommand;
 import com.alibaba.cloud.ai.graph.agent.hook.messages.MessagesModelHook;
-import com.alibaba.cloud.ai.graph.agent.hook.messages.UpdatePolicy;
-import com.spring.ai.common.utils.TextFilterUtils;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.ai.chat.messages.Message;
-import org.springframework.ai.chat.messages.UserMessage;
 
 /**
  * 文本过滤器

@@ -1,7 +1,8 @@
-package com.spring.quickstart.tools;
+package com.spring.ai.tools.custom;
 
-import com.spring.quickstart.model.dto.UserInfoDTO;
-import com.spring.quickstart.model.dto.UserInfoDTO.UserInfoDTOBuilder;
+
+import com.spring.ai.common.bean.dto.UserInfoDTO;
+import com.spring.ai.common.bean.dto.UserInfoDTO.UserInfoDTOBuilder;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 

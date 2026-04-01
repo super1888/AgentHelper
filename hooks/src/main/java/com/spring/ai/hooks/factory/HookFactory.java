@@ -1,4 +1,4 @@
-package com.spring.quickstart.hooks;
+package com.spring.ai.hooks.factory;
 
 import static com.spring.ai.common.utils.BaseUtils.getOrDefault;
 
@@ -8,10 +8,10 @@ import com.alibaba.cloud.ai.graph.agent.hook.hip.ToolConfig;
 import com.alibaba.cloud.ai.graph.agent.hook.modelcalllimit.ModelCallLimitHook;
 import com.alibaba.cloud.ai.graph.agent.hook.pii.PIIDetectionHook;
 import com.alibaba.cloud.ai.graph.agent.hook.summarization.SummarizationHook;
-import com.spring.quickstart.model.dto.hookdto.HumanInTheLoopHookDTO;
-import com.spring.quickstart.model.dto.hookdto.ModelCallLimitHookDTO;
-import com.spring.quickstart.model.dto.hookdto.PIIDetectionHookDTO;
-import com.spring.quickstart.model.dto.hookdto.SummarizationHookDTO;
+import com.spring.ai.hooks.domain.dto.HumanInTheLoopHookDTO;
+import com.spring.ai.hooks.domain.dto.ModelCallLimitHookDTO;
+import com.spring.ai.hooks.domain.dto.PIIDetectionHookDTO;
+import com.spring.ai.hooks.domain.dto.SummarizationHookDTO;
 import java.util.HashMap;
 import java.util.Map;
 import org.springframework.ai.chat.model.ChatModel;
@@ -23,7 +23,7 @@ import org.springframework.ai.chat.model.ChatModel;
  * @version 初次构建
  * @since 2026/4/1
  */
-public class CreatHook {
+public class HookFactory {
 
     /**
      * 当接近 token 限制时自动压缩对话历史。

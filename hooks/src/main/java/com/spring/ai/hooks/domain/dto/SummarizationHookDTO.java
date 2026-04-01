@@ -1,4 +1,4 @@
-package com.spring.quickstart.model.dto.hookdto;
+package com.spring.ai.hooks.domain.dto;
 
 import com.alibaba.cloud.ai.graph.agent.hook.TokenCounter;
 import lombok.Builder;

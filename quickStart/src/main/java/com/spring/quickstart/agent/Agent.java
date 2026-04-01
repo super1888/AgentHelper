@@ -2,8 +2,9 @@ package com.spring.quickstart.agent;
 
 import com.alibaba.cloud.ai.graph.agent.Builder;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
-import com.spring.quickstart.interceptor.ToolErrorInterceptor;
-import com.spring.quickstart.tools.CalculatorTools;
+
+import com.spring.ai.interceptors.custom.ToolErrorInterceptor;
+import com.spring.ai.tools.custom.CalculatorTools;
 
 import com.spring.quickstart.chatModel.GetDashScopeChatModel;
 import com.spring.quickstart.model.dto.AgentInfoDTO;

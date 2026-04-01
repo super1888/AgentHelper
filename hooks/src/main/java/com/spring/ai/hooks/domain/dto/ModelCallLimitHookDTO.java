@@ -1,7 +1,6 @@
-package com.spring.quickstart.model.dto.hookdto;
+package com.spring.ai.hooks.domain.dto;
 
 import com.alibaba.cloud.ai.graph.agent.hook.modelcalllimit.ModelCallLimitHook;
-import com.alibaba.cloud.ai.graph.agent.hook.modelcalllimit.ModelCallLimitHook.ExitBehavior;
 import lombok.Builder;
 import lombok.Data;
 

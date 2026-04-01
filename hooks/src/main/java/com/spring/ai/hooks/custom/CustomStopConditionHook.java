@@ -1,4 +1,4 @@
-package com.spring.quickstart.hooks;
+package com.spring.ai.hooks.custom;
 
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.RunnableConfig;

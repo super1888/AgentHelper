@@ -1,4 +1,4 @@
-package com.spring.ai.interceptors.customizeInterceptors;
+package com.spring.ai.interceptors.custom;
 
 import com.alibaba.cloud.ai.graph.agent.interceptor.ModelCallHandler;
 import com.alibaba.cloud.ai.graph.agent.interceptor.ModelInterceptor;

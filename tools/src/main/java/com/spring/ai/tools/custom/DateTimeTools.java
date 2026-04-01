@@ -1,4 +1,4 @@
-package com.spring.quickstart.tools;
+package com.spring.ai.tools.custom;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;

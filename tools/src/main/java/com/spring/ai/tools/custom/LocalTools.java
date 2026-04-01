@@ -1,4 +1,4 @@
-package com.spring.quickstart.tools;
+package com.spring.ai.tools.custom;
 
 import static com.alibaba.cloud.ai.graph.agent.tools.ToolContextConstants.AGENT_CONFIG_CONTEXT_KEY;
 

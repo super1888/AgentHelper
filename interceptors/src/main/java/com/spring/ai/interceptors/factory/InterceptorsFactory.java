@@ -1,9 +1,11 @@
 package com.spring.ai.interceptors.factory;
 
+import com.alibaba.cloud.ai.graph.agent.interceptor.contextediting.ContextEditingInterceptor;
 import com.alibaba.cloud.ai.graph.agent.interceptor.todolist.TodoListInterceptor;
 import com.alibaba.cloud.ai.graph.agent.interceptor.toolemulator.ToolEmulatorInterceptor;
 import com.alibaba.cloud.ai.graph.agent.interceptor.toolretry.ToolRetryInterceptor;
 import com.alibaba.cloud.ai.graph.agent.interceptor.toolselection.ToolSelectionInterceptor;
+import com.spring.ai.interceptors.domain.dto.ContextEditingInterceptorDTO;
 import com.spring.ai.interceptors.domain.dto.TodoListInterceptorDTO;
 import com.spring.ai.interceptors.domain.dto.ToolEmulatorInterceptorDTO;
 import com.spring.ai.interceptors.domain.dto.ToolRetryInterceptorDTO;
@@ -138,6 +140,38 @@ public class InterceptorsFactory {
         // 可选：自定义提示模板
         if (dto.getPromptTemplate() != null && !dto.getPromptTemplate().isBlank()) {
             builder.promptTemplate(dto.getPromptTemplate());
+        }
+
+        return builder.build();
+
+    }
+
+    /**
+     * 1. 作用 ContextEditingInterceptor 是 AI Agent 上下文编辑 / 清理拦截器，核心功能： 自动根据 token 数量清理过长的对话历史 防止上下文溢出、token 耗尽、模型推理变慢 保留最新 N 条消息，清理旧消息
+     * 支持保留工具调用、替换清理内容为占位符 精细化控制清理策略，让 Agent 长期稳定运行 2. 使用场景 长时间运行的 Agent / 智能体 对话轮次非常多，历史消息超长 模型有最大 token 限制（如 4k/8k/16k） 需要稳定、长期在线的 AI 自动化流程
+     *
+     * @param dto
+     * @return
+     */
+    public ContextEditingInterceptor createContextEditingInterceptor(ContextEditingInterceptorDTO dto) {
+        if (dto == null) {
+            throw new IllegalArgumentException("ContextEditingInterceptorDTO 不能为空");
+        }
+
+        ContextEditingInterceptor.Builder builder = new ContextEditingInterceptor.Builder();
+
+        // 配置各项参数
+        builder.trigger(dto.getTrigger());
+        builder.clearAtLeast(dto.getClearAtLeast());
+        builder.keep(dto.getKeep());
+        builder.clearToolInputs(dto.isClearToolInputs());
+        builder.placeholder(dto.getPlaceholder());
+        builder.tokenCounter(dto.getTokenCounter());
+
+        // 配置例外工具
+        Set<String> excludeTools = dto.getExcludeTools();
+        if (excludeTools != null && !excludeTools.isEmpty()) {
+            builder.excludeTools(excludeTools);
         }
 
         return builder.build();

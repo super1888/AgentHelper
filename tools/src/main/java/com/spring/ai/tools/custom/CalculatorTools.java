@@ -1,4 +1,4 @@
-package com.spring.quickstart.tools;
+package com.spring.ai.tools.custom;
 
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;

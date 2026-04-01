@@ -20,6 +20,8 @@
         <module>quickStart</module>
         <module>common</module>
         <module>interceptors</module>
+        <module>tools</module>
+        <module>hooks</module>
     </modules>
 
     <properties>
