@@ -13,13 +13,13 @@ import com.spring.quickstart.chatModel.GetChatModel;
 import com.spring.quickstart.chatModel.GetDashScopeChatModel;
 import com.spring.quickstart.hooks.LoggingHook;
 import com.spring.quickstart.hooks.MessageTrimmingHook;
+import com.spring.quickstart.hooks.TextFilterHook;
 import com.spring.quickstart.interceptor.ToolErrorInterceptor;
 import com.spring.quickstart.model.dto.AgentInfoDTO;
 import com.spring.quickstart.model.dto.AssistantMessageDTO;
 import com.spring.quickstart.model.result.PoemOutputResult;
 import com.spring.quickstart.model.result.TextAnalysisResult;
 import com.spring.quickstart.tools.CalculatorTools;
-import com.spring.quickstart.tools.GetUserInfoTools;
 import com.spring.quickstart.tools.LocalTools;
 import com.spring.quickstart.tools.SendEmailTools;
 import com.spring.quickstart.tools.WeatherTools;
@@ -795,6 +795,30 @@ class QuickStartApplicationTests {
                 .content();
 
         System.out.println(response);
+
+    }
+
+    @Test
+    void Agent23() {
+        String threadId = "thread_123";
+        RunnableConfig runnableConfig = RunnableConfig.builder()
+                .threadId(threadId)
+                .addMetadata("user_id", "2")
+                .build();
+
+
+        AgentInfoDTO agentInfoDTO = getAgent();
+        ReactAgent reactAgent = null;
+        try {
+            agentInfoDTO.setHooks(Arrays.asList(new TextFilterHook()));
+            reactAgent = agent.customAgent(agentInfoDTO);
+            AssistantMessage result = reactAgent.call("我要投诉");
+            System.out.println(result.getText());
+
+
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
 
     }
 

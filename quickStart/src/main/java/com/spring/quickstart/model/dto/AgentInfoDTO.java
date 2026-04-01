@@ -2,6 +2,7 @@ package com.spring.quickstart.model.dto;
 
 import com.alibaba.cloud.ai.graph.agent.hook.Hook;
 import com.alibaba.cloud.ai.graph.agent.interceptor.Interceptor;
+import com.alibaba.cloud.ai.graph.checkpoint.savers.MemorySaver;
 import java.util.List;
 import lombok.Builder;
 import lombok.Data;
@@ -53,6 +54,12 @@ public class AgentInfoDTO {
      * 是否记忆
      */
     private Boolean isMemory;
+
+    /**
+     * 记忆对象
+     */
+    private MemorySaver memorySaver;
+
 
     /**
      * 钩子

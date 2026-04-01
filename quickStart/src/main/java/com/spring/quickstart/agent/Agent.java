@@ -2,7 +2,6 @@ package com.spring.quickstart.agent;
 
 import com.alibaba.cloud.ai.graph.agent.Builder;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
-import com.alibaba.cloud.ai.graph.checkpoint.savers.MemorySaver;
 import com.spring.quickstart.interceptor.ToolErrorInterceptor;
 import com.spring.quickstart.tools.CalculatorTools;
 
@@ -128,7 +127,7 @@ public class Agent {
         }
 
         if (agentInfoDTO.getIsMemory() != null && agentInfoDTO.getIsMemory()) {
-            builder.saver(new MemorySaver());
+            builder.saver(agentInfoDTO.getMemorySaver());
         }
 
         if (agentInfoDTO.getHooks() != null) {
