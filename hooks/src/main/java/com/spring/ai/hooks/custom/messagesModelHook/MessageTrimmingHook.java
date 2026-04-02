@@ -1,4 +1,4 @@
-package com.spring.ai.hooks.custom;
+package com.spring.ai.hooks.custom.messagesModelHook;
 
 import com.alibaba.cloud.ai.graph.RunnableConfig;
 import com.alibaba.cloud.ai.graph.agent.hook.HookPosition;
@@ -10,7 +10,11 @@ import java.util.List;
 import org.springframework.ai.chat.messages.Message;
 
 /**
- * class information
+ * MessagesModelHook 是一个专门用于操作消息列表的 Hook，使用更简单，更推荐。它直接接收和返回消息列表，无需处理复杂的 OverAllState。
+ * <p>
+ * 适用场景：
+ * <p>
+ * 消息修剪、过滤或转换； 添加系统提示或上下文消息； 消息压缩和摘要； 简单的消息操作需求。
  *
  * @author zhouqi
  * @version 初次构建
