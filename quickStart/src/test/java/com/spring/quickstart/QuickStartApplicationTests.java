@@ -12,6 +12,7 @@ import com.alibaba.cloud.ai.graph.checkpoint.savers.MemorySaver;
 import com.alibaba.cloud.ai.graph.exception.GraphRunnerException;
 import com.alibaba.cloud.ai.graph.skills.registry.SkillRegistry;
 import com.alibaba.cloud.ai.graph.skills.registry.classpath.ClasspathSkillRegistry;
+import com.alibaba.cloud.ai.graph.skills.registry.filesystem.FileSystemSkillRegistry;
 import com.alibaba.cloud.ai.graph.streaming.OutputType;
 import com.alibaba.cloud.ai.graph.streaming.StreamingOutput;
 import com.spring.ai.hooks.custom.agentHook.LoggingHook;
@@ -54,6 +55,7 @@ import org.springframework.ai.chat.metadata.ChatResponseMetadata;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.chat.prompt.SystemPromptTemplate;
 import org.springframework.ai.content.Media;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.io.ClassPathResource;
@@ -833,11 +835,21 @@ class QuickStartApplicationTests {
     @Test
     void Agent24() {
         String threadId = "thread_123";
-        AgentInfoDTO agentInfoDTO = AgentInfoDTO.builder().agentId(1L).agentName("skills-integration-agent").model(getDashScopeChatModel.getSeniorModel())
+        AgentInfoDTO agentInfoDTO = AgentInfoDTO.builder().agentId(1L).agentName("skills-integration-agent")
+                .model(getDashScopeChatModel.getSeniorModel())
                 .enableLogging(true).build();
         ReactAgent reactAgent = null;
         try {
-
+            // 用户加以引导
+            SystemPromptTemplate customTemplate = SystemPromptTemplate.builder()
+                    .template("## 可用技能\n{skills_list}\n\n## 加载说明\n{skills_load_instructions}")
+                    .build();
+            // 指定目录配置
+            SkillRegistry registry11 = FileSystemSkillRegistry.builder()
+                    .userSkillsDirectory("/home/user/saa/skills")
+                    .projectSkillsDirectory("/app/project/skills")
+                    .systemPromptTemplate(customTemplate)
+                    .build();
             // 1. 技能注册表：从 classpath:skills 加载（如 src/main/resources/skills/）
             SkillRegistry registry = ClasspathSkillRegistry.builder()
                     .classpathPath("skills")
@@ -860,27 +872,25 @@ class QuickStartApplicationTests {
             reactAgent = agent.customAgent(agentInfoDTO);
             // 5. 测试调用！
             // 测试1：让Agent介绍自己的技能
-            AssistantMessage result1 = reactAgent.call("请介绍你拥有的所有技能");
-            System.out.println("=== 技能列表 ===");
-            System.out.println(result1.getText());
+//            AssistantMessage result1 = reactAgent.call("请介绍你拥有的所有技能");
+//            System.out.println("=== 技能列表 ===");
+//            System.out.println(result1.getText());
 
             // 测试2：调用frontend-design技能
-            AssistantMessage result2 = reactAgent.call("帮我设计一个响应式的登录页面，用Tailwind CSS");
+            AssistantMessage result2 = reactAgent.call("帮我设计一个响应式的登录页面 直接用html就能看到效果 ，要求高端大气上档次");
             System.out.println("\n=== 前端设计结果 ===");
             System.out.println(result2.getText());
 
             // 测试3：调用pdf技能
-            AssistantMessage result3 = reactAgent.call("帮我提取并总结这个PDF文件的核心内容");
-            System.out.println("\n=== PDF处理结果 ===");
-            System.out.println(result3.getText());
-
+//            AssistantMessage result3 = reactAgent.call("帮我提取并总结这个PDF文件的核心内容");
+//            System.out.println("\n=== PDF处理结果 ===");
+//            System.out.println(result3.getText());
 
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
 
     }
-
 
 
 }

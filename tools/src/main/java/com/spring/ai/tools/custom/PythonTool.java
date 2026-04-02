@@ -143,7 +143,7 @@ public class PythonTool implements BiFunction<PythonTool.PythonRequest, ToolCont
 	public static class PythonRequest {
 
 		@JsonProperty(required = true)
-		@JsonPropertyDescription("The Python code to execute")
+		@JsonPropertyDescription("执行Python代码并返回结果。传入参数必须是严格JSON格式，code字段为字符串类型")
 		public String code;
 
 		public PythonRequest() {

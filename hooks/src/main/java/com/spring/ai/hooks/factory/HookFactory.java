@@ -7,10 +7,13 @@ import com.alibaba.cloud.ai.graph.agent.hook.hip.HumanInTheLoopHook;
 import com.alibaba.cloud.ai.graph.agent.hook.hip.ToolConfig;
 import com.alibaba.cloud.ai.graph.agent.hook.modelcalllimit.ModelCallLimitHook;
 import com.alibaba.cloud.ai.graph.agent.hook.pii.PIIDetectionHook;
+import com.alibaba.cloud.ai.graph.agent.hook.skills.SkillsAgentHook;
+import com.alibaba.cloud.ai.graph.agent.hook.skills.SkillsAgentHook.Builder;
 import com.alibaba.cloud.ai.graph.agent.hook.summarization.SummarizationHook;
 import com.spring.ai.hooks.domain.dto.HumanInTheLoopHookDTO;
 import com.spring.ai.hooks.domain.dto.ModelCallLimitHookDTO;
 import com.spring.ai.hooks.domain.dto.PIIDetectionHookDTO;
+import com.spring.ai.hooks.domain.dto.SkillsAgentHookDTO;
 import com.spring.ai.hooks.domain.dto.SummarizationHookDTO;
 import java.util.HashMap;
 import java.util.Map;
@@ -141,14 +144,51 @@ public class HookFactory {
             throw new IllegalArgumentException("PIIDetectionHookDTO 不能为空");
         }
 
-        return PIIDetectionHook.builder()
-                .piiType(dto.getPiiType())
-                .strategy(dto.getStrategy())
-                .detector(dto.getDetector())
-                .applyToInput(dto.isApplyToInput())
+        // 构建 PIIDetectionHook
+        PIIDetectionHook.Builder piiBuilder = PIIDetectionHook.builder();
+
+        if (dto.getPiiType() != null) {
+            piiBuilder.piiType(dto.getPiiType());
+        }
+        if (dto.getStrategy() != null) {
+            piiBuilder.strategy(dto.getStrategy());
+        }
+        if (dto.getDetector() != null) {
+            piiBuilder.detector(dto.getDetector());
+        }
+        // 基本类型直接赋值
+        piiBuilder.applyToInput(dto.isApplyToInput())
                 .applyToOutput(dto.isApplyToOutput())
-                .applyToToolResults(dto.isApplyToToolResults())
-                .build();
+                .applyToToolResults(dto.isApplyToToolResults());
+
+        return piiBuilder.build();
+    }
+
+    /**
+     * 自动检测用户输入是否包含手机号、身份证、邮箱、银行卡等隐私信息，可选择拦截、脱敏、告警。
+     *
+     * @param dto
+     * @return
+     */
+    public static SkillsAgentHook createSkillsAgentHook(SkillsAgentHookDTO dto) {
+        if (dto == null) {
+            throw new IllegalArgumentException("SkillsAgentHookDTO 不能为空");
+        }
+
+        // 构建 SkillsAgentHook
+        Builder builder = SkillsAgentHook.builder();
+
+        if (dto.getSkillRegistry() != null) {
+            builder.skillRegistry(dto.getSkillRegistry());
+        }
+
+        builder.autoReload(dto.getAutoReload());
+
+        if (dto.getGroupedTools() != null) {
+            builder.groupedTools(dto.getGroupedTools());
+        }
+
+        return builder.build();
     }
 
 
