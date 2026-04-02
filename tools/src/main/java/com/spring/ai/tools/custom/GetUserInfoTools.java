@@ -17,7 +17,7 @@ public class GetUserInfoTools {
 
     @Tool(description = "Get username for a given user information")
     public UserInfoDTO userInfoTool(@ToolParam(description = "The username") String username) {
-        UserInfoDTO.builder()
+        UserInfoDTOBuilder builder = UserInfoDTO.builder();
         if ("张三" .equals(username)) {
             builder.name("张三").phone("18226213628").emailAddress("3034378787@qq.com").address("安徽 合肥");
         }

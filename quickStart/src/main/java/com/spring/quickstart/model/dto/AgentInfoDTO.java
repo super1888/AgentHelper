@@ -7,6 +7,7 @@ import java.util.List;
 import lombok.Builder;
 import lombok.Data;
 import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.tool.ToolCallback;
 
 /**
  * class information
@@ -37,7 +38,7 @@ public class AgentInfoDTO {
     /**
      * 工具集合类
      */
-    private List<Object> tools;
+    private List<Object> methodTools;
 
 
     /**
@@ -76,6 +77,16 @@ public class AgentInfoDTO {
      * 特定格式返回输出outputSchema
      */
     private Class<?> outputSchemaClass;
+
+    /**
+     * 开启日志
+     */
+    private Boolean enableLogging;
+
+    /**
+     * 工具集合类
+     */
+    private List<ToolCallback> tools;
 
 
 }

@@ -2,10 +2,8 @@ package com.spring.quickstart.agent;
 
 import com.alibaba.cloud.ai.graph.agent.Builder;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
-
-import com.spring.ai.interceptors.custom.ToolErrorInterceptor;
+import com.spring.ai.interceptors.custom.toolInterceptor.ToolErrorInterceptor;
 import com.spring.ai.tools.custom.CalculatorTools;
-
 import com.spring.quickstart.chatModel.GetDashScopeChatModel;
 import com.spring.quickstart.model.dto.AgentInfoDTO;
 import jakarta.annotation.Resource;
@@ -111,11 +109,17 @@ public class Agent {
 
         builder.model(agentInfoDTO.getModel());
 
-        builder.methodTools(agentInfoDTO.getTools().toArray());
+        if (agentInfoDTO.getMethodTools() != null) {
+            builder.methodTools(agentInfoDTO.getMethodTools().toArray());
+        }
 
-        builder.interceptors(agentInfoDTO.getInterceptors());
+        if (agentInfoDTO.getInterceptors() != null) {
+            builder.interceptors(agentInfoDTO.getInterceptors());
+        }
 
-        builder.instruction(agentInfoDTO.getInstruction());
+        if (agentInfoDTO.getInstruction() != null) {
+            builder.instruction(agentInfoDTO.getInstruction());
+        }
 
         if (agentInfoDTO.getOutputTypeClass() != null) {
             builder.outputType(agentInfoDTO.getOutputTypeClass());
@@ -134,6 +138,12 @@ public class Agent {
         if (agentInfoDTO.getHooks() != null) {
             builder.hooks(agentInfoDTO.getHooks());
         }
+
+        if (agentInfoDTO.getTools() != null) {
+            builder.tools(agentInfoDTO.getTools());
+        }
+
+        builder.enableLogging(agentInfoDTO.getEnableLogging());
 
         return builder.build();
 

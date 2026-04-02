@@ -19,12 +19,10 @@ import org.springframework.ai.content.Media;
 @Data
 public class AssistantMessageDTO {
 
-
     /**
      * 用户输入文本内容
      */
     private String text;
-
 
     /**
      * metadata消息的元数据映射
@@ -41,7 +39,8 @@ public class AssistantMessageDTO {
     private List<Media> media;
 
 
-    public static AssistantMessage getAssistantMessage(String textContent, Map<String, Object> metadata, List<ToolCall> toolCalls, List<Media> media) {
+    public static AssistantMessage getAssistantMessage(String textContent, Map<String, Object> metadata, List<ToolCall> toolCalls,
+            List<Media> media) {
         Builder builder = AssistantMessage.builder();
 
         if (textContent != null) {

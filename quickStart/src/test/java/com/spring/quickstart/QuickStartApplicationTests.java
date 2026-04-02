@@ -5,15 +5,22 @@ import com.alibaba.cloud.ai.graph.NodeOutput;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.RunnableConfig;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
+import com.alibaba.cloud.ai.graph.agent.hook.shelltool.ShellToolAgentHook;
+import com.alibaba.cloud.ai.graph.agent.hook.skills.SkillsAgentHook;
+import com.alibaba.cloud.ai.graph.agent.tools.ShellTool2;
+import com.alibaba.cloud.ai.graph.checkpoint.savers.MemorySaver;
 import com.alibaba.cloud.ai.graph.exception.GraphRunnerException;
+import com.alibaba.cloud.ai.graph.skills.registry.SkillRegistry;
+import com.alibaba.cloud.ai.graph.skills.registry.classpath.ClasspathSkillRegistry;
 import com.alibaba.cloud.ai.graph.streaming.OutputType;
 import com.alibaba.cloud.ai.graph.streaming.StreamingOutput;
-import LoggingHook;
+import com.spring.ai.hooks.custom.agentHook.LoggingHook;
 import com.spring.ai.hooks.custom.messagesModelHook.MessageTrimmingHook;
 import com.spring.ai.hooks.custom.messagesModelHook.TextFilterHook;
-import com.spring.ai.interceptors.custom.ToolErrorInterceptor;
+import com.spring.ai.interceptors.custom.toolInterceptor.ToolErrorInterceptor;
 import com.spring.ai.tools.custom.CalculatorTools;
 import com.spring.ai.tools.custom.LocalTools;
+import com.spring.ai.tools.custom.PythonTool;
 import com.spring.ai.tools.custom.SendEmailTools;
 import com.spring.ai.tools.custom.WeatherTools;
 import com.spring.quickstart.agent.Agent;
@@ -29,6 +36,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -52,12 +60,13 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.util.MimeTypeUtils;
 import reactor.core.publisher.Flux;
 
+
 @SpringBootTest
 class QuickStartApplicationTests {
 
     private AgentInfoDTO getAgent() {
         AgentInfoDTO agentInfoDTO = AgentInfoDTO.builder().agentId(1L).agentName("学习agent").model(getDashScopeChatModel.getSeniorModel())
-                .tools(Arrays.asList(new CalculatorTools(), new LocalTools(), new WeatherTools()))
+                .methodTools(Arrays.asList(new CalculatorTools(), new LocalTools(), new WeatherTools()))
                 .interceptors(Arrays.asList(new ToolErrorInterceptor(), new ToolErrorInterceptor()))
                 .instruction("你是一个学习助手，请根据用户的问题，使用工具回答用户的问题").build();
         return agentInfoDTO;
@@ -144,7 +153,7 @@ class QuickStartApplicationTests {
     void Agent4() {
 
         AgentInfoDTO agentInfoDTO = AgentInfoDTO.builder().agentId(1L).agentName("学习agent").model(getDashScopeChatModel.getSeniorModel())
-                .tools(Arrays.asList(new CalculatorTools(), new LocalTools(), new WeatherTools()))
+                .methodTools(Arrays.asList(new CalculatorTools(), new LocalTools(), new WeatherTools()))
                 .interceptors(Arrays.asList(new ToolErrorInterceptor(), new ToolErrorInterceptor()))
                 .instruction("你是一个学习助手，请根据用户的问题，使用工具回答用户的问题").build();
         ReactAgent reactAgent = null;
@@ -820,6 +829,58 @@ class QuickStartApplicationTests {
         }
 
     }
+
+    @Test
+    void Agent24() {
+        String threadId = "thread_123";
+        AgentInfoDTO agentInfoDTO = AgentInfoDTO.builder().agentId(1L).agentName("skills-integration-agent").model(getDashScopeChatModel.getSeniorModel())
+                .enableLogging(true).build();
+        ReactAgent reactAgent = null;
+        try {
+
+            // 1. 技能注册表：从 classpath:skills 加载（如 src/main/resources/skills/）
+            SkillRegistry registry = ClasspathSkillRegistry.builder()
+                    .classpathPath("skills")
+                    .build();
+
+            // 2. Skills Hook：注册 read_skill 工具并注入技能列表到系统提示
+            SkillsAgentHook skillsHook = SkillsAgentHook.builder()
+                    .skillRegistry(registry)
+                    .build();
+
+            // 3. Shell Hook：提供 Shell 命令执行（工作目录可指定，如当前工程目录）
+            ShellToolAgentHook shellHook = ShellToolAgentHook.builder()
+                    .shellTool2(ShellTool2.builder(System.getProperty("user.dir")).build())
+                    .build();
+
+            agentInfoDTO.setIsMemory(true);
+            agentInfoDTO.setMemorySaver(new MemorySaver());
+            agentInfoDTO.setHooks(List.of(skillsHook, shellHook));
+            agentInfoDTO.setTools(Collections.singletonList(PythonTool.createPythonToolCallback(PythonTool.DESCRIPTION)));
+            reactAgent = agent.customAgent(agentInfoDTO);
+            // 5. 测试调用！
+            // 测试1：让Agent介绍自己的技能
+            AssistantMessage result1 = reactAgent.call("请介绍你拥有的所有技能");
+            System.out.println("=== 技能列表 ===");
+            System.out.println(result1.getText());
+
+            // 测试2：调用frontend-design技能
+            AssistantMessage result2 = reactAgent.call("帮我设计一个响应式的登录页面，用Tailwind CSS");
+            System.out.println("\n=== 前端设计结果 ===");
+            System.out.println(result2.getText());
+
+            // 测试3：调用pdf技能
+            AssistantMessage result3 = reactAgent.call("帮我提取并总结这个PDF文件的核心内容");
+            System.out.println("\n=== PDF处理结果 ===");
+            System.out.println(result3.getText());
+
+
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+    }
+
 
 
 }

@@ -7,9 +7,11 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
+        <module name="skills" />
         <module name="quickStart" />
         <module name="common" />
         <module name="hooks" />
+        <module name="tools" />
         <module name="interceptors" />
       </profile>
     </annotationProcessing>
@@ -20,7 +22,9 @@
       <module name="hooks" options="-parameters" />
       <module name="interceptors" options="-parameters" />
       <module name="quickStart" options="-parameters" />
+      <module name="skills" options="-parameters" />
       <module name="springAi" options="" />
+      <module name="tools" options="-parameters" />
     </option>
   </component>
 </project>

@@ -22,6 +22,7 @@
         <module>interceptors</module>
         <module>tools</module>
         <module>hooks</module>
+        <module>skills</module>
     </modules>
 
     <properties>
@@ -36,7 +37,7 @@
         <mybatis.springboot.version>3.0.3</mybatis.springboot.version>
         <pagehelper.version>2.1.0</pagehelper.version>
         <mysql-connector-java>3.0.3</mysql-connector-java>
-        <spring-ai-alibaba.vsersion>1.1.2.1</spring-ai-alibaba.vsersion>
+        <spring-ai-alibaba.vsersion>1.1.2.2</spring-ai-alibaba.vsersion>
     </properties>
 
 
