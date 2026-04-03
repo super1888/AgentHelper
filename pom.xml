@@ -23,6 +23,7 @@
         <module>tools</module>
         <module>hooks</module>
         <module>skills</module>
+        <module>prompt</module>
     </modules>
 
     <properties>
