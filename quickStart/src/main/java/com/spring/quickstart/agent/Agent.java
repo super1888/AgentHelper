@@ -7,6 +7,7 @@ import com.spring.ai.tools.custom.CalculatorTools;
 import com.spring.quickstart.chatModel.GetDashScopeChatModel;
 import com.spring.quickstart.model.dto.AgentInfoDTO;
 import jakarta.annotation.Resource;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.ai.converter.BeanOutputConverter;
 import org.springframework.stereotype.Component;
 
@@ -129,6 +130,8 @@ public class Agent {
             BeanOutputConverter<?> outputConverter = new BeanOutputConverter<>(agentInfoDTO.getOutputSchemaClass());
             String format = outputConverter.getFormat();
             builder.outputSchema(format);
+        } else if (StringUtils.isNotBlank(agentInfoDTO.getOutputSchemaJson())) {
+            builder.outputSchema(agentInfoDTO.getOutputSchemaJson());
         }
 
         if (agentInfoDTO.getIsMemory() != null && agentInfoDTO.getIsMemory()) {

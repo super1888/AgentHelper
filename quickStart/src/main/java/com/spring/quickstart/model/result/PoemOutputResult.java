@@ -3,7 +3,7 @@ package com.spring.quickstart.model.result;
 import lombok.Data;
 
 /**
- * 指定格式输出
+ * 指定格式输出  必须含有getter 和 setter
  *
  * @author zhouqi
  * @version 初次构建

@@ -10,6 +10,7 @@
         <option value="$PROJECT_DIR$/hooks/pom.xml" />
         <option value="$PROJECT_DIR$/tools/pom.xml" />
         <option value="$PROJECT_DIR$/skills/pom.xml" />
+        <option value="$PROJECT_DIR$/prompt/pom.xml" />
       </list>
     </option>
   </component>

@@ -12,6 +12,7 @@
         <module name="common" />
         <module name="hooks" />
         <module name="tools" />
+        <module name="prompt" />
         <module name="interceptors" />
       </profile>
     </annotationProcessing>
@@ -21,6 +22,7 @@
       <module name="common" options="-parameters" />
       <module name="hooks" options="-parameters" />
       <module name="interceptors" options="-parameters" />
+      <module name="prompt" options="-parameters" />
       <module name="quickStart" options="-parameters" />
       <module name="skills" options="-parameters" />
       <module name="springAi" options="" />

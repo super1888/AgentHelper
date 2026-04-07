@@ -74,9 +74,15 @@ public class AgentInfoDTO {
     private Class<?> outputTypeClass;
 
     /**
-     * 特定格式返回输出outputSchema
+     * 特定格式返回输出outputSchema 对象转json
      */
     private Class<?> outputSchemaClass;
+
+    /**
+     * 指定JSON模式返回
+     */
+    private String outputSchemaJson;
+
 
     /**
      * 开启日志

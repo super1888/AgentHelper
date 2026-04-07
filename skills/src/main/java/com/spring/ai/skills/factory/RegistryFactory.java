@@ -1,10 +1,12 @@
 package com.spring.ai.skills.factory;
 
+import com.alibaba.cloud.ai.graph.advisors.SkillPromptAugmentAdvisor;
 import com.alibaba.cloud.ai.graph.skills.registry.SkillRegistry;
 import com.alibaba.cloud.ai.graph.skills.registry.classpath.ClasspathSkillRegistry;
 import com.alibaba.cloud.ai.graph.skills.registry.filesystem.FileSystemSkillRegistry;
 import com.spring.ai.skills.domain.dto.ClasspathSkillRegistryDTO;
 import com.spring.ai.skills.domain.dto.FileSystemSkillRegistryDTO;
+import com.spring.ai.skills.domain.dto.SkillPromptAugmentAdvisorDTO;
 import org.springframework.util.StringUtils;
 
 /**
@@ -53,6 +55,7 @@ public class RegistryFactory {
 
     /**
      * 创建 文件系统技能注册器 FileSystemSkillRegistry
+     *
      * @param dto 入参DTO
      * @return SkillRegistry 实例
      */
@@ -100,6 +103,59 @@ public class RegistryFactory {
 
         // 构建并返回最终实例
         return builder.build();
+    }
+
+    /**
+     * 创建 技能提示词增强顾问 SkillPromptAugmentAdvisor
+     *
+     * @param dto 入参DTO
+     * @return SkillPromptAugmentAdvisor 实例
+     */
+    public SkillPromptAugmentAdvisor creatSkillPromptAugmentAdvisor(SkillPromptAugmentAdvisorDTO dto) {
+        // 1. DTO 不能为空判断
+        if (dto == null) {
+            throw new IllegalArgumentException("创建参数 SkillPromptAugmentAdvisorDTO 不能为空");
+        }
+        // 初始化 Builder
+        SkillPromptAugmentAdvisor.Builder builder = new SkillPromptAugmentAdvisor.Builder();
+
+        // 2. 设置用户技能目录（优先 Resource，其次字符串）
+        if (dto.getUserSkillsResource() != null) {
+            builder.userSkillsDirectory(dto.getUserSkillsResource());
+        } else if (StringUtils.hasText(dto.getUserSkillsDirectory())) {
+            builder.userSkillsDirectory(dto.getUserSkillsDirectory());
+        }
+
+        // 3. 设置项目技能目录（优先 Resource，其次字符串）
+        if (dto.getProjectSkillsResource() != null) {
+            builder.projectSkillsDirectory(dto.getProjectSkillsResource());
+        } else if (StringUtils.hasText(dto.getProjectSkillsDirectory())) {
+            builder.projectSkillsDirectory(dto.getProjectSkillsDirectory());
+        }
+
+        // 4. 设置技能注册器
+        if (dto.getSkillRegistry() != null) {
+            builder.skillRegistry(dto.getSkillRegistry());
+        }
+
+        // 5. 设置执行顺序
+        if (dto.getOrder() != null) {
+            builder.order(dto.getOrder());
+        }
+
+        // 6. 设置调度器
+        if (dto.getScheduler() != null) {
+            builder.scheduler(dto.getScheduler());
+        }
+
+        // 7. 设置是否懒加载
+        if (dto.getLazyLoad() != null) {
+            builder.lazyLoad(dto.getLazyLoad());
+        }
+
+        // 构建并返回
+        return builder.build();
+
     }
 
 }
