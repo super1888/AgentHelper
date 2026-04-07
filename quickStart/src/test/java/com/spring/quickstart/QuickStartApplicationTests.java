@@ -4,7 +4,10 @@ package com.spring.quickstart;
 import com.alibaba.cloud.ai.graph.NodeOutput;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.RunnableConfig;
+import com.alibaba.cloud.ai.graph.action.InterruptionMetadata;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
+import com.alibaba.cloud.ai.graph.agent.hook.hip.HumanInTheLoopHook;
+import com.alibaba.cloud.ai.graph.agent.hook.hip.ToolConfig;
 import com.alibaba.cloud.ai.graph.agent.hook.shelltool.ShellToolAgentHook;
 import com.alibaba.cloud.ai.graph.agent.hook.skills.SkillsAgentHook;
 import com.alibaba.cloud.ai.graph.agent.tools.ShellTool2;
@@ -57,6 +60,8 @@ import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.SystemPromptTemplate;
 import org.springframework.ai.content.Media;
+import org.springframework.ai.tool.ToolCallback;
+import org.springframework.ai.tool.method.MethodToolCallbackProvider;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.util.MimeTypeUtils;
@@ -83,6 +88,7 @@ class QuickStartApplicationTests {
 
     @Resource
     private GetChatModel getChatModel;
+
 
     @Test
     void Agent1() {
@@ -890,6 +896,95 @@ class QuickStartApplicationTests {
             throw new RuntimeException(e);
         }
 
+    }
+
+    @Test
+    void agent25() {
+        // 1. 配置检查点
+        MemorySaver memorySaver = new MemorySaver();
+
+        // 2. 创建人工介入Hook
+        HumanInTheLoopHook humanInTheLoopHook = HumanInTheLoopHook.builder()
+                .approvalOn("getUserInfoAndSendEmail", ToolConfig.builder()
+                        .description("请确认发送邮件功能")
+                        .build())
+                .build();
+        ChatModel chatModel = getChatModel.creatDashScopeChatModel();
+        ToolCallback[] toolCallbacks = MethodToolCallbackProvider.builder().toolObjects(new SendEmailTools()).build().getToolCallbacks();
+        // 3. 创建Agent
+        ReactAgent agent = ReactAgent.builder()
+                .name("email")
+                .model(chatModel)
+                .tools(toolCallbacks)
+                .hooks(List.of(humanInTheLoopHook))
+                .saver(memorySaver)
+                .build();
+
+        String threadId = "user-session-001";
+        RunnableConfig config = RunnableConfig.builder()
+                .threadId(threadId)
+                .build();
+
+        // 4. 第一次调用 - 触发中断
+        System.out.println("=== 第一次调用：期望中断 ===");
+        Optional<NodeOutput> result = null;
+        try {
+            result = agent.invokeAndGetOutput(
+                    "帮我给 张三发一封清明节的邮件",
+                    config
+            );
+        } catch (GraphRunnerException e) {
+            throw new RuntimeException(e);
+        }
+
+        // 5. 检查中断并处理
+        if (result.isPresent() && result.get() instanceof InterruptionMetadata) {
+            InterruptionMetadata interruptionMetadata = (InterruptionMetadata) result.get();
+
+            System.out.println("检测到中断，需要人工审批");
+            List<InterruptionMetadata.ToolFeedback> toolFeedbacks =
+                    interruptionMetadata.toolFeedbacks();
+
+            for (InterruptionMetadata.ToolFeedback feedback : toolFeedbacks) {
+                System.out.println("工具: " + feedback.getName());
+                System.out.println("参数: " + feedback.getArguments());
+                System.out.println("描述: " + feedback.getDescription());
+            }
+
+            // 6. 模拟人工决策（这里选择批准）
+            InterruptionMetadata.Builder feedbackBuilder = InterruptionMetadata.builder()
+                    .nodeId(interruptionMetadata.node())
+                    .state(interruptionMetadata.state());
+
+            toolFeedbacks.forEach(toolFeedback -> {
+                InterruptionMetadata.ToolFeedback approvedFeedback =
+                        InterruptionMetadata.ToolFeedback.builder(toolFeedback)
+                                .result(InterruptionMetadata.ToolFeedback.FeedbackResult.APPROVED)
+                                .build();
+                feedbackBuilder.addToolFeedback(approvedFeedback);
+            });
+
+            InterruptionMetadata approvalMetadata = feedbackBuilder.build();
+
+            // 7. 第二次调用 - 使用人工反馈恢复执行
+            System.out.println(" === 第二次调用：使用批准决策恢复 ===");
+            RunnableConfig resumeConfig = RunnableConfig.builder()
+                    .threadId(threadId)
+                    .addMetadata(RunnableConfig.HUMAN_FEEDBACK_METADATA_KEY, approvalMetadata)
+                    .build();
+
+            Optional<NodeOutput> finalResult;
+            try {
+                finalResult = agent.invokeAndGetOutput("", resumeConfig);
+            } catch (GraphRunnerException e) {
+                throw new RuntimeException(e);
+            }
+
+            if (finalResult.isPresent()) {
+                System.out.println("执行完成");
+                System.out.println("最终结果: " + finalResult.get());
+            }
+        }
     }
 
 

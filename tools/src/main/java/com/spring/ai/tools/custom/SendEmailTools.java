@@ -7,6 +7,8 @@ import com.spring.ai.common.utils.EmailUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
+import org.springframework.stereotype.Component;
+
 /**
  * class information
  *

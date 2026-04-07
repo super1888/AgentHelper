@@ -24,6 +24,7 @@
         <module>hooks</module>
         <module>skills</module>
         <module>prompt</module>
+        <module>user</module>
     </modules>
 
     <properties>

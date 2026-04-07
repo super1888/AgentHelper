@@ -13,6 +13,7 @@
         <module name="hooks" />
         <module name="tools" />
         <module name="prompt" />
+        <module name="user" />
         <module name="interceptors" />
       </profile>
     </annotationProcessing>
@@ -27,6 +28,7 @@
       <module name="skills" options="-parameters" />
       <module name="springAi" options="" />
       <module name="tools" options="-parameters" />
+      <module name="user" options="-parameters" />
     </option>
   </component>
 </project>
