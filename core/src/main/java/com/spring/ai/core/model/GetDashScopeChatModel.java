@@ -2,7 +2,7 @@ package com.spring.ai.core.model;
 
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatOptions;
-import com.spring.ai.core.modelApi.GetDashScopeApi;
+import com.spring.ai.core.modelApi.ScopeApi;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Component;
 
@@ -18,7 +18,7 @@ import org.springframework.stereotype.Component;
 public class GetDashScopeChatModel {
 
     @Resource
-    GetDashScopeApi getDashScopeApi;
+    ScopeApi scopeApi;
 
     /**
      * 无配置 模型
@@ -28,7 +28,7 @@ public class GetDashScopeChatModel {
     public DashScopeChatModel getModel() {
         // 创建模型实例
         DashScopeChatModel build = DashScopeChatModel.builder()
-                .dashScopeApi(getDashScopeApi.getDashScopeApi(null))
+                .dashScopeApi(scopeApi.getDashScopeApi(null))
                 .build();
         return build;
     }
@@ -41,7 +41,7 @@ public class GetDashScopeChatModel {
     public DashScopeChatModel getChatModel() {
         // 创建模型实例
         DashScopeChatModel build = DashScopeChatModel.builder()
-                .dashScopeApi(getDashScopeApi.getDashScopeApi(null))
+                .dashScopeApi(scopeApi.getDashScopeApi(null))
                 .build();
         return build;
     }
@@ -56,7 +56,7 @@ public class GetDashScopeChatModel {
     public DashScopeChatModel getSeniorModel() {
 
         DashScopeChatModel build = DashScopeChatModel.builder()
-                .dashScopeApi(getDashScopeApi.getDashScopeApi(null))
+                .dashScopeApi(scopeApi.getDashScopeApi(null))
                 .defaultOptions(DashScopeChatOptions.builder()
                         .withModel("qwen-max")
                         .withTemperature(0.7)    // 控制随机性

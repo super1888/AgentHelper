@@ -41,6 +41,7 @@
         <mybatis.springboot.version>3.0.3</mybatis.springboot.version>
         <pagehelper.version>2.1.0</pagehelper.version>
         <mysql-connector-java>3.0.3</mysql-connector-java>
+        <spring-ai.version>1.0.1</spring-ai.version>
 
     </properties>
 
@@ -70,6 +71,9 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+
+
+
 
         <dependency>
             <groupId>org.projectlombok</groupId>
@@ -103,6 +107,18 @@
 
     </dependencies>
 
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.ai</groupId>
+                <artifactId>spring-ai-bom</artifactId>
+                <version>${spring-ai.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <!-- 构建配置（可选，确保打包正常） -->
     <build>
         <plugins>
@@ -113,5 +129,16 @@
             </plugin>
         </plugins>
     </build>
+
+    <repositories>
+        <repository>
+            <id>spring-release</id>
+            <name>Spring Release Repository</name>
+            <url>https://repo.spring.io/release</url>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
 
 </project>

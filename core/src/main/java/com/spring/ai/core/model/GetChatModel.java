@@ -2,7 +2,7 @@ package com.spring.ai.core.model;
 
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatOptions;
-import com.spring.ai.core.modelApi.GetDashScopeApi;
+import com.spring.ai.core.modelApi.ScopeApi;
 import org.springframework.ai.chat.model.ChatModel;
 
 import jakarta.annotation.Resource;
@@ -27,11 +27,11 @@ public class GetChatModel {
             .build();
 
     @Resource
-    GetDashScopeApi getDashScopeApi;
+    ScopeApi scopeApi;
 
     public ChatModel creatDashScopeChatModel() {
         ChatModel chatModel = DashScopeChatModel.builder()
-                .dashScopeApi(getDashScopeApi.getDashScopeApi(null))
+                .dashScopeApi(scopeApi.getDashScopeApi(null))
                 .defaultOptions(options)
                 .build();
         return chatModel;
