@@ -1,9 +1,10 @@
-package com.spring.quickstart.chatModel;
+package com.spring.ai.core.model;
 
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatOptions;
+import com.spring.ai.core.modelApi.GetDashScopeApi;
 import org.springframework.ai.chat.model.ChatModel;
-import com.spring.quickstart.modelApi.GetDashScopeApi;
+
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Component;
 

@@ -1,11 +1,10 @@
-package com.spring.quickstart.agent;
+package com.spring.ai.core.agent;
 
 import com.alibaba.cloud.ai.graph.agent.Builder;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
-import com.spring.ai.interceptors.custom.toolInterceptor.ToolErrorInterceptor;
-import com.spring.ai.tools.custom.CalculatorTools;
-import com.spring.quickstart.chatModel.GetDashScopeChatModel;
-import com.spring.quickstart.model.dto.AgentInfoDTO;
+
+import com.spring.ai.core.model.GetDashScopeChatModel;
+import com.spring.ai.core.model.dto.AgentInfoDTO;
 import jakarta.annotation.Resource;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.ai.converter.BeanOutputConverter;
@@ -47,13 +46,10 @@ public class Agent {
      */
     public ReactAgent creatAgentTool() {
 
-        CalculatorTools calculatorTools = new CalculatorTools();
-        ToolErrorInterceptor toolErrorInterceptor = new ToolErrorInterceptor();
+
         ReactAgent agent = ReactAgent.builder()
                 .name("search_agent")
                 .model(getDashScopeChatModel.getSeniorModel())
-                .methodTools(calculatorTools)
-                .interceptors(toolErrorInterceptor)
                 .build();
 
         return agent;
@@ -79,13 +75,9 @@ public class Agent {
                 保持专业、友好的语气。
                 """;
 
-        CalculatorTools calculatorTools = new CalculatorTools();
-        ToolErrorInterceptor toolErrorInterceptor = new ToolErrorInterceptor();
         ReactAgent agent = ReactAgent.builder()
                 .name("search_agent")
                 .model(getDashScopeChatModel.getSeniorModel())
-                .methodTools(calculatorTools)
-                .interceptors(toolErrorInterceptor)
                 .instruction(instruction)
                 .build();
 

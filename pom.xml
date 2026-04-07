@@ -25,6 +25,8 @@
         <module>skills</module>
         <module>prompt</module>
         <module>user</module>
+        <module>agent</module>
+        <module>core</module>
     </modules>
 
     <properties>
@@ -39,7 +41,7 @@
         <mybatis.springboot.version>3.0.3</mybatis.springboot.version>
         <pagehelper.version>2.1.0</pagehelper.version>
         <mysql-connector-java>3.0.3</mysql-connector-java>
-        <spring-ai-alibaba.vsersion>1.1.2.2</spring-ai-alibaba.vsersion>
+
     </properties>
 
 
@@ -61,13 +63,6 @@
             <artifactId>spring-ai-alibaba-agent-framework</artifactId>
             <version>${alibaba.ai.version}</version>
         </dependency>
-
-        <dependency>
-            <groupId>com.alibaba.cloud.ai</groupId>
-            <artifactId>spring-ai-alibaba-starter-dashscope</artifactId>
-            <version>${spring-ai-alibaba.vsersion}</version>
-        </dependency>
-
 
         <!-- 测试依赖（版本由父工程自动管理） -->
         <dependency>

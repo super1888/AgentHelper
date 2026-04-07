@@ -1,4 +1,4 @@
-package com.spring.quickstart.model.result;
+package com.spring.ai.core.model.result;
 
 import java.util.List;
 import lombok.Data;

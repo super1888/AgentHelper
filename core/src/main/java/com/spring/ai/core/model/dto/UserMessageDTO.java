@@ -1,4 +1,4 @@
-package com.spring.quickstart.model.dto;
+package com.spring.ai.core.model.dto;
 
 /**
  * class information

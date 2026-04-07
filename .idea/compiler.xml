@@ -9,6 +9,7 @@
         <outputRelativeToContentRoot value="true" />
         <module name="skills" />
         <module name="quickStart" />
+        <module name="agent" />
         <module name="common" />
         <module name="hooks" />
         <module name="tools" />
@@ -17,12 +18,17 @@
         <module name="interceptors" />
       </profile>
     </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="model" target="21" />
+    </bytecodeTargetLevel>
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="agent" options="-parameters" />
       <module name="common" options="-parameters" />
       <module name="hooks" options="-parameters" />
       <module name="interceptors" options="-parameters" />
+      <module name="model" options="-parameters" />
       <module name="prompt" options="-parameters" />
       <module name="quickStart" options="-parameters" />
       <module name="skills" options="-parameters" />

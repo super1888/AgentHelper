@@ -1,6 +1,5 @@
 package com.spring.quickstart.options;
 
-import com.spring.quickstart.model.dto.ChatOptionsDTO;
 import org.springframework.ai.chat.prompt.ChatOptions;
 
 /**

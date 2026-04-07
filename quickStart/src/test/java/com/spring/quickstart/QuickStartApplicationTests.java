@@ -18,6 +18,13 @@ import com.alibaba.cloud.ai.graph.skills.registry.classpath.ClasspathSkillRegist
 import com.alibaba.cloud.ai.graph.skills.registry.filesystem.FileSystemSkillRegistry;
 import com.alibaba.cloud.ai.graph.streaming.OutputType;
 import com.alibaba.cloud.ai.graph.streaming.StreamingOutput;
+import com.spring.ai.core.agent.Agent;
+import com.spring.ai.core.model.GetChatModel;
+import com.spring.ai.core.model.GetDashScopeChatModel;
+import com.spring.ai.core.model.dto.AgentInfoDTO;
+import com.spring.ai.core.model.dto.AssistantMessageDTO;
+import com.spring.ai.core.model.result.PoemOutputResult;
+import com.spring.ai.core.model.result.TextAnalysisResult;
 import com.spring.ai.hooks.custom.agentHook.LoggingHook;
 import com.spring.ai.hooks.custom.messagesModelHook.MessageTrimmingHook;
 import com.spring.ai.hooks.custom.messagesModelHook.TextFilterHook;
@@ -27,13 +34,6 @@ import com.spring.ai.tools.custom.LocalTools;
 import com.spring.ai.tools.custom.PythonTool;
 import com.spring.ai.tools.custom.SendEmailTools;
 import com.spring.ai.tools.custom.WeatherTools;
-import com.spring.quickstart.agent.Agent;
-import com.spring.quickstart.chatModel.GetChatModel;
-import com.spring.quickstart.chatModel.GetDashScopeChatModel;
-import com.spring.quickstart.model.dto.AgentInfoDTO;
-import com.spring.quickstart.model.dto.AssistantMessageDTO;
-import com.spring.quickstart.model.result.PoemOutputResult;
-import com.spring.quickstart.model.result.TextAnalysisResult;
 import com.spring.quickstart.userMessage.MessageType;
 import jakarta.annotation.Resource;
 import java.net.MalformedURLException;
@@ -938,9 +938,7 @@ class QuickStartApplicationTests {
         }
 
         // 5. 检查中断并处理
-        if (result.isPresent() && result.get() instanceof InterruptionMetadata) {
-            InterruptionMetadata interruptionMetadata = (InterruptionMetadata) result.get();
-
+        if (result.isPresent() && result.get() instanceof InterruptionMetadata interruptionMetadata) {
             System.out.println("检测到中断，需要人工审批");
             List<InterruptionMetadata.ToolFeedback> toolFeedbacks =
                     interruptionMetadata.toolFeedbacks();

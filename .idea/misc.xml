@@ -12,7 +12,14 @@
         <option value="$PROJECT_DIR$/skills/pom.xml" />
         <option value="$PROJECT_DIR$/prompt/pom.xml" />
         <option value="$PROJECT_DIR$/user/pom.xml" />
+        <option value="$PROJECT_DIR$/agent/pom.xml" />
+        <option value="$PROJECT_DIR$/model/pom.xml" />
       </list>
+    </option>
+    <option name="ignoredFiles">
+      <set>
+        <option value="$PROJECT_DIR$/model/pom.xml" />
+      </set>
     </option>
   </component>
   <component name="ProjectRootManager" version="2" languageLevel="JDK_21" project-jdk-name="21" project-jdk-type="JavaSDK">

@@ -1,8 +1,8 @@
-package com.spring.quickstart.chatModel;
+package com.spring.ai.core.model;
 
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatOptions;
-import com.spring.quickstart.modelApi.GetDashScopeApi;
+import com.spring.ai.core.modelApi.GetDashScopeApi;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Component;
 
@@ -38,7 +38,7 @@ public class GetDashScopeChatModel {
      *
      * @return
      */
-    public DashScopeChatModel getChatModel () {
+    public DashScopeChatModel getChatModel() {
         // 创建模型实例
         DashScopeChatModel build = DashScopeChatModel.builder()
                 .dashScopeApi(getDashScopeApi.getDashScopeApi(null))
@@ -49,8 +49,7 @@ public class GetDashScopeChatModel {
     /**
      * 高级配置 模型
      * <p>
-     * temperature：控制输出的随机性（0.0-1.0），
-     * 值越高越有创造性 maxTokens：限制单次响应的最大 token 数 topP：核采样，控制输出的多样性
+     * temperature：控制输出的随机性（0.0-1.0）， 值越高越有创造性 maxTokens：限制单次响应的最大 token 数 topP：核采样，控制输出的多样性
      *
      * @return
      */

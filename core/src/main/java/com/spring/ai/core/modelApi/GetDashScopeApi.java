@@ -1,4 +1,4 @@
-package com.spring.quickstart.modelApi;
+package com.spring.ai.core.modelApi;
 
 import com.alibaba.cloud.ai.dashscope.api.DashScopeApi;
 import org.apache.commons.lang3.StringUtils;
