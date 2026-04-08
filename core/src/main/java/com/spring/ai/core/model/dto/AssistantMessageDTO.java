@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import lombok.Data;
 import org.springframework.ai.chat.messages.AssistantMessage;
+
 import org.springframework.ai.chat.messages.AssistantMessage.Builder;
 import org.springframework.ai.chat.messages.AssistantMessage.ToolCall;
 import org.springframework.ai.content.Media;

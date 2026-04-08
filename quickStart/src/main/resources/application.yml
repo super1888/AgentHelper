@@ -12,4 +12,10 @@ spring:
       api-key: sk-5F4MCbuBCDQy4kPhTohZV7jt9A8wo8oCGUvn0C8VsmvdByVr
     deepseek:
       api-key: sk-417d47721a134518aa10a22666fa04b9
-
+    anthropic:
+      api-key: sk-417d47721a134518aa10a22666fa04b9
+    zhipuai:
+      api-key: sk-cNRM0AjYow5dAa5D2QHcZm857CSX048kgUnPr74bNHUpTjrQ
+  autoconfigure:
+    exclude:
+      - com.alibaba.cloud.ai.autoconfigure.dashscope.DashScopeAudioSpeechAutoConfiguration

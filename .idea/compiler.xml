@@ -9,6 +9,7 @@
         <outputRelativeToContentRoot value="true" />
         <module name="skills" />
         <module name="quickStart" />
+        <module name="core" />
         <module name="agent" />
         <module name="common" />
         <module name="hooks" />
@@ -26,6 +27,7 @@
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
       <module name="agent" options="-parameters" />
       <module name="common" options="-parameters" />
+      <module name="core" options="-parameters" />
       <module name="hooks" options="-parameters" />
       <module name="interceptors" options="-parameters" />
       <module name="model" options="-parameters" />

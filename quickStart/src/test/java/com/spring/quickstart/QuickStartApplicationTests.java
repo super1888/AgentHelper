@@ -18,10 +18,11 @@ import com.alibaba.cloud.ai.graph.skills.registry.classpath.ClasspathSkillRegist
 import com.alibaba.cloud.ai.graph.skills.registry.filesystem.FileSystemSkillRegistry;
 import com.alibaba.cloud.ai.graph.streaming.OutputType;
 import com.alibaba.cloud.ai.graph.streaming.StreamingOutput;
-import com.spring.ai.core.agent.Agent;
+import com.spring.ai.agent.domian.dto.AgentInfoDTO;
+import com.spring.ai.agent.factory.AgentFactory;
+import com.spring.ai.common.emun.AgentTypeEnum;
 import com.spring.ai.core.model.GetChatModel;
 import com.spring.ai.core.model.GetDashScopeChatModel;
-import com.spring.ai.core.model.dto.AgentInfoDTO;
 import com.spring.ai.core.model.dto.AssistantMessageDTO;
 import com.spring.ai.core.model.result.PoemOutputResult;
 import com.spring.ai.core.model.result.TextAnalysisResult;
@@ -68,7 +69,7 @@ import org.springframework.util.MimeTypeUtils;
 import reactor.core.publisher.Flux;
 
 
-@SpringBootTest
+@SpringBootTest(classes = QuickStartApplication.class)
 class QuickStartApplicationTests {
 
     private AgentInfoDTO getAgent() {
@@ -81,7 +82,7 @@ class QuickStartApplicationTests {
 
 
     @Resource
-    private Agent agent;
+    private AgentFactory agent;
 
     @Resource
     private GetDashScopeChatModel getDashScopeChatModel;
@@ -190,7 +191,7 @@ class QuickStartApplicationTests {
                 .instruction("你是一个学习助手，请根据用户的问题，使用工具回答用户的问题").build();
         ReactAgent reactAgent = null;
         try {
-            reactAgent = agent.customAgent(agentInfoDTO);
+            reactAgent = (ReactAgent)agent.createAgent(AgentTypeEnum.REACT,agentInfoDTO);
 
 
         } catch (Exception e) {
@@ -229,7 +230,7 @@ class QuickStartApplicationTests {
         AgentInfoDTO agentInfoDTO = getAgent();
         ReactAgent reactAgent = null;
         try {
-            reactAgent = agent.customAgent(agentInfoDTO);
+            reactAgent = (ReactAgent)agent.createAgent(AgentTypeEnum.REACT,agentInfoDTO);
 
 
         } catch (Exception e) {
@@ -271,7 +272,7 @@ class QuickStartApplicationTests {
         AgentInfoDTO agentInfoDTO = getAgent();
         ReactAgent reactAgent = null;
         try {
-            reactAgent = agent.customAgent(agentInfoDTO);
+            reactAgent = (ReactAgent)agent.createAgent(AgentTypeEnum.REACT,agentInfoDTO);
 
 
         } catch (Exception e) {
@@ -301,7 +302,7 @@ class QuickStartApplicationTests {
         ReactAgent reactAgent = null;
         try {
             agentInfoDTO.setOutputTypeClass(PoemOutputResult.class);
-            reactAgent = agent.customAgent(agentInfoDTO);
+            reactAgent = (ReactAgent)agent.createAgent(AgentTypeEnum.REACT,agentInfoDTO);
 
 
         } catch (Exception e) {
@@ -330,7 +331,7 @@ class QuickStartApplicationTests {
         ReactAgent reactAgent = null;
         try {
             agentInfoDTO.setOutputSchemaClass(TextAnalysisResult.class);
-            reactAgent = agent.customAgent(agentInfoDTO);
+            reactAgent = (ReactAgent)agent.createAgent(AgentTypeEnum.REACT,agentInfoDTO);
 
 
         } catch (Exception e) {
@@ -358,7 +359,7 @@ class QuickStartApplicationTests {
         ReactAgent reactAgent = null;
         try {
             agentInfoDTO.setIsMemory(true);
-            reactAgent = agent.customAgent(agentInfoDTO);
+            reactAgent = (ReactAgent)agent.createAgent(AgentTypeEnum.REACT,agentInfoDTO);
 
 
         } catch (Exception e) {
@@ -388,7 +389,7 @@ class QuickStartApplicationTests {
         ReactAgent reactAgent = null;
         try {
             agentInfoDTO.setHooks(Arrays.asList(new LoggingHook(), new MessageTrimmingHook()));
-            reactAgent = agent.customAgent(agentInfoDTO);
+            reactAgent = (ReactAgent)agent.createAgent(AgentTypeEnum.REACT,agentInfoDTO);
 
 
         } catch (Exception e) {
@@ -424,7 +425,7 @@ class QuickStartApplicationTests {
         // 1. 创建计数器，等待异步流执行完成
         CountDownLatch latch = new CountDownLatch(1);
         try {
-            ReactAgent reactAgent = agent.customAgent(agentInfoDTO);
+            ReactAgent reactAgent = (ReactAgent)agent.createAgent(AgentTypeEnum.REACT,agentInfoDTO);
             Flux<NodeOutput> stream = reactAgent.stream("ai开发的复杂任务");
             stream.subscribe(
                     output -> {
@@ -486,7 +487,7 @@ class QuickStartApplicationTests {
         // 1. 创建计数器，等待异步流执行完成
         CountDownLatch latch = new CountDownLatch(1);
         try {
-            ReactAgent reactAgent = agent.customAgent(agentInfoDTO);
+            ReactAgent reactAgent = (ReactAgent)agent.createAgent(AgentTypeEnum.REACT,agentInfoDTO);
             Flux<NodeOutput> stream = reactAgent.stream("我地址的天气如何");
             stream.subscribe(
                     output -> {
@@ -851,7 +852,7 @@ class QuickStartApplicationTests {
         ReactAgent reactAgent = null;
         try {
             agentInfoDTO.setHooks(Arrays.asList(new TextFilterHook()));
-            reactAgent = agent.customAgent(agentInfoDTO);
+            reactAgent = (ReactAgent)agent.createAgent(AgentTypeEnum.REACT,agentInfoDTO);
             AssistantMessage result = reactAgent.call("我要投诉");
             System.out.println(result.getText());
 
@@ -899,7 +900,7 @@ class QuickStartApplicationTests {
             agentInfoDTO.setMemorySaver(new MemorySaver());
             agentInfoDTO.setHooks(List.of(skillsHook, shellHook));
             agentInfoDTO.setTools(Collections.singletonList(PythonTool.createPythonToolCallback(PythonTool.DESCRIPTION)));
-            reactAgent = agent.customAgent(agentInfoDTO);
+            reactAgent = (ReactAgent)agent.createAgent(AgentTypeEnum.REACT,agentInfoDTO);
             // 5. 测试调用！
             // 测试1：让Agent介绍自己的技能
 //            AssistantMessage result1 = reactAgent.call("请介绍你拥有的所有技能");

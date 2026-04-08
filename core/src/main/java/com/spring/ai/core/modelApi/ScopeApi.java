@@ -2,7 +2,7 @@ package com.spring.ai.core.modelApi;
 
 import com.alibaba.cloud.ai.dashscope.api.DashScopeApi;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.ai.anthropic.api.AnthropicApi;
+//import org.springframework.ai.anthropic.api.AnthropicApi;
 import org.springframework.ai.deepseek.api.DeepSeekApi;
 import org.springframework.ai.openai.api.OpenAiApi;
 import org.springframework.ai.zhipuai.api.ZhiPuAiApi;
@@ -26,8 +26,8 @@ public class ScopeApi {
     @Value("${spring.ai.deepseek.api-key}")
     private String deepseekApiKey;
 
-    @Value("${spring.ai.anthropic.api-key}")
-    private String anthropicApi;
+//    @Value("${spring.ai.anthropic.api-key}")
+//    private String anthropicApi;
 
     @Value("${spring.ai.openai.api-key}")
     private String openAiApi;
@@ -64,16 +64,16 @@ public class ScopeApi {
                 .build();
     }
 
-    public AnthropicApi getAnthropicApi(String getApiKey) {
-
-        if (StringUtils.isBlank(getApiKey)) {
-            getApiKey = anthropicApi;
-        }
-        // 创建模型实例
-        return AnthropicApi.builder()
-                .apiKey(getApiKey)
-                .build();
-    }
+//    public AnthropicApi getAnthropicApi(String getApiKey) {
+//
+//        if (StringUtils.isBlank(getApiKey)) {
+//            getApiKey = anthropicApi;
+//        }
+//        // 创建模型实例
+//        return AnthropicApi.builder()
+//                .apiKey(getApiKey)
+//                .build();
+//    }
 
     public OpenAiApi getOpenAiApi(String getApiKey) {
 
@@ -92,7 +92,9 @@ public class ScopeApi {
             getApiKey = zhiPuAiApi; // 你的默认key
         }
         // 智谱官方没有builder，直接用构造方法！
-        return new ZhiPuAiApi(getApiKey);
+        return ZhiPuAiApi.builder()
+                .apiKey(getApiKey)
+                .build();
     }
 
 

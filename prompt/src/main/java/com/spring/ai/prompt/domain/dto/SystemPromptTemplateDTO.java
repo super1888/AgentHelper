@@ -8,7 +8,12 @@ import org.springframework.core.io.Resource;
 
 /**
  * SystemPromptTemplate 构建入参 DTO  用途：封装系统提示词模板的所有配置参数
- *
+ *  SystemPrompt 和 Instruction 的区别
+ * 特性	SystemPrompt	Instruction
+ * 作用位置	系统消息（SystemMessage）	用户消息（UserMessage）
+ * 用途	定义路由Agent的角色、职责和决策规则	提供具体的路由指导或额外上下文
+ * 优先级	更高，影响整体路由行为	作为补充信息
+ * 使用场景	需要详细定义路由规则和Agent职责时	需要提供特定场景的路由指导时
  * @author zhouqi
  * @version 初次构建
  * @since 2026/4/3

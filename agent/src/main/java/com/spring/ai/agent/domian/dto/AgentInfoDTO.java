@@ -1,4 +1,4 @@
-package com.spring.ai.core.model.dto;
+package com.spring.ai.agent.domian.dto;
 
 import com.alibaba.cloud.ai.graph.agent.hook.Hook;
 import com.alibaba.cloud.ai.graph.agent.interceptor.Interceptor;

@@ -1,26 +1,25 @@
-package com.spring.ai.core.model.dto;
+package com.spring.ai.agent.domian.dto;
 
 import com.alibaba.cloud.ai.graph.CompileConfig;
 import com.alibaba.cloud.ai.graph.agent.Agent;
 import com.alibaba.cloud.ai.graph.agent.hook.Hook;
 import com.alibaba.cloud.ai.graph.serializer.StateSerializer;
-
 import java.util.List;
 import java.util.concurrent.Executor;
-import java.util.function.Consumer;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
- * SequentialAgent 数据传输对象 用于封装创建SequentialAgent所需的所有参数，统一参数传递
+ * agentFLow 父类
  *
  * @author zhouqi
  * @version 初次构建
  * @since 2026/4/8
  */
+@NoArgsConstructor
 @Data
-@Builder
-public class SequentialAgentDTO {
+public class FlowAgentDTO {
 
     /**
      * 智能体名称（唯一标识/业务名称）
@@ -56,5 +55,4 @@ public class SequentialAgentDTO {
      * 钩子函数集合（智能体生命周期钩子，如初始化、执行前后回调）
      */
     private List<Hook> hooks;
-
 }

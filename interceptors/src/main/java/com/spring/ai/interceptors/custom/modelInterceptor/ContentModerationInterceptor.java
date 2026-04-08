@@ -32,7 +32,7 @@ public class ContentModerationInterceptor extends ModelInterceptor {
             String content = msg.getText().toLowerCase();
             for (String blocked : blockedWords) {
                 if (content.contains(blocked)) {
-                    return ModelResponse.of(AssistantMessage.builder().content("检测到不适当的内容，请修改您的输入").build());
+                    return ModelResponse.of(new AssistantMessage("检测到不适当的内容，请修改您的输入"));
                 }
             }
         }
