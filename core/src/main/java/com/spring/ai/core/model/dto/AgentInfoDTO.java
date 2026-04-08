@@ -31,6 +31,31 @@ public class AgentInfoDTO {
     private String agentName;
 
     /**
+     * agent 描述
+     */
+    private String description;
+
+    /**
+     * agent 返回key
+     */
+    private String outputKey;
+
+    /**
+     * agent 指导介绍
+     */
+    private String instruction;
+
+    /**
+     * 控制是否在消息历史中包含中间推理
+     */
+    private Boolean returnReasoningContents ;
+
+    /**
+     * 包含上一个Agent的推理内容
+     */
+    private Boolean includeContents;
+
+    /**
      * 大模型配置
      */
     private ChatModel model;
@@ -45,11 +70,6 @@ public class AgentInfoDTO {
      * 拦截器集合
      */
     private List<Interceptor> interceptors;
-
-    /**
-     * 添加角色描述
-     */
-    private String instruction;
 
     /**
      * 是否记忆

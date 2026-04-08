@@ -8,4 +8,6 @@ spring:
       api-key: sk-417d47721a134518aa10a22666fa04b9
     anthropic:
       api-key: sk-417d47721a134518aa10a22666fa04b9
+    zhipuai:
+      api-key: sk-cNRM0AjYow5dAa5D2QHcZm857CSX048kgUnPr74bNHUpTjrQ
 

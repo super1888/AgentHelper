@@ -1,7 +1,6 @@
 package com.spring.ai.core.config;
 
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
-import org.springframework.ai.anthropic.AnthropicChatModel;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.deepseek.DeepSeekChatModel;
 import org.springframework.ai.openai.OpenAiChatModel;

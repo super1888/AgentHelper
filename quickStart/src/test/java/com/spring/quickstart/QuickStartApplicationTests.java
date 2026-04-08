@@ -92,7 +92,11 @@ class QuickStartApplicationTests {
 
     @Test
     void Agent1() {
-        ReactAgent reactAgent = agent.creatAgent();
+        ReactAgent reactAgent = ReactAgent.builder()
+                .name("Agent")
+                .model(getDashScopeChatModel.getModel())
+                .systemPrompt("你是一个有帮助的助手")
+                .build();
 
         try {
             // 使用字符串
@@ -122,7 +126,11 @@ class QuickStartApplicationTests {
 
     @Test
     void Agent2() {
-        ReactAgent reactAgent = agent.creatAgentTool();
+
+        ReactAgent reactAgent = ReactAgent.builder()
+                .name("search_agent")
+                .model(getDashScopeChatModel.getSeniorModel())
+                .build();
         try {
             // 使用字符串
             AssistantMessage response1 = reactAgent.call("合肥的天气如何");
@@ -143,7 +151,23 @@ class QuickStartApplicationTests {
 
     @Test
     void Agent3() {
-        ReactAgent reactAgent = agent.creatAgentPrompt();
+        String instruction = """
+                你是一个经验丰富的JavaAI软件开发工程师 面试经验丰富。
+
+                在回答问题时，请：
+                1. 首先理解用户的核心需求
+                2. 结合目前发展趋势常见问题
+                3. 提供清晰的建议和理由
+                4. 如果需要更多信息，主动询问
+
+                保持专业、友好的语气。
+                """;
+
+        ReactAgent reactAgent = ReactAgent.builder()
+                .name("search_agent")
+                .model(getDashScopeChatModel.getSeniorModel())
+                .instruction(instruction)
+                .build();
         try {
             // 使用字符串
             AssistantMessage response1 = reactAgent.call("你觉得javaAI工程师面试会问什么");

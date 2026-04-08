@@ -5,6 +5,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.ai.anthropic.api.AnthropicApi;
 import org.springframework.ai.deepseek.api.DeepSeekApi;
 import org.springframework.ai.openai.api.OpenAiApi;
+import org.springframework.ai.zhipuai.api.ZhiPuAiApi;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -24,10 +25,15 @@ public class ScopeApi {
 
     @Value("${spring.ai.deepseek.api-key}")
     private String deepseekApiKey;
+
     @Value("${spring.ai.anthropic.api-key}")
     private String anthropicApi;
+
     @Value("${spring.ai.openai.api-key}")
     private String openAiApi;
+
+    @Value("${spring.ai.zhipuai.api-key}")
+    private String zhiPuAiApi;
 
     /**
      * 获取DashScopeApi实例的方法
@@ -78,6 +84,15 @@ public class ScopeApi {
         return OpenAiApi.builder()
                 .apiKey(getApiKey)
                 .build();
+    }
+
+    public ZhiPuAiApi getZhiPuAiApi(String getApiKey) {
+        // 完全和你原来逻辑一样：为空就用默认key
+        if (StringUtils.isBlank(getApiKey)) {
+            getApiKey = zhiPuAiApi; // 你的默认key
+        }
+        // 智谱官方没有builder，直接用构造方法！
+        return new ZhiPuAiApi(getApiKey);
     }
 
 
