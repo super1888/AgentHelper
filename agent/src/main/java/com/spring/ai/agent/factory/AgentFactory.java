@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.ApplicationContext;
@@ -23,7 +24,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class AgentFactory implements InitializingBean, ApplicationContextAware {
 
-    private Map<AgentTypeEnum, AgentCreator> creatorMap = new ConcurrentHashMap<>(128);
+    private final Map<AgentTypeEnum, AgentCreator> creatorMap = new ConcurrentHashMap<>();
     private ApplicationContext appContext;
 
 
@@ -45,7 +46,7 @@ public class AgentFactory implements InitializingBean, ApplicationContextAware {
     }
 
     @Override
-    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+    public void setApplicationContext(@NotNull ApplicationContext applicationContext) throws BeansException {
         appContext = applicationContext;
     }
 }

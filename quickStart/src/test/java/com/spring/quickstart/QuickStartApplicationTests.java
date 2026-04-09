@@ -1,10 +1,16 @@
 package com.spring.quickstart;
 
 
+import com.alibaba.cloud.ai.graph.CompileConfig;
+import com.alibaba.cloud.ai.graph.CompiledGraph;
+import com.alibaba.cloud.ai.graph.KeyStrategy;
+import com.alibaba.cloud.ai.graph.KeyStrategyFactory;
 import com.alibaba.cloud.ai.graph.NodeOutput;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.RunnableConfig;
+import com.alibaba.cloud.ai.graph.StateGraph;
 import com.alibaba.cloud.ai.graph.action.InterruptionMetadata;
+import com.alibaba.cloud.ai.graph.agent.AgentTool;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import com.alibaba.cloud.ai.graph.agent.hook.hip.HumanInTheLoopHook;
 import com.alibaba.cloud.ai.graph.agent.hook.hip.ToolConfig;
@@ -13,9 +19,11 @@ import com.alibaba.cloud.ai.graph.agent.hook.skills.SkillsAgentHook;
 import com.alibaba.cloud.ai.graph.agent.tools.ShellTool2;
 import com.alibaba.cloud.ai.graph.checkpoint.savers.MemorySaver;
 import com.alibaba.cloud.ai.graph.exception.GraphRunnerException;
+import com.alibaba.cloud.ai.graph.exception.GraphStateException;
 import com.alibaba.cloud.ai.graph.skills.registry.SkillRegistry;
 import com.alibaba.cloud.ai.graph.skills.registry.classpath.ClasspathSkillRegistry;
 import com.alibaba.cloud.ai.graph.skills.registry.filesystem.FileSystemSkillRegistry;
+import com.alibaba.cloud.ai.graph.state.strategy.ReplaceStrategy;
 import com.alibaba.cloud.ai.graph.streaming.OutputType;
 import com.alibaba.cloud.ai.graph.streaming.StreamingOutput;
 import com.spring.ai.agent.domian.dto.AgentInfoDTO;
@@ -42,6 +50,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -191,7 +200,7 @@ class QuickStartApplicationTests {
                 .instruction("你是一个学习助手，请根据用户的问题，使用工具回答用户的问题").build();
         ReactAgent reactAgent = null;
         try {
-            reactAgent = (ReactAgent)agent.createAgent(AgentTypeEnum.REACT,agentInfoDTO);
+            reactAgent = (ReactAgent) agent.createAgent(AgentTypeEnum.REACT, agentInfoDTO);
 
 
         } catch (Exception e) {
@@ -230,7 +239,7 @@ class QuickStartApplicationTests {
         AgentInfoDTO agentInfoDTO = getAgent();
         ReactAgent reactAgent = null;
         try {
-            reactAgent = (ReactAgent)agent.createAgent(AgentTypeEnum.REACT,agentInfoDTO);
+            reactAgent = (ReactAgent) agent.createAgent(AgentTypeEnum.REACT, agentInfoDTO);
 
 
         } catch (Exception e) {
@@ -272,7 +281,7 @@ class QuickStartApplicationTests {
         AgentInfoDTO agentInfoDTO = getAgent();
         ReactAgent reactAgent = null;
         try {
-            reactAgent = (ReactAgent)agent.createAgent(AgentTypeEnum.REACT,agentInfoDTO);
+            reactAgent = (ReactAgent) agent.createAgent(AgentTypeEnum.REACT, agentInfoDTO);
 
 
         } catch (Exception e) {
@@ -302,7 +311,7 @@ class QuickStartApplicationTests {
         ReactAgent reactAgent = null;
         try {
             agentInfoDTO.setOutputTypeClass(PoemOutputResult.class);
-            reactAgent = (ReactAgent)agent.createAgent(AgentTypeEnum.REACT,agentInfoDTO);
+            reactAgent = (ReactAgent) agent.createAgent(AgentTypeEnum.REACT, agentInfoDTO);
 
 
         } catch (Exception e) {
@@ -331,7 +340,7 @@ class QuickStartApplicationTests {
         ReactAgent reactAgent = null;
         try {
             agentInfoDTO.setOutputSchemaClass(TextAnalysisResult.class);
-            reactAgent = (ReactAgent)agent.createAgent(AgentTypeEnum.REACT,agentInfoDTO);
+            reactAgent = (ReactAgent) agent.createAgent(AgentTypeEnum.REACT, agentInfoDTO);
 
 
         } catch (Exception e) {
@@ -359,7 +368,7 @@ class QuickStartApplicationTests {
         ReactAgent reactAgent = null;
         try {
             agentInfoDTO.setIsMemory(true);
-            reactAgent = (ReactAgent)agent.createAgent(AgentTypeEnum.REACT,agentInfoDTO);
+            reactAgent = (ReactAgent) agent.createAgent(AgentTypeEnum.REACT, agentInfoDTO);
 
 
         } catch (Exception e) {
@@ -389,7 +398,7 @@ class QuickStartApplicationTests {
         ReactAgent reactAgent = null;
         try {
             agentInfoDTO.setHooks(Arrays.asList(new LoggingHook(), new MessageTrimmingHook()));
-            reactAgent = (ReactAgent)agent.createAgent(AgentTypeEnum.REACT,agentInfoDTO);
+            reactAgent = (ReactAgent) agent.createAgent(AgentTypeEnum.REACT, agentInfoDTO);
 
 
         } catch (Exception e) {
@@ -425,7 +434,7 @@ class QuickStartApplicationTests {
         // 1. 创建计数器，等待异步流执行完成
         CountDownLatch latch = new CountDownLatch(1);
         try {
-            ReactAgent reactAgent = (ReactAgent)agent.createAgent(AgentTypeEnum.REACT,agentInfoDTO);
+            ReactAgent reactAgent = (ReactAgent) agent.createAgent(AgentTypeEnum.REACT, agentInfoDTO);
             Flux<NodeOutput> stream = reactAgent.stream("ai开发的复杂任务");
             stream.subscribe(
                     output -> {
@@ -487,7 +496,7 @@ class QuickStartApplicationTests {
         // 1. 创建计数器，等待异步流执行完成
         CountDownLatch latch = new CountDownLatch(1);
         try {
-            ReactAgent reactAgent = (ReactAgent)agent.createAgent(AgentTypeEnum.REACT,agentInfoDTO);
+            ReactAgent reactAgent = (ReactAgent) agent.createAgent(AgentTypeEnum.REACT, agentInfoDTO);
             Flux<NodeOutput> stream = reactAgent.stream("我地址的天气如何");
             stream.subscribe(
                     output -> {
@@ -852,7 +861,7 @@ class QuickStartApplicationTests {
         ReactAgent reactAgent = null;
         try {
             agentInfoDTO.setHooks(Arrays.asList(new TextFilterHook()));
-            reactAgent = (ReactAgent)agent.createAgent(AgentTypeEnum.REACT,agentInfoDTO);
+            reactAgent = (ReactAgent) agent.createAgent(AgentTypeEnum.REACT, agentInfoDTO);
             AssistantMessage result = reactAgent.call("我要投诉");
             System.out.println(result.getText());
 
@@ -900,7 +909,7 @@ class QuickStartApplicationTests {
             agentInfoDTO.setMemorySaver(new MemorySaver());
             agentInfoDTO.setHooks(List.of(skillsHook, shellHook));
             agentInfoDTO.setTools(Collections.singletonList(PythonTool.createPythonToolCallback(PythonTool.DESCRIPTION)));
-            reactAgent = (ReactAgent)agent.createAgent(AgentTypeEnum.REACT,agentInfoDTO);
+            reactAgent = (ReactAgent) agent.createAgent(AgentTypeEnum.REACT, agentInfoDTO);
             // 5. 测试调用！
             // 测试1：让Agent介绍自己的技能
 //            AssistantMessage result1 = reactAgent.call("请介绍你拥有的所有技能");
@@ -1007,6 +1016,268 @@ class QuickStartApplicationTests {
                 System.out.println("执行完成");
                 System.out.println("最终结果: " + finalResult.get());
             }
+        }
+    }
+
+    @Test
+    void agent26() {
+        // 定义子Agent的输入Schema（标准 JSON Schema 格式）
+        String writerInputSchema = """
+                {
+                    "type": "object",
+                    "properties": {
+                        "topic": {
+                            "type": "string"
+                        },
+                        "wordCount": {
+                            "type": "integer"
+                        },
+                        "style": {
+                            "type": "string"
+                        }
+                    },
+                    "required": ["topic", "wordCount", "style"]
+                }
+                """;
+        ChatModel chatModel = getChatModel.creatDashScopeChatModel();
+        ReactAgent writerAgent = ReactAgent.builder()
+                .name("structured_writer_agent")
+                .model(chatModel)
+                .description("根据结构化输入写文章")
+                .instruction("你是一个专业作家。请严格按照输入的主题、字数和风格要求创作文章。")
+                .inputSchema(writerInputSchema)
+                .build();
+
+        ReactAgent coordinatorAgent = ReactAgent.builder()
+                .name("coordinator_agent")
+                .model(chatModel)
+                .instruction("你需要调用写作工具来完成用户的写作请求。请根据用户需求，使用结构化的参数调用写作工具。")
+                .tools(AgentTool.getFunctionToolCallback(writerAgent))
+                .build();
+
+        try {
+            Optional<OverAllState> result = coordinatorAgent.invoke("请写一篇关于春天的散文，大约150字");
+            if (result.isPresent()) {
+                OverAllState state = result.get();
+
+                // 访问消息历史
+                Optional<Object> messages = state.value("messages");
+                List<Message> messageList = (List<Message>) messages.get();
+                messageList.forEach(System.out::println);
+
+                // 访问自定义状态
+                Optional<Object> customData = state.value("custom_key");
+
+                System.out.println("完整状态：" + state);
+            }
+        } catch (GraphRunnerException e) {
+            throw new RuntimeException(e);
+
+
+        }
+    }
+
+    @Test
+    void agent27() {
+        ChatModel chatModel = getChatModel.creatDashScopeChatModel();
+        // 创建写作Agent
+        ReactAgent writerAgent = ReactAgent.builder()
+                .name("writer_agent")
+                .model(chatModel)
+                .description("专门负责创作文章和内容生成")
+                .instruction("你是一个专业作家，擅长各类文章创作。")
+                .build();
+
+        // 创建翻译Agent
+        ReactAgent translatorAgent = ReactAgent.builder()
+                .name("translator_agent")
+                .model(chatModel)
+                .description("专门负责文本翻译工作")
+                .instruction("你是一个专业翻译，能够准确翻译多种语言。")
+                .build();
+
+// 创建总结Agent
+        ReactAgent summarizerAgent = ReactAgent.builder()
+                .name("summarizer_agent")
+                .model(chatModel)
+                .description("专门负责内容总结和提炼")
+                .instruction("你是一个内容总结专家，擅长提炼关键信息。")
+                .build();
+
+// 创建主Agent，集成多个工具
+        ReactAgent multiToolAgent = ReactAgent.builder()
+                .name("multi_tool_coordinator")
+                .model(chatModel)
+                .instruction("你可以访问多个专业工具：写作、翻译和总结。" +
+                        "根据用户需求选择合适的工具来完成任务。")
+                .tools(
+                        AgentTool.getFunctionToolCallback(writerAgent),
+                        AgentTool.getFunctionToolCallback(translatorAgent),
+                        AgentTool.getFunctionToolCallback(summarizerAgent)
+                )
+                .build();
+        try {
+            Optional<OverAllState> result = multiToolAgent.invoke("请写一篇关于AI的文章，然后翻译成英文，最后给出摘要");
+            if (result.isPresent()) {
+                OverAllState state = result.get();
+
+                // 访问消息历史
+                Optional<Object> messages = state.value("messages");
+                List<Message> messageList = (List<Message>) messages.get();
+                messageList.forEach(System.out::println);
+
+                // 访问自定义状态
+                Optional<Object> customData = state.value("custom_key");
+
+                System.out.println("完整状态：" + state);
+            }
+        } catch (GraphRunnerException e) {
+            throw new RuntimeException(e);
+
+
+        }
+    }
+
+    @Test
+    void agent28() {
+        ChatModel chatModel = getChatModel.creatDashScopeChatModel();
+        // 创建专门的数据分析 Agent
+        ReactAgent analysisAgent = ReactAgent.builder()
+                .name("data_analyzer")
+                .model(chatModel)
+                .instruction("你是一个数据分析专家，负责分析数据并提供洞察，请分析以下输入数据： {input}")
+                .outputKey("analysis_result")
+                .build();
+
+        // 创建报告生成 Agent
+        ReactAgent reportAgent = ReactAgent.builder()
+                .name("report_generator")
+                .model(chatModel)
+                .instruction("你是一个报告生成专家，负责将分析结果 {analysis_result} 转化为专业报告")
+                .outputKey("final_report")
+                .build();
+
+        // 定义状态管理策略
+        KeyStrategyFactory keyStrategyFactory = () -> {
+            HashMap<String, KeyStrategy> strategies = new HashMap<>();
+            strategies.put("input", new ReplaceStrategy());
+            return strategies;
+        };
+
+        // 构建包含 Agent 的工作流
+        StateGraph workflow = new StateGraph(keyStrategyFactory);
+
+        // 将 Agent 作为 SubGraph Node 添加
+        try {
+            workflow.addNode(analysisAgent.name(), analysisAgent.asNode(
+                    true,                     // includeContents: 是否传递父图的消息历史
+                    false                     // returnReasoningContents: 是否返回推理过程
+            ));
+
+            workflow.addNode(reportAgent.name(), reportAgent.asNode(
+                    true,
+                    false
+            ));
+
+            // 定义流程
+            workflow.addEdge(StateGraph.START, analysisAgent.name());
+            workflow.addEdge(analysisAgent.name(), reportAgent.name());
+            workflow.addEdge(reportAgent.name(), StateGraph.END);
+
+            // 编译并执行工作流
+            CompiledGraph compiledGraph = workflow.compile(CompileConfig.builder().build());
+            NodeOutput lastOutput = compiledGraph.stream(
+                            Map.of("input", "2025年全年销量100亿，毛利率 23%，净利率 13%。2024年全年销量80亿，毛利率 20%，净利率 8%。"))
+                    .doOnNext(output -> {
+                        if (output instanceof StreamingOutput<?> streamingOutput) {
+                            System.out.println("Output from node " + streamingOutput.node() + ": " + streamingOutput.message().getText());
+                        }
+                    })
+                    .blockLast();
+
+            System.out.println(" 最终结果，包含所有节点状态： " + lastOutput.state().data());
+        } catch (GraphStateException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Test
+    void agent29() {
+        ChatModel chatModel = getChatModel.creatDashScopeChatModel();
+        // 1. 创建信息收集 Agent
+        ReactAgent researchAgent = ReactAgent.builder()
+                .name("researcher")
+                .model(chatModel)
+                .instruction("你是一个研究专家，负责收集和整理相关信息，请研究主题： {input}")
+                .outputKey("research_data")
+                .enableLogging(true)
+                .build();
+
+        // 2. 创建数据分析 Agent
+        ReactAgent analysisAgent = ReactAgent.builder()
+                .name("analyst")
+                .model(chatModel)
+                .instruction("你是一个分析专家，负责深入分析关于主题  {input}  的研究数据。数据如下： { research_data} ")
+                .outputKey("analysis_result")
+                .enableLogging(true)
+                .build();
+
+        // 3. 创建总结 Agent
+        ReactAgent summaryAgent = ReactAgent.builder()
+                .name("summarizer")
+                .model(chatModel)
+                .instruction("你是一个总结专家，负责将分析结果提炼为简洁的结论，结果： {analysis_result} ")
+                .outputKey("final_summary")
+                .enableLogging(true)
+                .build();
+
+        // 定义状态管理策略
+        KeyStrategyFactory keyStrategyFactory = () -> {
+            HashMap<String, KeyStrategy> strategies = new HashMap<>();
+            strategies.put("input", new ReplaceStrategy());
+            return strategies;
+        };
+
+        // 4. 构建工作流
+        StateGraph workflow = new StateGraph(keyStrategyFactory);
+
+        // 添加 Agent 节点
+        try {
+            workflow.addNode(researchAgent.name(), researchAgent.asNode(
+                    true,    // 包含历史消息
+                    false    // 不返回推理过程
+            ));
+
+            workflow.addNode(analysisAgent.name(), analysisAgent.asNode(
+                    true,
+                    false
+            ));
+
+            workflow.addNode(summaryAgent.name(), summaryAgent.asNode(
+                    true,
+                    true     // 返回完整推理过程
+            ));
+
+            // 定义顺序执行流程
+            workflow.addEdge(StateGraph.START, researchAgent.name());
+            workflow.addEdge(researchAgent.name(), analysisAgent.name());
+            workflow.addEdge(analysisAgent.name(), summaryAgent.name());
+            workflow.addEdge(summaryAgent.name(), StateGraph.END);
+
+            // 编译并执行工作流
+            CompiledGraph compiledGraph = workflow.compile(CompileConfig.builder().build());
+            NodeOutput finalOutput = compiledGraph.stream(Map.of("input", "帮我做一份关于AI Agent的研究报告"))
+                    .doOnNext(output -> {
+                        if (output instanceof StreamingOutput<?> streamingOutput) {
+                            System.out.println("Output from node " + streamingOutput.node() + ": " + streamingOutput.message().getText());
+                        }
+                    })
+                    .blockLast();
+
+            System.out.println("多Agent研究工作流构建完成");
+            System.out.println("最终输出: " + finalOutput.state().value("final_summary").orElse("无"));
+        } catch (GraphStateException e) {
+            throw new RuntimeException(e);
         }
     }
 

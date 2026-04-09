@@ -90,6 +90,14 @@ public class CustomAgent extends AbstractAgent implements AgentCreator {
             builder.outputSchema(agentInfoDTO.getOutputSchemaJson());
         }
 
+        if (agentInfoDTO.getInputSchemaClass() != null) {
+            BeanOutputConverter<?> inputConverter = new BeanOutputConverter<>(agentInfoDTO.getInputSchemaClass());
+            String format = inputConverter.getFormat();
+            builder.inputSchema(format);
+        } else if (StringUtils.hasText(agentInfoDTO.getInputSchemaJson())) {
+            builder.inputSchema(agentInfoDTO.getInputSchemaJson());
+        }
+
         if (agentInfoDTO.getIsMemory() != null && agentInfoDTO.getIsMemory()) {
             builder.saver(agentInfoDTO.getMemorySaver());
         }

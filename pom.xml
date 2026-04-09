@@ -27,6 +27,7 @@
         <module>user</module>
         <module>agent</module>
         <module>core</module>
+        <module>vectorStore</module>
     </modules>
 
     <properties>
@@ -128,7 +129,6 @@
             </dependency>
         </dependencies>
     </dependencyManagement>
-
 
 
     <!-- 构建配置（可选，确保打包正常） -->

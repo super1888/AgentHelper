@@ -103,6 +103,16 @@ public class AgentInfoDTO {
      */
     private String outputSchemaJson;
 
+    /**
+     * 特定格式返回输出inputSchema 对象转json
+     */
+    private Class<?> inputSchemaClass;
+
+    /**
+     * 指定JSON模式输入
+     */
+    private String inputSchemaJson;
+
 
     /**
      * 开启日志
