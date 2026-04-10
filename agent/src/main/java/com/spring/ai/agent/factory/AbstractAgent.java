@@ -1,15 +1,15 @@
 package com.spring.ai.agent.factory;
 
-import com.spring.ai.common.emun.AgentTypeEnum;
+import com.spring.ai.common.enums.AgentTypeEnum;
+import com.spring.ai.common.enums.ErrorCodeEnum;
+import com.spring.ai.common.exception.BusinessException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
- * 抽象工厂 存储重复数据
+ * Agent 创建器抽象父类。
  *
- * @author zhouqi
- * @version 初次构建
- * @since 2026/4/8
+ * <p>统一收敛默认行为，避免子类未实现时返回 null，降低调用方排查成本。</p>
  */
 @Component
 @Slf4j
@@ -17,12 +17,12 @@ public abstract class AbstractAgent implements AgentCreator {
 
     @Override
     public AgentTypeEnum getAgentType() {
-        return null;
+        throw new UnsupportedOperationException("子类必须实现 getAgentType()");
     }
 
     @Override
-    public Object createAgent(Object dto) throws Exception {
-        log.info("未创建Agent！");
-        return null;
+    public Object createAgent(Object dto) {
+        log.warn("Agent 创建器尚未实现，creator={}", this.getClass().getName());
+        throw new BusinessException(ErrorCodeEnum.AGENT_CONFIG_ERROR, "当前 Agent 创建器尚未实现");
     }
 }

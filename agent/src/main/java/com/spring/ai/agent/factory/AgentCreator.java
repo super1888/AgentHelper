@@ -1,24 +1,26 @@
 package com.spring.ai.agent.factory;
 
-import com.spring.ai.common.emun.AgentTypeEnum;
+import com.spring.ai.common.enums.AgentTypeEnum;
 
 /**
- * agent工厂父类
+ * Agent 创建器接口。
  *
- * @author zhouqi
- * @version 初次构建
- * @since 2026/4/8
+ * <p>不同类型的 Agent 通过各自的创建器实现统一接入 AgentFactory。</p>
  */
 public interface AgentCreator {
 
     /**
-     * 当前Creator支持的Agent类型
+     * 获取当前创建器支持的 Agent 类型。
+     *
+     * @return Agent 类型
      */
     AgentTypeEnum getAgentType();
 
     /**
-     * 创建Agent
+     * 根据传入 DTO 创建 Agent 实例。
+     *
+     * @param dto Agent 构建参数
+     * @return 创建完成的 Agent 对象
      */
-    Object createAgent(Object dto) throws Exception;
-
+    Object createAgent(Object dto);
 }

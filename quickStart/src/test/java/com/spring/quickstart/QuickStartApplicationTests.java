@@ -28,7 +28,7 @@ import com.alibaba.cloud.ai.graph.streaming.OutputType;
 import com.alibaba.cloud.ai.graph.streaming.StreamingOutput;
 import com.spring.ai.agent.domian.dto.AgentInfoDTO;
 import com.spring.ai.agent.factory.AgentFactory;
-import com.spring.ai.common.emun.AgentTypeEnum;
+import com.spring.ai.common.enums.AgentTypeEnum;
 import com.spring.ai.core.model.GetChatModel;
 import com.spring.ai.core.model.GetDashScopeChatModel;
 import com.spring.ai.core.model.dto.AssistantMessageDTO;

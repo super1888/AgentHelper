@@ -1,4 +1,4 @@
-package com.spring.ai.common.emun;
+package com.spring.ai.common.enums;
 
 /**
  * class information

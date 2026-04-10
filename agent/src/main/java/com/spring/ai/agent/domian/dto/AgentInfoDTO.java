@@ -10,119 +10,112 @@ import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.tool.ToolCallback;
 
 /**
- * class information
+ * Agent 通用配置 DTO。
  *
- * @author zhouqi
- * @version 初次构建
- * @since 2026/3/24
+ * <p>用于承载创建 ReactAgent 时所需的大部分参数，是当前项目中最核心的 Agent
+ * 配置对象之一。</p>
  */
 @Builder
 @Data
 public class AgentInfoDTO {
 
     /**
-     * agent id
+     * Agent 主键。
      */
     private Long agentId;
 
     /**
-     * agent name
+     * Agent 名称。
      */
     private String agentName;
 
     /**
-     * agent 描述
+     * Agent 描述。
      */
     private String description;
 
     /**
-     * agent 返回key
+     * Agent 输出结果在状态中的保存 key。
      */
     private String outputKey;
 
     /**
-     * agent 指导介绍
+     * Agent 系统指令。
      */
     private String instruction;
 
     /**
-     * 控制是否在消息历史中包含中间推理
+     * 是否在上下文中保留中间推理内容。
      */
-    private Boolean returnReasoningContents ;
+    private Boolean returnReasoningContents;
 
     /**
-     * 包含上一个Agent的推理内容
+     * 是否包含上游 Agent 的输出内容。
      */
     private Boolean includeContents;
 
     /**
-     * 大模型配置
+     * 所使用的大模型实例。
      */
     private ChatModel model;
 
     /**
-     * 工具集合类
+     * 基于方法扫描注册的工具对象集合。
      */
     private List<Object> methodTools;
 
-
     /**
-     * 拦截器集合
+     * 拦截器集合。
      */
     private List<Interceptor> interceptors;
 
     /**
-     * 是否记忆
+     * 是否开启记忆能力。
      */
     private Boolean isMemory;
 
     /**
-     * 记忆对象
+     * 记忆保存器。
      */
     private MemorySaver memorySaver;
 
-
     /**
-     * 钩子
+     * Hook 集合。
      */
     private List<Hook> hooks;
 
-
     /**
-     * 特定格式返回输出
+     * 指定结构化输出类型。
      */
     private Class<?> outputTypeClass;
 
     /**
-     * 特定格式返回输出outputSchema 对象转json
+     * 指定输出 Schema 对应的 Java 类。
      */
     private Class<?> outputSchemaClass;
 
     /**
-     * 指定JSON模式返回
+     * 指定输出 Schema 的 JSON 字符串。
      */
     private String outputSchemaJson;
 
     /**
-     * 特定格式返回输出inputSchema 对象转json
+     * 指定输入 Schema 对应的 Java 类。
      */
     private Class<?> inputSchemaClass;
 
     /**
-     * 指定JSON模式输入
+     * 指定输入 Schema 的 JSON 字符串。
      */
     private String inputSchemaJson;
 
-
     /**
-     * 开启日志
+     * 是否开启 Agent 日志。
      */
     private Boolean enableLogging;
 
     /**
-     * 工具集合类
+     * 直接注册的 ToolCallback 集合。
      */
     private List<ToolCallback> tools;
-
-
 }

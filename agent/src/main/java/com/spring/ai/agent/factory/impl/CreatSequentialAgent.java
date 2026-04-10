@@ -5,7 +5,7 @@ import com.alibaba.cloud.ai.graph.agent.flow.agent.SequentialAgent.SequentialAge
 import com.spring.ai.agent.domian.dto.SequentialAgentDTO;
 import com.spring.ai.agent.factory.AbstractAgent;
 import com.spring.ai.agent.factory.AgentCreator;
-import com.spring.ai.common.emun.AgentTypeEnum;
+import com.spring.ai.common.enums.AgentTypeEnum;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -27,7 +27,7 @@ public class CreatSequentialAgent extends AbstractAgent implements AgentCreator 
     }
 
     @Override
-    public Object createAgent(Object dto) throws Exception {
+    public Object createAgent(Object dto) {
         SequentialAgentDTO agentInfoDTO = (SequentialAgentDTO) dto;
         return creatSequentialAgent(agentInfoDTO);
     }

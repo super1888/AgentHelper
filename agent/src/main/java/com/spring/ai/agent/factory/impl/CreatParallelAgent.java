@@ -1,13 +1,10 @@
 package com.spring.ai.agent.factory.impl;
 
 import com.alibaba.cloud.ai.graph.agent.flow.agent.ParallelAgent;
-import com.alibaba.cloud.ai.graph.agent.flow.agent.SequentialAgent;
-import com.alibaba.cloud.ai.graph.agent.flow.agent.SequentialAgent.SequentialAgentBuilder;
 import com.spring.ai.agent.domian.dto.ParallelAgentDTO;
-import com.spring.ai.agent.domian.dto.SequentialAgentDTO;
 import com.spring.ai.agent.factory.AbstractAgent;
 import com.spring.ai.agent.factory.AgentCreator;
-import com.spring.ai.common.emun.AgentTypeEnum;
+import com.spring.ai.common.enums.AgentTypeEnum;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -29,7 +26,7 @@ public class CreatParallelAgent extends AbstractAgent implements AgentCreator {
     }
 
     @Override
-    public Object createAgent(Object dto) throws Exception {
+    public Object createAgent(Object dto) {
         ParallelAgentDTO agentInfoDTO = (ParallelAgentDTO) dto;
         return creatParallelAgent(agentInfoDTO);
     }

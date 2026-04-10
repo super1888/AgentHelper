@@ -15,6 +15,7 @@ import org.springframework.web.multipart.MultipartFile;
 /**
  * Office 文档读取器。
  * 基于阿里云 POI 文档读取器解析 Word、PPT、Excel 等 Office 文件。
+ * @author zhuoqi
  */
 @Component
 public class PoiMultipartDocumentReader implements MultipartDocumentReader {
