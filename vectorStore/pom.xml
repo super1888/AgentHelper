@@ -1,44 +1,52 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-	<modelVersion>4.0.0</modelVersion>
-	<parent>
-		<groupId>com.spring.ai</groupId>
-		<artifactId>springAi</artifactId>
-		<version>1.0-SNAPSHOT</version>
-	</parent>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
 
-	<artifactId>vectorStore</artifactId>
-	<version>1.0-SNAPSHOT</version>
-	<name>vectorStore</name>
-	<description>向量存储模块</description>
+    <parent>
+        <groupId>com.spring.ai</groupId>
+        <artifactId>springAi</artifactId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
 
-	<properties>
-		<java.version>21</java.version>
-	</properties>
-	<dependencies>
+    <artifactId>vectorStore</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <name>vectorStore</name>
+    <description>向量存储模块</description>
 
-		<!-- 向量存储 Chroma（轻量，不用装服务，开发首选） -->
-<!--		<dependency>-->
-<!--			<groupId>org.springframework.ai</groupId>-->
-<!--			<artifactId>spring-ai-starter-vector-store-chroma</artifactId>-->
-<!--		</dependency>-->
+    <properties>
+        <java.version>21</java.version>
+        <swagger.annotations.version>2.2.28</swagger.annotations.version>
+    </properties>
 
-		<dependency>
-			<groupId>org.springframework.ai</groupId>
-			<artifactId>spring-ai-starter-vector-store-redis</artifactId>
-		</dependency>
+    <dependencies>
+        <!-- Redis 向量存储实现 -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-vector-store-redis</artifactId>
+        </dependency>
 
+        <!-- 阿里云 POI 文档读取器，支持 Office 文档解析 -->
+        <dependency>
+            <groupId>com.alibaba.cloud.ai</groupId>
+            <artifactId>spring-ai-alibaba-starter-document-reader-poi</artifactId>
+        </dependency>
 
-		<!--本地包-->
-		<dependency>
-			<groupId>com.spring.ai</groupId>
-			<artifactId>common</artifactId>
-			<version>1.0-SNAPSHOT</version>
-			<scope>compile</scope>
-		</dependency>
+        <!-- OpenAPI 注解，仅用于 DTO/接口文档说明 -->
+        <dependency>
+            <groupId>io.swagger.core.v3</groupId>
+            <artifactId>swagger-annotations-jakarta</artifactId>
+            <version>${swagger.annotations.version}</version>
+        </dependency>
 
-
-	</dependencies>
+        <!-- 公共模块，复用共享常量等基础能力 -->
+        <dependency>
+            <groupId>com.spring.ai</groupId>
+            <artifactId>common</artifactId>
+            <version>1.0-SNAPSHOT</version>
+            <scope>compile</scope>
+        </dependency>
+    </dependencies>
 
 </project>
