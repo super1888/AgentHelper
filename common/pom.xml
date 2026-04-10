@@ -20,6 +20,9 @@
         <java.version>21</java.version>
         <jakarta.mail.version>2.0.1</jakarta.mail.version>
         <sensitive-word.vsersion>0.29.2</sensitive-word.vsersion>
+        <pdfbox.version>3.0.3</pdfbox.version>
+        <poi.version>5.2.5</poi.version>
+        <poi-ooxml.version>5.2.5</poi-ooxml.version>
     </properties>
     <dependencies>
         <!-- JavaMail 发送邮件 -->
@@ -33,6 +36,22 @@
             <groupId>com.github.houbb</groupId>
             <artifactId>sensitive-word</artifactId>
             <version>${sensitive-word.vsersion}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>pdfbox</artifactId>
+            <version>${pdfbox.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi</artifactId>
+            <version>${poi.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>${poi-ooxml.version}</version>
         </dependency>
 
     </dependencies>

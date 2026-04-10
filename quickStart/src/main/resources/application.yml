@@ -1,3 +1,6 @@
+server:
+  port: 6666
+
 spring:
   main:
     web-application-type: servlet
@@ -5,6 +8,13 @@ spring:
     active: dev
   application:
     name: AgentHelper
+
+  servlet:
+    multipart:
+      max-file-size: 100MB    # 单个文件最大100MB
+      max-request-size: 100MB # 总请求最大100MB
+
+
   ai:
     dashscope:
       api-key: sk-c0351e8f4bb34a77bbf364c411932eeb
@@ -16,6 +26,26 @@ spring:
       api-key: sk-417d47721a134518aa10a22666fa04b9
     zhipuai:
       api-key: sk-cNRM0AjYow5dAa5D2QHcZm857CSX048kgUnPr74bNHUpTjrQ
-  autoconfigure:
-    exclude:
-      - com.alibaba.cloud.ai.autoconfigure.dashscope.DashScopeAudioSpeechAutoConfiguration
+    model:
+      embedding: dashscope
+    vectorstore:
+      redis:
+        prefix: "vector:"       # key 前缀
+        index-name: my-vector-index # 索引名
+  #    chroma:
+  #      client:
+  #        host: localhost
+  #        port: 8000
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6379
+      password: 123456
+      database: 7
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+          max-wait: -1ms

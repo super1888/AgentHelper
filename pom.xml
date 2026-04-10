@@ -34,6 +34,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <alibaba.ai.version>1.1.2.0</alibaba.ai.version>
+        <alibaba.ai.extensions.ersion>1.1.2.1</alibaba.ai.extensions.ersion>
         <mybatis-plus.version>3.5.7</mybatis-plus.version>
         <mysql.java>8.0.33</mysql.java>
         <druid.version>1.2.19</druid.version>
@@ -42,7 +43,7 @@
         <mybatis.springboot.version>3.0.3</mybatis.springboot.version>
         <pagehelper.version>2.1.0</pagehelper.version>
         <mysql-connector-java>3.0.3</mysql-connector-java>
-        <spring-ai.version>1.0.1</spring-ai.version>
+        <spring-ai.version>1.1.2</spring-ai.version>
 
     </properties>
 
@@ -58,17 +59,17 @@
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
-        <!-- 阿里云 AI 依赖 -->
-        <dependency>
-            <groupId>com.alibaba.cloud.ai</groupId>
-            <artifactId>spring-ai-alibaba-agent-framework</artifactId>
-        </dependency>
-
         <!-- 测试依赖（版本由父工程自动管理） -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
+        </dependency>
+
+        <!-- 阿里云 AI 依赖 -->
+        <dependency>
+            <groupId>com.alibaba.cloud.ai</groupId>
+            <artifactId>spring-ai-alibaba-agent-framework</artifactId>
         </dependency>
 
 
@@ -109,21 +110,21 @@
             <dependency>
                 <groupId>com.alibaba.cloud.ai</groupId>
                 <artifactId>spring-ai-alibaba-bom</artifactId>
-                <version>1.1.2.0</version>
+                <version>${alibaba.ai.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
             <dependency>
                 <groupId>org.springframework.ai</groupId>
                 <artifactId>spring-ai-bom</artifactId>
-                <version>1.1.2</version>
+                <version>${spring-ai.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
             <dependency>
                 <groupId>com.alibaba.cloud.ai</groupId>
                 <artifactId>spring-ai-alibaba-extensions-bom</artifactId>
-                <version>1.1.2.1</version>
+                <version>${alibaba.ai.extensions.ersion}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -147,6 +148,14 @@
             <id>spring-release</id>
             <name>Spring Release Repository</name>
             <url>https://repo.spring.io/release</url>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+        <repository>
+            <id>spring-milestones</id>
+            <name>Spring Milestones</name>
+            <url>https://repo.spring.io/milestone</url>
             <snapshots>
                 <enabled>false</enabled>
             </snapshots>

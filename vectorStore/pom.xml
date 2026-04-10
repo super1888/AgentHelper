@@ -17,6 +17,19 @@
 		<java.version>21</java.version>
 	</properties>
 	<dependencies>
+
+		<!-- 向量存储 Chroma（轻量，不用装服务，开发首选） -->
+<!--		<dependency>-->
+<!--			<groupId>org.springframework.ai</groupId>-->
+<!--			<artifactId>spring-ai-starter-vector-store-chroma</artifactId>-->
+<!--		</dependency>-->
+
+		<dependency>
+			<groupId>org.springframework.ai</groupId>
+			<artifactId>spring-ai-starter-vector-store-redis</artifactId>
+		</dependency>
+
+
 		<!--本地包-->
 		<dependency>
 			<groupId>com.spring.ai</groupId>

@@ -12,6 +12,7 @@
         <module name="core" />
         <module name="agent" />
         <module name="common" />
+        <module name="vectorStore" />
         <module name="hooks" />
         <module name="tools" />
         <module name="prompt" />
@@ -37,6 +38,7 @@
       <module name="springAi" options="" />
       <module name="tools" options="-parameters" />
       <module name="user" options="-parameters" />
+      <module name="vectorStore" options="-parameters" />
     </option>
   </component>
 </project>
