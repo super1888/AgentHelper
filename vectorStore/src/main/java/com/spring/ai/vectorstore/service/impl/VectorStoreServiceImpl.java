@@ -395,6 +395,13 @@ public class VectorStoreServiceImpl implements VectorStoreService {
                             + ". Please use Redis Stack or install RedisJSON and RediSearch modules.",
                     exception);
         }
+        if (message != null && (message.contains("no such index") || message.contains("Unknown Index name"))) {
+            return new VectorStoreException(
+                    HttpStatus.SERVICE_UNAVAILABLE,
+                    "Redis vector index is missing during " + action
+                            + ". Enable spring.ai.vectorstore.redis.initialize-schema=true and restart the application.",
+                    exception);
+        }
         return VectorStoreException.internalError("Vector store operation failed during " + action, exception);
     }
 
