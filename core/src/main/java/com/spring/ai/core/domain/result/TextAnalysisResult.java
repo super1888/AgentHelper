@@ -1,4 +1,4 @@
-package com.spring.ai.core.model.result;
+package com.spring.ai.core.domain.result;
 
 import java.util.List;
 import lombok.Data;

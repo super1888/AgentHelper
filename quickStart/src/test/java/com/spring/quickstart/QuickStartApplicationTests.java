@@ -29,11 +29,11 @@ import com.alibaba.cloud.ai.graph.streaming.StreamingOutput;
 import com.spring.ai.agent.domian.dto.AgentInfoDTO;
 import com.spring.ai.agent.factory.AgentFactory;
 import com.spring.ai.common.enums.AgentTypeEnum;
-import com.spring.ai.core.model.GetChatModel;
-import com.spring.ai.core.model.GetDashScopeChatModel;
-import com.spring.ai.core.model.dto.AssistantMessageDTO;
-import com.spring.ai.core.model.result.PoemOutputResult;
-import com.spring.ai.core.model.result.TextAnalysisResult;
+import com.spring.ai.core.facotry.GetChatModel;
+import com.spring.ai.core.facotry.GetDashScopeChatModel;
+import com.spring.ai.core.domain.dto.AssistantMessageDTO;
+import com.spring.ai.core.domain.result.PoemOutputResult;
+import com.spring.ai.core.domain.result.TextAnalysisResult;
 import com.spring.ai.hooks.custom.agentHook.LoggingHook;
 import com.spring.ai.hooks.custom.messagesModelHook.MessageTrimmingHook;
 import com.spring.ai.hooks.custom.messagesModelHook.RAGMessagesHook;
@@ -76,7 +76,9 @@ import org.springframework.ai.content.Media;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;
 import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.util.MimeTypeUtils;
 import reactor.core.publisher.Flux;
@@ -1294,7 +1296,7 @@ class QuickStartApplicationTests {
         ReactAgent ragAgent = ReactAgent.builder()
                 .name("rag_agent")
                 .model(chatModel)
-                .hooks(new RAGMessagesHook(vectorStore))
+                .hooks(new RAGMessagesHook((ObjectProvider<VectorStore>) vectorStore))
                 .build();
 
         // 调用 Agent

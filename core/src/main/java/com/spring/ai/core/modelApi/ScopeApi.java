@@ -2,100 +2,66 @@ package com.spring.ai.core.modelApi;
 
 import com.alibaba.cloud.ai.dashscope.api.DashScopeApi;
 import org.apache.commons.lang3.StringUtils;
-//import org.springframework.ai.anthropic.api.AnthropicApi;
+import org.springframework.ai.anthropic.api.AnthropicApi;
 import org.springframework.ai.deepseek.api.DeepSeekApi;
 import org.springframework.ai.openai.api.OpenAiApi;
 import org.springframework.ai.zhipuai.api.ZhiPuAiApi;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-/**
- * class information
- *
- * @author zhouqi
- * @version 初次构建
- * @since 2026/3/29
- */
 @Component
 public class ScopeApi {
 
-    // 从配置文件中注入API密钥
-    @Value("${spring.ai.dashscope.api-key}")  // 存储API密钥的私有变量
+    @Value("${spring.ai.dashscope.api-key:}")
     private String dashscopeApiKey;
 
-    @Value("${spring.ai.deepseek.api-key}")
+    @Value("${spring.ai.deepseek.api-key:}")
     private String deepseekApiKey;
 
-//    @Value("${spring.ai.anthropic.api-key}")
-//    private String anthropicApi;
+    @Value("${spring.ai.anthropic.api-key:}")
+    private String anthropicApiKey;
 
-    @Value("${spring.ai.openai.api-key}")
-    private String openAiApi;
+    @Value("${spring.ai.openai.api-key:}")
+    private String openAiApiKey;
 
-    @Value("${spring.ai.zhipuai.api-key}")
-    private String zhiPuAiApi;
+    @Value("${spring.ai.zhipuai.api-key:}")
+    private String zhiPuAiApiKey;
 
-    /**
-     * 获取DashScopeApi实例的方法
-     *
-     * @param getApiKey 传入的API密钥，如果为空则使用配置文件中的默认值
-     * @return DashScopeApi 返回配置好的DashScopeApi实例
-     */
-
-    // 检查传入的API密钥是否为空，如果为空则使用配置文件中的默认值
-    public DashScopeApi getDashScopeApi(String getApiKey) {
-        if (StringUtils.isBlank(getApiKey)) {
-            getApiKey = dashscopeApiKey;
-        }
-        // 创建模型实例
+    public DashScopeApi getDashScopeApi(String apiKey) {
         return DashScopeApi.builder()
-                .apiKey(getApiKey)
+                .apiKey(resolveApiKey(apiKey, dashscopeApiKey, "dashscope"))
                 .build();
     }
 
-    public DeepSeekApi getDeepSeekApi(String getApiKey) {
-
-        if (StringUtils.isBlank(getApiKey)) {
-            getApiKey = deepseekApiKey;
-        }
-        // 创建模型实例
+    public DeepSeekApi getDeepSeekApi(String apiKey) {
         return DeepSeekApi.builder()
-                .apiKey(getApiKey)
+                .apiKey(resolveApiKey(apiKey, deepseekApiKey, "deepseek"))
                 .build();
     }
 
-//    public AnthropicApi getAnthropicApi(String getApiKey) {
-//
-//        if (StringUtils.isBlank(getApiKey)) {
-//            getApiKey = anthropicApi;
-//        }
-//        // 创建模型实例
-//        return AnthropicApi.builder()
-//                .apiKey(getApiKey)
-//                .build();
-//    }
+    public AnthropicApi getAnthropicApi(String apiKey) {
+        return AnthropicApi.builder()
+                .apiKey(resolveApiKey(apiKey, anthropicApiKey, "anthropic"))
+                .build();
+    }
 
-    public OpenAiApi getOpenAiApi(String getApiKey) {
-
-        if (StringUtils.isBlank(getApiKey)) {
-            getApiKey = openAiApi;
-        }
-        // 创建模型实例
+    public OpenAiApi getOpenAiApi(String apiKey) {
         return OpenAiApi.builder()
-                .apiKey(getApiKey)
+                .apiKey(resolveApiKey(apiKey, openAiApiKey, "openai"))
                 .build();
     }
 
-    public ZhiPuAiApi getZhiPuAiApi(String getApiKey) {
-        // 完全和你原来逻辑一样：为空就用默认key
-        if (StringUtils.isBlank(getApiKey)) {
-            getApiKey = zhiPuAiApi; // 你的默认key
-        }
-        // 智谱官方没有builder，直接用构造方法！
+    public ZhiPuAiApi getZhiPuAiApi(String apiKey) {
         return ZhiPuAiApi.builder()
-                .apiKey(getApiKey)
+                .apiKey(resolveApiKey(apiKey, zhiPuAiApiKey, "zhipuai"))
                 .build();
     }
 
-
+    private String resolveApiKey(String requestApiKey, String configuredApiKey, String provider) {
+        String resolved = StringUtils.isBlank(requestApiKey) ? configuredApiKey : requestApiKey;
+        if (StringUtils.isBlank(resolved)) {
+            throw new IllegalArgumentException("Missing api key for provider: " + provider);
+        }
+        return resolved;
+    }
 }

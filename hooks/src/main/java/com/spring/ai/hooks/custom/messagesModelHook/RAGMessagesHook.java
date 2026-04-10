@@ -9,7 +9,6 @@ import com.alibaba.cloud.ai.graph.agent.hook.HookPositions;
 import com.alibaba.cloud.ai.graph.agent.hook.messages.AgentCommand;
 import com.alibaba.cloud.ai.graph.agent.hook.messages.MessagesModelHook;
 import com.alibaba.cloud.ai.graph.agent.hook.messages.UpdatePolicy;
-import jakarta.annotation.Resource;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -22,6 +21,7 @@ import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -55,10 +55,10 @@ public class RAGMessagesHook extends MessagesModelHook {
     private static final int MAX_DOCUMENT_CHARS = 800;
 
 
-    private final VectorStore vectorStore;
+    private final ObjectProvider<VectorStore> vectorStoreProvider;
 
-    public RAGMessagesHook(VectorStore vectorStore) {
-        this.vectorStore = vectorStore;
+    public RAGMessagesHook(ObjectProvider<VectorStore> vectorStoreProvider) {
+        this.vectorStoreProvider = vectorStoreProvider;
     }
 
 
@@ -94,8 +94,9 @@ public class RAGMessagesHook extends MessagesModelHook {
      * 按照 vectorStore 模块现有元数据规则执行相似度检索。
      */
     private List<Document> retrieveDocuments(String userQuestion) {
+        VectorStore vectorStore = vectorStoreProvider.getIfAvailable();
         if (vectorStore == null) {
-            log.warn("RAG hook skipped because VectorStore bean is not injected. Please obtain RAGMessagesHook from Spring instead of manual new.");
+            log.warn("RAG hook skipped because VectorStore bean is unavailable.");
             return List.of();
         }
         try {

@@ -1,4 +1,4 @@
-package com.spring.ai.core.model.dto;
+package com.spring.ai.core.domain.dto;
 
 import java.util.List;
 import lombok.Data;

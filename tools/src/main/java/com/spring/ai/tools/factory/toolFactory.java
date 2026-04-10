@@ -1,28 +1,47 @@
 package com.spring.ai.tools.factory;
 
+import com.spring.ai.common.enums.ToolFactoryTypeEnum;
 import com.spring.ai.tools.domain.dto.MethodToolCallbackProviderDTO;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.ai.tool.ToolCallback;
-import org.springframework.ai.tool.method.MethodToolCallbackProvider;
+import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.InitializingBean;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
+import org.springframework.stereotype.Component;
 
 /**
- * class information
- *
- * @author zhouqi
- * @version 初次构建
- * @since 2026/4/7
+ * Tool 工厂分发器。
  */
-public class toolFactory {
+@Component
+public class ToolFactory implements InitializingBean, ApplicationContextAware {
 
-    /**
-     * 核心能力是扫描并自动将带有 @Tool 注解的方法转换为 ToolCallback 实例
-     *
-     * @param dto
-     * @return
-     */
-    public ToolCallback[] creatMethodToolCallbackProvider(MethodToolCallbackProviderDTO dto) {
+    private final Map<ToolFactoryTypeEnum, ToolCreator> creatorMap = new ConcurrentHashMap<>();
+    private ApplicationContext applicationContext;
 
-        return MethodToolCallbackProvider.builder().toolObjects(dto.getTools()).build().getToolCallbacks();
-
+    @SuppressWarnings("unchecked")
+    public <T> T createToolComponent(ToolFactoryTypeEnum type, Object dto) {
+        ToolCreator creator = creatorMap.get(type);
+        if (creator == null) {
+            throw new IllegalArgumentException("不支持的 Tool 工厂类型: " + type);
+        }
+        return (T) creator.create(dto);
     }
 
+    public ToolCallback[] creatMethodToolCallbackProvider(MethodToolCallbackProviderDTO dto) {
+        return createToolComponent(ToolFactoryTypeEnum.METHOD_TOOL_CALLBACK_PROVIDER, dto);
+    }
+
+    @Override
+    public void afterPropertiesSet() {
+        applicationContext.getBeansOfType(ToolCreator.class).values()
+                .forEach(creator -> creatorMap.put(creator.getToolFactoryType(), creator));
+    }
+
+    @Override
+    public void setApplicationContext(@NotNull ApplicationContext applicationContext) throws BeansException {
+        this.applicationContext = applicationContext;
+    }
 }

@@ -12,5 +12,19 @@ public enum ModelProviderEnum {
     DEEPSEEK,
     ZHIPU,
     ANTHROPIC,
-    DASHSCOPE
+    DASHSCOPE;
+
+    public static ModelProviderEnum fromValue(String value) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException("Model provider must not be blank");
+        }
+        String normalized = value.trim()
+                .replace("-", "_")
+                .replace(" ", "_")
+                .toUpperCase();
+        if ("ZHIPUAI".equals(normalized)) {
+            return ZHIPU;
+        }
+        return ModelProviderEnum.valueOf(normalized);
+    }
 }
