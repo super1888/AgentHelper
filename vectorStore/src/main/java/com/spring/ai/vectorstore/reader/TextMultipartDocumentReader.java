@@ -1,6 +1,7 @@
 package com.spring.ai.vectorstore.reader;
 
 import com.spring.ai.vectorstore.exception.VectorStoreException;
+import jakarta.annotation.Resource;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -20,11 +21,8 @@ public class TextMultipartDocumentReader implements MultipartDocumentReader {
 
     private static final Set<String> SUPPORTED_EXTENSIONS = Set.of("txt", "md");
 
-    private final ExtractedTextFormatter extractedTextFormatter;
-
-    public TextMultipartDocumentReader(ExtractedTextFormatter extractedTextFormatter) {
-        this.extractedTextFormatter = extractedTextFormatter;
-    }
+    @Resource
+    private ExtractedTextFormatter extractedTextFormatter;
 
     @Override
     public boolean supports(String extension) {

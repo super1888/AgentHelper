@@ -1,6 +1,7 @@
 package com.spring.ai.vectorstore.reader;
 
 import com.spring.ai.vectorstore.exception.VectorStoreException;
+import jakarta.annotation.Resource;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -21,7 +22,11 @@ public class MultipartDocumentReaderRegistry {
 
     private final Map<String, MultipartDocumentReader> readersByExtension = new LinkedHashMap<>();
 
-    public MultipartDocumentReaderRegistry(List<MultipartDocumentReader> readers) {
+    @Resource
+    private List<MultipartDocumentReader> readers;
+
+    @jakarta.annotation.PostConstruct
+    public void init() {
         for (MultipartDocumentReader reader : readers) {
             for (String extension : SUPPORTED_EXTENSIONS) {
                 // 同一扩展名只保留首个匹配读取器，保证注册结果稳定。

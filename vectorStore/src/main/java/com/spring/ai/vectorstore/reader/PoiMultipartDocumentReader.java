@@ -2,6 +2,7 @@ package com.spring.ai.vectorstore.reader;
 
 import com.alibaba.cloud.ai.reader.poi.PoiDocumentReader;
 import com.spring.ai.vectorstore.exception.VectorStoreException;
+import jakarta.annotation.Resource;
 import java.io.IOException;
 import java.util.Locale;
 import java.util.Set;
@@ -20,11 +21,8 @@ public class PoiMultipartDocumentReader implements MultipartDocumentReader {
 
     private static final Set<String> SUPPORTED_EXTENSIONS = Set.of("doc", "docx", "ppt", "pptx", "xls", "xlsx");
 
-    private final ExtractedTextFormatter extractedTextFormatter;
-
-    public PoiMultipartDocumentReader(ExtractedTextFormatter extractedTextFormatter) {
-        this.extractedTextFormatter = extractedTextFormatter;
-    }
+    @Resource
+    private ExtractedTextFormatter extractedTextFormatter;
 
     @Override
     public boolean supports(String extension) {

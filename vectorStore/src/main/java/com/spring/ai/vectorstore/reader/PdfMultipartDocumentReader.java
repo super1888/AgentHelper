@@ -1,6 +1,7 @@
 package com.spring.ai.vectorstore.reader;
 
 import com.spring.ai.vectorstore.exception.VectorStoreException;
+import jakarta.annotation.Resource;
 import java.io.IOException;
 import java.util.List;
 import org.apache.pdfbox.Loader;
@@ -18,11 +19,8 @@ import org.springframework.web.multipart.MultipartFile;
 @Component
 public class PdfMultipartDocumentReader implements MultipartDocumentReader {
 
-    private final ExtractedTextFormatter extractedTextFormatter;
-
-    public PdfMultipartDocumentReader(ExtractedTextFormatter extractedTextFormatter) {
-        this.extractedTextFormatter = extractedTextFormatter;
-    }
+    @Resource
+    private ExtractedTextFormatter extractedTextFormatter;
 
     @Override
     public boolean supports(String extension) {

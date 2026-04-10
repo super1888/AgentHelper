@@ -4,60 +4,36 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
  * 向量库模块配置参数。
- * 主要用于控制检索数量、切片策略、文本清洗策略等行为。
+ * 主要用于控制检索数量、切片策略、批量写入策略等行为。
  */
 @ConfigurationProperties(prefix = "app.vector-store")
 public class VectorStoreProperties {
 
-    /**
-     * 默认返回结果数量。
-     */
     private int defaultTopK = 3;
-
-    /**
-     * 单个切片的目标 token 数。
-     */
     private int chunkSize = 800;
-
-    /**
-     * 单个切片最小字符数。
-     */
     private int minChunkSizeChars = 350;
-
-    /**
-     * 可参与向量化的最小切片长度。
-     */
     private int minChunkLengthToEmbed = 5;
-
-    /**
-     * 单篇文档允许切分出的最大切片数量。
-     */
-    private int maxNumChunks = 10000;
-
-    /**
-     * 切片时是否保留原始分隔符。
-     */
+    private int maxNumChunks = 256;
     private boolean keepSeparator = true;
-
-    /**
-     * 是否将文本左对齐。
-     */
     private boolean leftAlignment = false;
-
-    /**
-     * 删除页眉页脚前，跳过的顶部页数。
-     */
     private int numberOfTopPagesToSkipBeforeDelete = 0;
-
-    /**
-     * 删除顶部文本行数。
-     */
     private int numberOfTopTextLinesToDelete = 0;
+    private int numberOfBottomTextLinesToDelete = 0;
 
     /**
-     * 删除底部文本行数。
+     * 单次写入向量库的批大小。
      */
-    private int numberOfBottomTextLinesToDelete = 0;
+    private int writeBatchSize = 16;
+
+    /**
+     * 切片数量达到阈值后是否启用并行批量写入。
+     */
+    private boolean parallelWriteEnabled = true;
+
+    /**
+     * 启用并行批量写入的最小切片数阈值。
+     */
+    private int parallelWriteThreshold = 24;
 
     public int getDefaultTopK() {
         return defaultTopK;
@@ -137,5 +113,29 @@ public class VectorStoreProperties {
 
     public void setNumberOfBottomTextLinesToDelete(int numberOfBottomTextLinesToDelete) {
         this.numberOfBottomTextLinesToDelete = numberOfBottomTextLinesToDelete;
+    }
+
+    public int getWriteBatchSize() {
+        return writeBatchSize;
+    }
+
+    public void setWriteBatchSize(int writeBatchSize) {
+        this.writeBatchSize = writeBatchSize;
+    }
+
+    public boolean isParallelWriteEnabled() {
+        return parallelWriteEnabled;
+    }
+
+    public void setParallelWriteEnabled(boolean parallelWriteEnabled) {
+        this.parallelWriteEnabled = parallelWriteEnabled;
+    }
+
+    public int getParallelWriteThreshold() {
+        return parallelWriteThreshold;
+    }
+
+    public void setParallelWriteThreshold(int parallelWriteThreshold) {
+        this.parallelWriteThreshold = parallelWriteThreshold;
     }
 }
