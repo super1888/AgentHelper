@@ -36,7 +36,10 @@ import com.spring.ai.core.model.result.PoemOutputResult;
 import com.spring.ai.core.model.result.TextAnalysisResult;
 import com.spring.ai.hooks.custom.agentHook.LoggingHook;
 import com.spring.ai.hooks.custom.messagesModelHook.MessageTrimmingHook;
+import com.spring.ai.hooks.custom.messagesModelHook.RAGMessagesHook;
 import com.spring.ai.hooks.custom.messagesModelHook.TextFilterHook;
+
+import com.spring.ai.interceptors.custom.modelInterceptor.RAGModelInterceptor;
 import com.spring.ai.interceptors.custom.toolInterceptor.ToolErrorInterceptor;
 import com.spring.ai.tools.custom.CalculatorTools;
 import com.spring.ai.tools.custom.LocalTools;
@@ -72,6 +75,7 @@ import org.springframework.ai.chat.prompt.SystemPromptTemplate;
 import org.springframework.ai.content.Media;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;
+import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.util.MimeTypeUtils;
@@ -98,6 +102,9 @@ class QuickStartApplicationTests {
 
     @Resource
     private GetChatModel getChatModel;
+
+    @Resource
+    private VectorStore vectorStore;
 
 
     @Test
@@ -1279,6 +1286,48 @@ class QuickStartApplicationTests {
         } catch (GraphStateException e) {
             throw new RuntimeException(e);
         }
+    }
+    @Test
+    void agent30() {
+        ChatModel chatModel = getChatModel.creatDashScopeChatModel();
+        // 创建带有 RAG Hook 的 Agent
+        ReactAgent ragAgent = ReactAgent.builder()
+                .name("rag_agent")
+                .model(chatModel)
+                .hooks(new RAGMessagesHook(vectorStore))
+                .build();
+
+        // 调用 Agent
+        AssistantMessage response = null;
+        try {
+            response = ragAgent.call("终端报文返回dar=4 是什么意思 ");
+        } catch (GraphRunnerException e) {
+            throw new RuntimeException(e);
+        }
+        System.out.println("答案: " + response.getText());
+
+
+    }
+    @Test
+    void agent31() {
+        ChatModel chatModel = getChatModel.creatDashScopeChatModel();
+
+        ReactAgent ragAgent = ReactAgent.builder()
+                .name("rag_agent")
+                .model(chatModel)
+                .interceptors(new RAGModelInterceptor(vectorStore))
+                .build();
+
+// 调用 Agent
+        AssistantMessage response = null;
+        try {
+            response = ragAgent.call("什么是基于应用连接的数据交换 ");
+        } catch (GraphRunnerException e) {
+            throw new RuntimeException(e);
+        }
+        System.out.println("答案: " + response.getText());
+
+
     }
 
 
