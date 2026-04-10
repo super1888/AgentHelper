@@ -10,21 +10,21 @@ import static com.spring.ai.common.constants.VectorStoreManagerConstants.METADAT
 import static com.spring.ai.common.constants.VectorStoreManagerConstants.MODULE_NAME;
 
 import com.spring.ai.vectorstore.config.VectorStoreProperties;
-import com.spring.ai.vectorstore.dto.VectorStoreDeleteResponse;
-import com.spring.ai.vectorstore.dto.VectorStoreDocumentResponse;
-import com.spring.ai.vectorstore.dto.VectorStoreSearchResponse;
-import com.spring.ai.vectorstore.dto.VectorStoreUploadResponse;
+import com.spring.ai.vectorstore.domain.response.VectorStoreDeleteResponse;
+import com.spring.ai.vectorstore.domain.response.VectorStoreDocumentResponse;
+import com.spring.ai.vectorstore.domain.response.VectorStoreSearchResponse;
+import com.spring.ai.vectorstore.domain.response.VectorStoreUploadResponse;
 import com.spring.ai.vectorstore.exception.VectorStoreException;
 import com.spring.ai.vectorstore.reader.MultipartDocumentReader;
 import com.spring.ai.vectorstore.reader.MultipartDocumentReaderRegistry;
 import com.spring.ai.vectorstore.service.VectorStoreService;
+import jakarta.annotation.Resource;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.ai.vectorstore.SearchRequest;
@@ -35,34 +35,28 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
- * 向量库服务实现类。
- * 负责串联文档读取、元数据补齐、文本切片、向量写入、检索与删除流程。
+ * 向量库服务实现类。 负责串联文档读取、元数据补齐、文本切片、向量写入、检索与删除流程。
  */
 @Service
+@Slf4j
 public class VectorStoreServiceImpl implements VectorStoreService {
 
-    private static final Logger log = LoggerFactory.getLogger(VectorStoreServiceImpl.class);
     private static final String DEFAULT_CONTENT_TYPE = "application/octet-stream";
 
-    private final VectorStore vectorStore;
-    private final TokenTextSplitter tokenTextSplitter;
-    private final VectorStoreProperties vectorStoreProperties;
-    private final MultipartDocumentReaderRegistry readerRegistry;
+    @Resource
+    VectorStore vectorStore;
 
-    public VectorStoreServiceImpl(
-            VectorStore vectorStore,
-            TokenTextSplitter tokenTextSplitter,
-            VectorStoreProperties vectorStoreProperties,
-            MultipartDocumentReaderRegistry readerRegistry) {
-        this.vectorStore = vectorStore;
-        this.tokenTextSplitter = tokenTextSplitter;
-        this.vectorStoreProperties = vectorStoreProperties;
-        this.readerRegistry = readerRegistry;
-    }
+    @Resource
+    TokenTextSplitter tokenTextSplitter;
+
+    @Resource
+    VectorStoreProperties vectorStoreProperties;
+
+    @Resource
+    MultipartDocumentReaderRegistry readerRegistry;
 
     /**
-     * 上传文件并写入向量库。
-     * 整体流程包括：参数校验、按扩展名匹配读取器、提取文本、补齐元数据、文本切片、写入向量库。
+     * 上传文件并写入向量库。 整体流程包括：参数校验、按扩展名匹配读取器、提取文本、补齐元数据、文本切片、写入向量库。
      *
      * @param file 上传文件
      * @return 上传结果
@@ -98,23 +92,23 @@ public class VectorStoreServiceImpl implements VectorStoreService {
         log.info("Stored vector document, fileName={}, sourceDocuments={}, chunks={}",
                 fileName, sourceDocuments.size(), chunkDocuments.size());
 
-        return new VectorStoreUploadResponse(
-                fileName,
-                extension,
-                sourceDocuments.size(),
-                chunkDocuments.size(),
-                file.getSize(),
-                uploadedAt,
-                "Document parsed, chunked and stored successfully");
+        return VectorStoreUploadResponse.builder()
+                .fileName(fileName)
+                .fileExtension(extension)
+                .sourceDocumentCount(sourceDocuments.size())
+                .chunkCount(chunkDocuments.size())
+                .fileSize(file.getSize())
+                .uploadedAt(uploadedAt)
+                .message("Document parsed, chunked and stored successfully")
+                .build();
     }
 
     /**
-     * 检索向量库。
-     * 检索时默认只查询当前模块写入的数据，避免误检索到共享向量库中的其他业务数据。
+     * 检索向量库。 检索时默认只查询当前模块写入的数据，避免误检索到共享向量库中的其他业务数据。
      *
-     * @param query 查询词
-     * @param fileName 文件名过滤条件
-     * @param topK 返回结果数
+     * @param query               查询词
+     * @param fileName            文件名过滤条件
+     * @param topK                返回结果数
      * @param similarityThreshold 相似度阈值
      * @return 检索结果
      */
@@ -138,13 +132,14 @@ public class VectorStoreServiceImpl implements VectorStoreService {
                 .map(this::toDocumentResponse)
                 .toList();
 
-        return new VectorStoreSearchResponse(
-                normalizedQuery,
-                normalizedFileName,
-                validatedTopK,
-                validatedThreshold,
-                items.size(),
-                items);
+        return VectorStoreSearchResponse.builder()
+                .query(normalizedQuery)
+                .fileName(normalizedFileName)
+                .topK(validatedTopK)
+                .similarityThreshold(validatedThreshold)
+                .total(items.size())
+                .items(items)
+                .build();
     }
 
     /**
@@ -156,7 +151,11 @@ public class VectorStoreServiceImpl implements VectorStoreService {
     public VectorStoreDeleteResponse deleteAll() {
         vectorStore.delete(new FilterExpressionBuilder().eq(METADATA_MODULE, MODULE_NAME).build());
         log.info("Deleted all vectors for module={}", MODULE_NAME);
-        return new VectorStoreDeleteResponse("deleteAll", null, "Deleted vectors written by the current module");
+        return VectorStoreDeleteResponse.builder()
+                .action("deleteAll")
+                .fileName(null)
+                .message("Deleted vectors written by the current module")
+                .build();
     }
 
     /**
@@ -175,7 +174,11 @@ public class VectorStoreServiceImpl implements VectorStoreService {
                         filterExpressionBuilder.eq(METADATA_FILE_NAME, normalizedFileName))
                 .build());
         log.info("Deleted vectors for fileName={}", normalizedFileName);
-        return new VectorStoreDeleteResponse("deleteByFileName", normalizedFileName, "Deleted vectors for the specified file");
+        return VectorStoreDeleteResponse.builder()
+                .action("deleteByFileName")
+                .fileName(normalizedFileName)
+                .message("Deleted vectors for the specified file")
+                .build();
     }
 
     /**
@@ -214,13 +217,12 @@ public class VectorStoreServiceImpl implements VectorStoreService {
     }
 
     /**
-     * 为文档补充统一元数据。
-     * 元数据保持扁平结构，便于向量库过滤条件直接使用。
+     * 为文档补充统一元数据。 元数据保持扁平结构，便于向量库过滤条件直接使用。
      *
-     * @param document 原始文档
-     * @param file 上传文件
-     * @param fileName 文件名
-     * @param extension 扩展名
+     * @param document   原始文档
+     * @param file       上传文件
+     * @param fileName   文件名
+     * @param extension  扩展名
      * @param uploadedAt 上传时间
      * @return 补齐元数据后的文档
      */
@@ -261,8 +263,7 @@ public class VectorStoreServiceImpl implements VectorStoreService {
     }
 
     /**
-     * 构建检索过滤条件。
-     * 默认仅检索当前模块数据；如果传入文件名，则进一步按文件名过滤。
+     * 构建检索过滤条件。 默认仅检索当前模块数据；如果传入文件名，则进一步按文件名过滤。
      *
      * @param fileName 文件名
      * @return Spring AI 向量过滤表达式
@@ -321,7 +322,7 @@ public class VectorStoreServiceImpl implements VectorStoreService {
     /**
      * 规范化必填文本参数。
      *
-     * @param value 原始值
+     * @param value        原始值
      * @param errorMessage 错误信息
      * @return 去除首尾空格后的值
      */
@@ -353,10 +354,11 @@ public class VectorStoreServiceImpl implements VectorStoreService {
         if (document.getMetadata() != null) {
             metadata.putAll(document.getMetadata());
         }
-        return new VectorStoreDocumentResponse(
-                document.getId(),
-                document.getText(),
-                document.getScore(),
-                metadata);
+        return VectorStoreDocumentResponse.builder()
+                .id(document.getId())
+                .content(document.getText())
+                .score(document.getScore())
+                .metadata(metadata)
+                .build();
     }
 }

@@ -1,8 +1,8 @@
 package com.spring.ai.vectorstore.controller;
 
-import com.spring.ai.vectorstore.dto.VectorStoreDeleteResponse;
-import com.spring.ai.vectorstore.dto.VectorStoreSearchResponse;
-import com.spring.ai.vectorstore.dto.VectorStoreUploadResponse;
+import com.spring.ai.vectorstore.domain.response.VectorStoreDeleteResponse;
+import com.spring.ai.vectorstore.domain.response.VectorStoreSearchResponse;
+import com.spring.ai.vectorstore.domain.response.VectorStoreUploadResponse;
 import com.spring.ai.vectorstore.service.VectorStoreService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -22,7 +22,7 @@ import org.springframework.web.multipart.MultipartFile;
 @RequestMapping("/vectorStore")
 public class VectorStoreController {
 
-    @Resource
+        @Resource
     VectorStoreService vectorStoreService;
 
     /**

@@ -1,8 +1,8 @@
 package com.spring.ai.vectorstore.service;
 
-import com.spring.ai.vectorstore.dto.VectorStoreDeleteResponse;
-import com.spring.ai.vectorstore.dto.VectorStoreSearchResponse;
-import com.spring.ai.vectorstore.dto.VectorStoreUploadResponse;
+import com.spring.ai.vectorstore.domain.response.VectorStoreDeleteResponse;
+import com.spring.ai.vectorstore.domain.response.VectorStoreSearchResponse;
+import com.spring.ai.vectorstore.domain.response.VectorStoreUploadResponse;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
