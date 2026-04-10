@@ -7,29 +7,3 @@ spring:
     url: jdbc:mysql://localhost:3306/agent_db?rewriteBatchedStatements=true&autoReconnect=true&allowMultiQueries=true&useSSL=false&characterEncoding=UTF-8&serverTimezone=GMT%2b8
     username: root
     password: root
-
-
-
-
-app:
-  common:
-    async:
-      core-pool-size: 4
-      max-pool-size: 8
-      queue-capacity: 200
-      keep-alive-seconds: 60
-      thread-name-prefix: "common-async-"
-  vector-store:
-    default-top-k: 3
-    chunk-size: 800
-    min-chunk-size-chars: 350
-    min-chunk-length-to-embed: 5
-    max-num-chunks: 256
-    keep-separator: true
-    left-alignment: false
-    number-of-top-pages-to-skip-before-delete: 0
-    number-of-top-text-lines-to-delete: 0
-    number-of-bottom-text-lines-to-delete: 0
-    write-batch-size: 16
-    parallel-write-enabled: true
-    parallel-write-threshold: 24

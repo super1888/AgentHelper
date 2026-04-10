@@ -15,6 +15,9 @@ spring:
   ai:
     dashscope:
       api-key: sk-c0351e8f4bb34a77bbf364c411932eeb
+      embedding:
+        options:
+          model: text-embedding-v4
     openai:
       api-key: sk-5F4MCbuBCDQy4kPhTohZV7jt9A8wo8oCGUvn0C8VsmvdByVr
     deepseek:
@@ -57,3 +60,26 @@ pagehelper:
   helper-dialect: mysql
   reasonable: true
   support-methods-arguments: true
+
+app:
+  common:
+    async:
+      core-pool-size: 4
+      max-pool-size: 8
+      queue-capacity: 200
+      keep-alive-seconds: 60
+      thread-name-prefix: "common-async-"
+  vector-store:
+    default-top-k: 3
+    chunk-size: 800
+    min-chunk-size-chars: 350
+    min-chunk-length-to-embed: 5
+    max-num-chunks: 128
+    keep-separator: true
+    left-alignment: false
+    number-of-top-pages-to-skip-before-delete: 0
+    number-of-top-text-lines-to-delete: 0
+    number-of-bottom-text-lines-to-delete: 0
+    write-batch-size: 8
+    parallel-write-enabled: false
+    parallel-write-threshold: 64

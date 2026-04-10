@@ -41,14 +41,15 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
- * 向量库服务实现类。
- * 负责串联文档读取、元数据补齐、文本切片、向量写入、检索与删除流程。
+ * 向量库服务实现类。 负责串联文档读取、元数据补齐、文本切片、向量写入、检索与删除流程。
  */
 @Service
 @Slf4j
 public class VectorStoreServiceImpl implements VectorStoreService {
 
     private static final String DEFAULT_CONTENT_TYPE = "application/octet-stream";
+    private static final int MIN_ADAPTIVE_CHUNK_SIZE = 100;
+    private static final int MAX_ADAPTIVE_SPLIT_DEPTH = 3;
 
     @Resource
     private VectorStore vectorStore;
@@ -142,8 +143,7 @@ public class VectorStoreServiceImpl implements VectorStoreService {
                     .total(items.size())
                     .items(items)
                     .build();
-        }
-        catch (RuntimeException exception) {
+        } catch (RuntimeException exception) {
             throw translateVectorStoreException("search", exception);
         }
     }
@@ -158,8 +158,7 @@ public class VectorStoreServiceImpl implements VectorStoreService {
                     .action("deleteAll")
                     .message("Deleted vectors written by the current module")
                     .build();
-        }
-        catch (RuntimeException exception) {
+        } catch (RuntimeException exception) {
             throw translateVectorStoreException("deleteAll", exception);
         }
     }
@@ -182,8 +181,7 @@ public class VectorStoreServiceImpl implements VectorStoreService {
                     .fileName(normalizedFileName)
                     .message("Deleted vectors for the specified file")
                     .build();
-        }
-        catch (RuntimeException exception) {
+        } catch (RuntimeException exception) {
             throw translateVectorStoreException("deleteByFileName", exception);
         }
     }
@@ -195,22 +193,43 @@ public class VectorStoreServiceImpl implements VectorStoreService {
         List<List<Document>> batches = ParallelExecutionUtils.partition(chunkDocuments, validateWriteBatchSize());
         try {
             if (shouldUseParallelWrite(chunkDocuments.size(), batches.size())) {
-                ParallelExecutionUtils.parallelConsumeBatches(batches, commonAsyncExecutor, this::addBatchToVectorStore);
+                ParallelExecutionUtils.parallelConsumeBatches(batches, commonAsyncExecutor, batch -> persistBatch(batch, 0));
+            } else {
+                batches.forEach(batch -> persistBatch(batch, 0));
             }
-            else {
-                batches.forEach(this::addBatchToVectorStore);
-            }
-        }
-        catch (RuntimeException exception) {
+        } catch (RuntimeException exception) {
             throw translateVectorStoreException("upload", exception);
         }
     }
 
-    private void addBatchToVectorStore(List<Document> batch) {
-        vectorStore.add(batch);
+    private void persistBatch(List<Document> batch, int splitDepth) {
+        try {
+            vectorStore.add(batch);
+        } catch (RuntimeException exception) {
+            Throwable rootCause = unwrapCause(exception);
+            if (isTokenLimitException(rootCause) && splitDepth < MAX_ADAPTIVE_SPLIT_DEPTH) {
+                List<Document> smallerChunks = adaptiveSplit(batch, splitDepth);
+                if (smallerChunks.size() > batch.size()) {
+                    log.warn("Embedding token limit reached, retrying with smaller chunks. splitDepth={}, originalSize={}, newSize={}",
+                            splitDepth, batch.size(), smallerChunks.size());
+                    List<List<Document>> smallerBatches = ParallelExecutionUtils.partition(smallerChunks, validateWriteBatchSize());
+                    smallerBatches.forEach(nextBatch -> persistBatch(nextBatch, splitDepth + 1));
+                    return;
+                }
+            }
+            throw exception;
+        }
     }
 
+    /**
+     * 判断是否应该使用并行写入策略
+     *
+     * @param chunkCount 数据块的数量
+     * @param batchCount 批次数量
+     * @return 如果满足以下条件则返回true： 1. 并行写入功能已启用 2. 数据块数量达到并行写入阈值 3. 批次数量大于1 否则返回false
+     */
     private boolean shouldUseParallelWrite(int chunkCount, int batchCount) {
+
         return vectorStoreProperties.isParallelWriteEnabled()
                 && chunkCount >= vectorStoreProperties.getParallelWriteThreshold()
                 && batchCount > 1;
@@ -222,6 +241,20 @@ public class VectorStoreServiceImpl implements VectorStoreService {
             throw VectorStoreException.badRequest("writeBatchSize must be greater than 0");
         }
         return batchSize;
+    }
+
+    private List<Document> adaptiveSplit(List<Document> batch, int splitDepth) {
+        int adaptiveChunkSize = Math.max(
+                MIN_ADAPTIVE_CHUNK_SIZE,
+                vectorStoreProperties.getChunkSize() / (int) Math.pow(2, splitDepth + 1));
+        TokenTextSplitter adaptiveSplitter = TokenTextSplitter.builder()
+                .withChunkSize(adaptiveChunkSize)
+                .withMinChunkSizeChars(Math.max(80, vectorStoreProperties.getMinChunkSizeChars() / 2))
+                .withMinChunkLengthToEmbed(vectorStoreProperties.getMinChunkLengthToEmbed())
+                .withMaxNumChunks(Math.max(vectorStoreProperties.getMaxNumChunks(), batch.size() * 4))
+                .withKeepSeparator(vectorStoreProperties.isKeepSeparator())
+                .build();
+        return adaptiveSplitter.apply(batch);
     }
 
     private void validateFile(MultipartFile file) {
@@ -333,7 +366,28 @@ public class VectorStoreServiceImpl implements VectorStoreService {
      * 翻译底层 Redis VectorStore 异常，输出更明确的业务提示。
      */
     private VectorStoreException translateVectorStoreException(String action, RuntimeException exception) {
-        String message = exception.getMessage();
+        Throwable rootCause = unwrapCause(exception);
+        String message = rootCause.getMessage();
+        log.error("Vector store operation failed during {}, rootCause={}", action, message, exception);
+        if (rootCause instanceof VectorStoreException vectorStoreException) {
+            return vectorStoreException;
+        }
+        if (isTokenLimitException(rootCause)) {
+            return new VectorStoreException(
+                    HttpStatus.BAD_REQUEST,
+                    "Embedding input is too large during " + action
+                            + ". Reduce chunk size or upload a smaller document.",
+                    exception);
+        }
+        if (message != null && (message.contains("HTTP 429")
+                || message.contains("AllocationQuota")
+                || message.contains("Throttling.AllocationQuota"))) {
+            return new VectorStoreException(
+                    HttpStatus.TOO_MANY_REQUESTS,
+                    "Embedding model quota exceeded during " + action
+                            + ". Reduce upload concurrency or chunk count, or increase DashScope quota.",
+                    exception);
+        }
         if (message != null && (message.contains("JSON.SET") || message.contains("FT.SEARCH") || message.contains("FT.CREATE"))) {
             return new VectorStoreException(
                     HttpStatus.SERVICE_UNAVAILABLE,
@@ -342,5 +396,21 @@ public class VectorStoreServiceImpl implements VectorStoreService {
                     exception);
         }
         return VectorStoreException.internalError("Vector store operation failed during " + action, exception);
+    }
+
+    private boolean isTokenLimitException(Throwable throwable) {
+        String message = throwable == null ? null : throwable.getMessage();
+        return message != null && (
+                message.contains("maximum number of allowed input tokens")
+                        || message.contains("exceeds the maximum number of allowed input tokens")
+                        || message.contains("input tokens"));
+    }
+
+    private Throwable unwrapCause(Throwable throwable) {
+        Throwable current = throwable;
+        while (current.getCause() != null && current.getCause() != current) {
+            current = current.getCause();
+        }
+        return current;
     }
 }

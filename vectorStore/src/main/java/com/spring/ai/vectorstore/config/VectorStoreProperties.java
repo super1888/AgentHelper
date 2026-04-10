@@ -13,7 +13,7 @@ public class VectorStoreProperties {
     private int chunkSize = 800;
     private int minChunkSizeChars = 350;
     private int minChunkLengthToEmbed = 5;
-    private int maxNumChunks = 256;
+    private int maxNumChunks = 128;
     private boolean keepSeparator = true;
     private boolean leftAlignment = false;
     private int numberOfTopPagesToSkipBeforeDelete = 0;
@@ -23,17 +23,17 @@ public class VectorStoreProperties {
     /**
      * 单次写入向量库的批大小。
      */
-    private int writeBatchSize = 16;
+    private int writeBatchSize = 8;
 
     /**
      * 切片数量达到阈值后是否启用并行批量写入。
      */
-    private boolean parallelWriteEnabled = true;
+    private boolean parallelWriteEnabled = false;
 
     /**
      * 启用并行批量写入的最小切片数阈值。
      */
-    private int parallelWriteThreshold = 24;
+    private int parallelWriteThreshold = 64;
 
     public int getDefaultTopK() {
         return defaultTopK;

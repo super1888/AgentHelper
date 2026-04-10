@@ -28,6 +28,9 @@ public class VectorStoreControllerAdvice {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("success", false);
         body.put("message", exception.getMessage());
+        if (exception.getCause() != null && exception.getCause().getMessage() != null) {
+            body.put("detail", exception.getCause().getMessage());
+        }
         return ResponseEntity.status(exception.getHttpStatus()).body(body);
     }
 
