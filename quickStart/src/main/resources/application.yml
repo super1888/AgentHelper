@@ -1,21 +1,6 @@
-server:
-  port: 8881
-
 spring:
   application:
     name: AgentHelper
-  ai:
-    alibaba:
-      a2a:
-        server:
-          version: 1.0.0
-          card:
-            name: a2a_data_analysis_agent
-            description: SpringAi local A2A agent backed by Nacos registry
-            provider:
-              name: springAi
-              organization: springAi
-              url: http://127.0.0.1:8881
   profiles:
     active: dev
   config:
