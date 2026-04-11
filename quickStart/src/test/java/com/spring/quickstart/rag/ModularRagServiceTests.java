@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import com.spring.ai.common.constants.VectorStoreManagerConstants;
 import com.spring.ai.common.enums.RagFlowTypeEnum;
+import com.spring.ai.core.facotry.GetChatModel;
 import com.spring.ai.core.rag.domain.dto.ModularRagRequest;
 import com.spring.ai.core.rag.domain.vo.ModularRagExecutionResult;
 import com.spring.ai.core.rag.service.ModularRagService;
@@ -14,7 +15,9 @@ import java.util.List;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
+import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.rag.advisor.RetrievalAugmentationAdvisor;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
@@ -39,6 +42,10 @@ class ModularRagServiceTests {
     @Resource
     private VectorStore vectorStore;
 
+
+    @Resource
+    private GetChatModel getChatModel;
+
     /**
      * 验证基础版 QuestionAnswerAdvisor 是否可以正常创建。
      *
@@ -48,9 +55,14 @@ class ModularRagServiceTests {
     @Test
     @DisplayName("应该可以创建 QuestionAnswerAdvisor")
     void shouldCreateQuestionAnswerAdvisor() {
+
+        // 1. 手动创建 ChatClient（指定模型，不会冲突）
+        ChatClient chatClient = ChatClient.builder(getChatModel.creatDashScopeChatModel()).build();
+
+
         ModularRagRequest request = ModularRagRequest.builder()
 
-                .userQuery("什么是 RAG")
+                .userQuery("面向对象的协议是什么")
                 .ragFlowType(RagFlowTypeEnum.QUESTION_ANSWER_ADVISOR)
                 .topK(3)
                 .similarityThreshold(0.50D)
@@ -60,6 +72,14 @@ class ModularRagServiceTests {
                 .build();
 
         QuestionAnswerAdvisor advisor = modularRagService.createQuestionAnswerAdvisor(vectorStore, request);
+
+        // 3. 调用（完美不报错）
+        ChatResponse response = chatClient.prompt()
+                .user("面向对象的协议是什么")
+                .advisors(advisor)
+                .call()
+                .chatResponse();
+        System.out.println(response.getResult());
 
         assertNotNull(modularRagService);
         assertNotNull(vectorStore);

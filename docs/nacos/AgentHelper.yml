@@ -1,0 +1,95 @@
+spring:
+  main:
+    web-application-type: servlet
+
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+
+  ai:
+    dashscope:
+      api-key: sk-c0351e8f4bb34a77bbf364c411932eeb
+      embedding:
+        options:
+          model: text-embedding-v4
+    openai:
+      api-key: sk-5F4MCbuBCDQy4kPhTohZV7jt9A8wo8oCGUvn0C8VsmvdByVr
+    deepseek:
+      api-key: sk-417d47721a134518aa10a22666fa04b9
+    anthropic:
+      api-key: sk-417d47721a134518aa10a22666fa04b9
+    zhipuai:
+      api-key: sk-cNRM0AjYow5dAa5D2QHcZm857CSX048kgUnPr74bNHUpTjrQ
+    model:
+      embedding: dashscope
+    vectorstore:
+      redis:
+        initialize-schema: true
+        prefix: "vector:"
+        index-name: my-vector-index
+    alibaba:
+      a2a:
+        nacos:
+          server-addr: 127.0.0.1:8848
+          username: nacos
+          password: nacos
+          discovery:
+            enabled: true
+          registry:
+            enabled: true
+        server:
+          version: 1.0.0
+          card:
+            name: a2a_data_analysis_agent
+            description: SpringAi local A2A agent backed by Nacos registry
+            provider:
+              name: springAi
+              organization: springAi
+              url: http://127.0.0.1:8881
+
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6379
+      password: 123456
+      database: 7
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+          max-wait: -1ms
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.spring.ai
+
+pagehelper:
+  helper-dialect: mysql
+  reasonable: true
+  support-methods-arguments: true
+
+app:
+  common:
+    async:
+      core-pool-size: 4
+      max-pool-size: 8
+      queue-capacity: 200
+      keep-alive-seconds: 60
+      thread-name-prefix: "common-async-"
+  vector-store:
+    default-top-k: 3
+    chunk-size: 800
+    min-chunk-size-chars: 350
+    min-chunk-length-to-embed: 5
+    max-num-chunks: 128
+    keep-separator: true
+    left-alignment: false
+    number-of-top-pages-to-skip-before-delete: 0
+    number-of-top-text-lines-to-delete: 0
+    number-of-bottom-text-lines-to-delete: 0
+    write-batch-size: 8
+    parallel-write-enabled: false
+    parallel-write-threshold: 64
