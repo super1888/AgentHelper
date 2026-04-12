@@ -78,7 +78,6 @@ import org.springframework.ai.tool.method.MethodToolCallbackProvider;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.util.MimeTypeUtils;
 import reactor.core.publisher.Flux;
