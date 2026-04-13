@@ -18,5 +18,6 @@
     <file url="file://$PROJECT_DIR$/tools/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/user/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/vectorStore/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/websocket/src/main/java" charset="UTF-8" />
   </component>
 </project>
