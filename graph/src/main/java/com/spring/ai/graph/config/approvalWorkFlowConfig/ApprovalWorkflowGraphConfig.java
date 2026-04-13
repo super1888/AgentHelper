@@ -39,7 +39,7 @@ public class ApprovalWorkflowGraphConfig {
     @Resource
     private ApprovalMailService approvalMailService;
 
-    @Resource
+    @Resource(name = "approvalWorkflowCheckpointSaver")
     private BaseCheckpointSaver approvalWorkflowCheckpointSaver;
 
     @Bean("approvalWorkflowGraph")
