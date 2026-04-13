@@ -3,7 +3,8 @@ package com.spring.quickstart;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.agent.a2a.A2aRemoteAgent;
 import com.alibaba.cloud.ai.graph.exception.GraphRunnerException;
-import com.spring.ai.agent.provider.RemoteAgent;
+
+import com.spring.ai.a2a.provider.RemoteAgent;
 import jakarta.annotation.Resource;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;

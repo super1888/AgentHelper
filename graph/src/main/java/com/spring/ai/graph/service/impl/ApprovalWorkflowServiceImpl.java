@@ -11,12 +11,12 @@ import com.spring.ai.graph.domian.request.ApprovalWorkflowStartRequest;
 import com.spring.ai.graph.domian.response.ApprovalWorkflowResponse;
 import com.spring.ai.graph.service.ApprovalWorkflowService;
 import com.spring.ai.graph.stateKeys.ApprovalWorkflowStateKeys;
+import jakarta.annotation.Resource;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 /**
@@ -29,11 +29,8 @@ import org.springframework.stereotype.Service;
 @Service
 public class ApprovalWorkflowServiceImpl implements ApprovalWorkflowService {
 
-    private final CompiledGraph approvalWorkflowGraph;
-
-    public ApprovalWorkflowServiceImpl(@Qualifier("approvalWorkflowGraph") CompiledGraph approvalWorkflowGraph) {
-        this.approvalWorkflowGraph = approvalWorkflowGraph;
-    }
+    @Resource(name = "approvalWorkflowGraph")
+    private CompiledGraph approvalWorkflowGraph;
 
     @Override
     public ApprovalWorkflowResponse startWorkflow(ApprovalWorkflowStartRequest request) {

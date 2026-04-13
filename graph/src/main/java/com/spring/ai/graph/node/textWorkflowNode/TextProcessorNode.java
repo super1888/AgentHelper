@@ -1,4 +1,4 @@
-package com.spring.ai.core.node;
+package com.spring.ai.graph.node.textWorkflowNode;
 
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;

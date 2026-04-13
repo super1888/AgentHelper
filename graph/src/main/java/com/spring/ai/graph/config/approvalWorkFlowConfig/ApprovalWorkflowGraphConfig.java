@@ -1,4 +1,4 @@
-package com.spring.ai.graph.config;
+package com.spring.ai.graph.config.approvalWorkFlowConfig;
 
 import static com.alibaba.cloud.ai.graph.StateGraph.END;
 import static com.alibaba.cloud.ai.graph.StateGraph.START;
@@ -21,9 +21,9 @@ import com.spring.ai.graph.node.sendEmailWorkflowNode.PrepareApprovalNode;
 import com.spring.ai.graph.node.sendEmailWorkflowNode.ValidateApprovalRequestNode;
 import com.spring.ai.graph.service.ApprovalMailService;
 import com.spring.ai.graph.stateKeys.ApprovalWorkflowStateKeys;
+import jakarta.annotation.Resource;
 import java.util.HashMap;
 import java.util.Map;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -36,12 +36,14 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class ApprovalWorkflowGraphConfig {
 
-    @Bean("approvalWorkflowGraph")
-    public CompiledGraph approvalWorkflowGraph(
-            ApprovalMailService approvalMailService,
-            @Qualifier("approvalWorkflowCheckpointSaver") BaseCheckpointSaver approvalWorkflowCheckpointSaver)
-            throws Exception {
+    @Resource
+    private ApprovalMailService approvalMailService;
 
+    @Resource
+    private BaseCheckpointSaver approvalWorkflowCheckpointSaver;
+
+    @Bean("approvalWorkflowGraph")
+    public CompiledGraph approvalWorkflowGraph() throws Exception {
         KeyStrategyFactory keyStrategyFactory = () -> {
             HashMap<String, KeyStrategy> strategies = new HashMap<>();
             strategies.put(ApprovalWorkflowStateKeys.REQUEST_NO, new ReplaceStrategy());

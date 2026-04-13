@@ -2,6 +2,11 @@ package com.spring.ai.graph.controller;
 
 import com.spring.ai.common.web.ApiResponse;
 
+import com.spring.ai.graph.domian.request.ApprovalDecisionRequest;
+import com.spring.ai.graph.domian.request.ApprovalWorkflowStartRequest;
+import com.spring.ai.graph.domian.response.ApprovalWorkflowResponse;
+import com.spring.ai.graph.service.ApprovalWorkflowService;
+import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -22,11 +27,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/workflow/approval")
 public class ApprovalWorkflowController {
 
-    private final ApprovalWorkflowService approvalWorkflowService;
-
-    public ApprovalWorkflowController(ApprovalWorkflowService approvalWorkflowService) {
-        this.approvalWorkflowService = approvalWorkflowService;
-    }
+    @Resource
+    ApprovalWorkflowService approvalWorkflowService;
 
     /**
      * 发起审批。

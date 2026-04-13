@@ -1,31 +1,40 @@
-package com.spring.ai.core.config;
+package com.spring.ai.graph.config.approvalWorkFlowConfig;
 
 import static com.alibaba.cloud.ai.graph.action.AsyncEdgeAction.edge_async;
 import static com.alibaba.cloud.ai.graph.action.AsyncNodeAction.node_async;
 
+import com.alibaba.cloud.ai.graph.CompileConfig;
+import com.alibaba.cloud.ai.graph.CompiledGraph;
 import com.alibaba.cloud.ai.graph.KeyStrategy;
 import com.alibaba.cloud.ai.graph.KeyStrategyFactory;
 import com.alibaba.cloud.ai.graph.StateGraph;
+import com.alibaba.cloud.ai.graph.checkpoint.BaseCheckpointSaver;
+import com.alibaba.cloud.ai.graph.checkpoint.config.SaverConfig;
 import com.alibaba.cloud.ai.graph.state.strategy.ReplaceStrategy;
-import com.spring.ai.core.node.ConditionEvaluatorNode;
-import com.spring.ai.core.node.TextProcessorNode;
+import com.spring.ai.graph.node.textWorkflowNode.ConditionEvaluatorNode;
+import com.spring.ai.graph.node.textWorkflowNode.TextProcessorNode;
+import jakarta.annotation.Resource;
 import java.util.HashMap;
 import java.util.Map;
-import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
 /**
- * 集成自定义 Node 到 StateGraph
- * ReplaceStrategy → 直接覆盖旧值（你现在用的）
- * AppendStrategy → 追加到后面
- * MergeStrategy → 合并对象
- * KeepStrategy → 保留旧值，不更新
+ * 集成自定义 Node 到 StateGraph ReplaceStrategy → 直接覆盖旧值（你现在用的） AppendStrategy → 追加到后面 MergeStrategy → 合并对象 KeepStrategy → 保留旧值，不更新
  *
  * @author zhouqi
  * @version 初次构建
  * @since 2026/4/9
  */
-public class WorkflowConfiguration {
 
-    public StateGraph customWorkflowGraph(ChatClient.Builder chatClientBuilder) throws Exception{
+@Configuration
+public class TextWorkflowConfiguration {
+
+    @Resource
+    private BaseCheckpointSaver approvalWorkflowCheckpointSaver;
+
+    @Bean("customWorkflowGraph")
+    public CompiledGraph customWorkflowGraph() throws Exception {
         // 定义状态管理策略
         KeyStrategyFactory keyStrategyFactory = () -> {
             HashMap<String, KeyStrategy> strategies = new HashMap<>();
@@ -56,6 +65,8 @@ public class WorkflowConfiguration {
                 )
         );
 
-        return graph;
+        return graph.compile(CompileConfig.builder()
+                .saverConfig(SaverConfig.builder().register(approvalWorkflowCheckpointSaver).build())
+                .build());
     }
 }
