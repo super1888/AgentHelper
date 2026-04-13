@@ -21,26 +21,27 @@
     </properties>
 
     <dependencies>
-        <!-- Redis 向量存储实现 -->
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-starter-vector-store-redis</artifactId>
         </dependency>
 
-        <!-- 阿里云 POI 文档读取器，支持 Office 文档解析 -->
+        <dependency>
+            <groupId>redis.clients</groupId>
+            <artifactId>jedis</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>com.alibaba.cloud.ai</groupId>
             <artifactId>spring-ai-alibaba-starter-document-reader-poi</artifactId>
         </dependency>
 
-        <!-- OpenAPI 注解，仅用于 DTO/接口文档说明 -->
         <dependency>
             <groupId>io.swagger.core.v3</groupId>
             <artifactId>swagger-annotations-jakarta</artifactId>
             <version>${swagger.annotations.version}</version>
         </dependency>
 
-        <!-- 公共模块，复用共享常量等基础能力 -->
         <dependency>
             <groupId>com.spring.ai</groupId>
             <artifactId>common</artifactId>

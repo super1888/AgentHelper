@@ -1,12 +1,12 @@
 spring:
+  profiles:
+    active: dev
   main:
     web-application-type: servlet
-
   servlet:
     multipart:
       max-file-size: 100MB
       max-request-size: 100MB
-
   ai:
     dashscope:
       api-key: sk-c0351e8f4bb34a77bbf364c411932eeb
@@ -30,37 +30,33 @@ spring:
         index-name: my-vector-index
     alibaba:
       a2a:
+        # 配置Nacos的地址和用户名密码
         nacos:
           server-addr: 127.0.0.1:8848
           username: nacos
           password: nacos
           discovery:
-            enabled: true
+            enabled: true   # 启用服务发现（查询其他 Agent）
           registry:
-            enabled: true
+            enabled: true   # 启用服务注册（注册本地 Agent）
+        # 配置A2A server的额外信息，如版本号，agentCard中的Skills等
         server:
           version: 1.0.0
           card:
-            name: a2a_data_analysis_agent
-            description: SpringAi local A2A agent backed by Nacos registry
+            url: http://localhost:9999/a2a
+            skills:
+              - id: nacos-question-answer
+                name: Nacos Question Answer
+                description: Answer questions about Nacos.
+                tags:
+                  - Nacos
+                examples:
+                  - What is Nacos?
+            icon-url: https://img.alicdn.com/imgextra/i4/O1CN01rW3vAB1FDWKSOiFf0_!!6000000000453-2-tps-204-40.png
+            documentation-url: https://nacos.io
             provider:
-              name: springAi
-              organization: springAi
-              url: http://127.0.0.1:8881
-
-  data:
-    redis:
-      host: 127.0.0.1
-      port: 6379
-      password: 123456
-      database: 7
-      timeout: 2000ms
-      lettuce:
-        pool:
-          max-active: 8
-          max-idle: 8
-          min-idle: 0
-          max-wait: -1ms
+              organization: Alibaba
+              url: https://www.alibaba.com
 
 mybatis:
   mapper-locations: classpath:mapper/*.xml

@@ -22,7 +22,7 @@ import org.springframework.web.multipart.MultipartFile;
 @RequestMapping("/vectorStore")
 public class VectorStoreController {
 
-        @Resource
+    @Resource
     VectorStoreService vectorStoreService;
 
     /**

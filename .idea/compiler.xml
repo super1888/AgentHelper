@@ -7,14 +7,16 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
-        <module name="skills" />
         <module name="quickStart" />
-        <module name="core" />
         <module name="agent" />
+        <module name="tools" />
+        <module name="graph" />
+        <module name="skills" />
+        <module name="core" />
+        <module name="a2a" />
         <module name="common" />
         <module name="vectorStore" />
         <module name="hooks" />
-        <module name="tools" />
         <module name="prompt" />
         <module name="user" />
         <module name="interceptors" />
@@ -26,9 +28,11 @@
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="a2a" options="-parameters" />
       <module name="agent" options="-parameters" />
       <module name="common" options="-parameters" />
       <module name="core" options="-parameters" />
+      <module name="graph" options="-parameters" />
       <module name="hooks" options="-parameters" />
       <module name="interceptors" options="-parameters" />
       <module name="model" options="-parameters" />

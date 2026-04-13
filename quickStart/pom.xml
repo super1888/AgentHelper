@@ -71,10 +71,7 @@
             <scope>compile</scope>
         </dependency>
 
-        <dependency>
-            <groupId>com.alibaba.cloud.ai</groupId>
-            <artifactId>spring-ai-alibaba-starter-a2a-nacos</artifactId>
-        </dependency>
+
 
         <dependency>
             <groupId>com.alibaba.cloud</groupId>
@@ -97,6 +94,7 @@
             <artifactId>nacos-client</artifactId>
             <version>${nacos.version}</version>
         </dependency>
+
 
 
     </dependencies>
