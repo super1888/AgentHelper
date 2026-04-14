@@ -4,7 +4,6 @@ import com.alibaba.cloud.ai.graph.agent.interceptor.ModelCallHandler;
 import com.alibaba.cloud.ai.graph.agent.interceptor.ModelInterceptor;
 import com.alibaba.cloud.ai.graph.agent.interceptor.ModelRequest;
 import com.alibaba.cloud.ai.graph.agent.interceptor.ModelResponse;
-import com.spring.ai.common.bean.dto.UserInfoDTO;
 import com.spring.ai.user.domain.dto.UserPreferencesDTO;
 import org.springframework.ai.chat.messages.SystemMessage;
 

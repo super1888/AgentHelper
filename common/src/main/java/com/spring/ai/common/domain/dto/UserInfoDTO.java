@@ -1,4 +1,4 @@
-package com.spring.ai.common.bean.dto;
+package com.spring.ai.common.domain.dto;
 
 /**
  * class information

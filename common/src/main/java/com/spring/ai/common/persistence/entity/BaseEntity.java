@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableLogic;
+import com.baomidou.mybatisplus.annotation.Version;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 import lombok.Data;
@@ -19,7 +20,7 @@ import lombok.Data;
 @Data
 public abstract class BaseEntity implements Serializable {
 
-    @TableId(value = "id", type = IdType.INPUT)
+    @TableId(value = "id", type = IdType.ASSIGN_ID)
     private Long id;
 
     @TableField(value = "create_time", fill = FieldFill.INSERT)
@@ -34,7 +35,11 @@ public abstract class BaseEntity implements Serializable {
     @TableField("update_by")
     private Long updateBy;
 
-    @TableLogic
+    @TableLogic(value = "0", delval = "1")
     @TableField("delete_flag")
     private Integer deleteFlag;
+
+    @Version
+    @TableField("version")
+    private Integer version;
 }

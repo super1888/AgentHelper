@@ -16,9 +16,14 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-
     </properties>
     <dependencies>
+
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-jsqlparser</artifactId>
+            <version>${mybatis-plus.version}</version> <!-- 确保版本和 MyBatis Plus 主包一致 -->
+        </dependency>
 
 
         <!--本地包-->
