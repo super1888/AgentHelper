@@ -41,8 +41,11 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleUnhandledException(Exception exception) {
-        log.error("系统发生未处理异常", exception);
+        log.error("Unhandled system exception", exception);
         return ResponseEntity.internalServerError()
-                .body(ApiResponse.fail(ErrorCodeEnum.INTERNAL_SERVER_ERROR, ErrorCodeEnum.INTERNAL_SERVER_ERROR.getMessage()));
+                .body(ApiResponse.fail(
+                        ErrorCodeEnum.INTERNAL_SERVER_ERROR,
+                        ErrorCodeEnum.INTERNAL_SERVER_ERROR.getMessage()
+                ));
     }
 }

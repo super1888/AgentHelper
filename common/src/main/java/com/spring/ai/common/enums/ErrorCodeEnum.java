@@ -9,7 +9,12 @@ public enum ErrorCodeEnum {
 
     SUCCESS("00000", "操作成功"),
     BAD_REQUEST("40000", "请求参数有误"),
+    UNAUTHORIZED("40100", "未登录或登录已失效"),
+    FORBIDDEN("40300", "无权限访问"),
     NOT_FOUND("40400", "请求资源不存在"),
+    USER_ALREADY_EXISTS("U1000", "用户已存在"),
+    USER_DISABLED("U1001", "用户已被禁用"),
+    USER_PASSWORD_MISMATCH("U1002", "用户名或密码错误"),
     AGENT_CONFIG_ERROR("A1000", "Agent 配置异常"),
     TOOL_EXECUTION_ERROR("T1000", "工具执行异常"),
     VECTOR_STORE_ERROR("V1000", "向量存储处理异常"),

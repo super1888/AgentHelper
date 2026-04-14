@@ -19,7 +19,7 @@ import org.springframework.web.multipart.MultipartFile;
  */
 @Tag(name = "向量库管理")
 @RestController
-@RequestMapping("/vectorStore")
+@RequestMapping("/agentHelper/vectorStore")
 public class VectorStoreController {
 
     @Resource
