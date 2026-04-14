@@ -6,11 +6,7 @@ import com.spring.ai.common.providerInterface.UserProvider;
 import org.springframework.stereotype.Component;
 
 /**
- * class information
- *
- * @author zhouqi
- * @version 初次构建
- * @since 2026/4/14
+ * 基于 Sa-Token 的当前登录用户提供器。
  */
 @Component
 public class SaTokenUserProvider implements UserProvider {

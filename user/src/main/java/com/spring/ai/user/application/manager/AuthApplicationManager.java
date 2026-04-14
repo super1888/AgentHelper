@@ -1,14 +1,13 @@
 package com.spring.ai.user.application.manager;
 
 import cn.dev33.satoken.stp.StpUtil;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.spring.ai.common.constants.SqlConstants;
 import com.spring.ai.common.constants.UserAuthConstants;
 import com.spring.ai.common.enums.ErrorCodeEnum;
+import com.spring.ai.common.enums.user.UserStatusEnum;
 import com.spring.ai.common.exception.BusinessException;
 import com.spring.ai.common.repository.enitiy.SyUser;
 import com.spring.ai.common.repository.service.SyUserService;
-import com.spring.ai.user.application.assmbler.AuthAssembler;
+import com.spring.ai.user.application.assmbler.UserAssembler;
 import com.spring.ai.user.domain.request.UserLoginRequest;
 import com.spring.ai.user.domain.vo.UserAuthLoginVO;
 import com.spring.ai.user.domain.vo.UserProfileVO;
@@ -16,27 +15,27 @@ import jakarta.annotation.Resource;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 
+/**
+ * 认证应用管理器。
+ */
 @Component
 public class AuthApplicationManager {
 
-    private static final int USER_STATUS_ENABLED = 1;
+    @Resource
+    private SyUserService syUserService;
 
     @Resource
-    SyUserService syUserService;
+    private PasswordEncoder passwordEncoder;
 
-    @Resource
-    PasswordEncoder passwordEncoder;
-
+    /**
+     * 用户登录。
+     *
+     * @param request 登录请求
+     * @return 登录结果
+     */
     public UserAuthLoginVO login(UserLoginRequest request) {
-        String username = normalize(request.getUsername());
-        SyUser user = syUserService.getOne(
-                new LambdaQueryWrapper<SyUser>()
-                        .eq(SyUser::getUsername, username)
-                        .last(SqlConstants.LIMIT_ONE)
-        );
-
+        SyUser user = syUserService.getByUsername(normalize(request.getUsername()));
         if (user == null || !passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
             throw new BusinessException(
                     ErrorCodeEnum.USER_PASSWORD_MISMATCH,
@@ -45,7 +44,7 @@ public class AuthApplicationManager {
             );
         }
 
-        if (user.getStatus() != null && user.getStatus() != USER_STATUS_ENABLED) {
+        if (!UserStatusEnum.ENABLE.getCode().equals(user.getStatus())) {
             throw new BusinessException(
                     ErrorCodeEnum.USER_DISABLED,
                     HttpStatus.FORBIDDEN,
@@ -55,20 +54,29 @@ public class AuthApplicationManager {
 
         StpUtil.login(user.getId());
         StpUtil.getSession().set(UserAuthConstants.LOGIN_NAME, user.getUsername());
+
         return UserAuthLoginVO.builder()
-                .user(AuthAssembler.toUserProfile(user))
-                .token(AuthAssembler.buildToken(user.getId()))
+                .user(UserAssembler.toUserProfileVO(user))
+                .token(UserAssembler.toUserTokenVO(user.getId()))
                 .build();
     }
 
+    /**
+     * 退出登录。
+     */
     public void logout() {
         StpUtil.checkLogin();
         StpUtil.logout();
     }
 
+    /**
+     * 获取当前登录用户信息。
+     *
+     * @return 当前登录用户信息
+     */
     public UserProfileVO currentUser() {
         StpUtil.checkLogin();
-        SyUser user = syUserService.getById(StpUtil.getLoginIdAsLong());
+        SyUser user = syUserService.getDetailById(StpUtil.getLoginIdAsLong());
         if (user == null) {
             throw new BusinessException(
                     ErrorCodeEnum.NOT_FOUND,
@@ -76,16 +84,10 @@ public class AuthApplicationManager {
                     "当前登录用户不存在"
             );
         }
-        return AuthAssembler.toUserProfile(user);
+        return UserAssembler.toUserProfileVO(user);
     }
-
 
     private String normalize(String value) {
         return value == null ? null : value.trim();
-    }
-
-    private String normalizeNullable(String value) {
-        String normalized = normalize(value);
-        return StringUtils.hasText(normalized) ? normalized : null;
     }
 }

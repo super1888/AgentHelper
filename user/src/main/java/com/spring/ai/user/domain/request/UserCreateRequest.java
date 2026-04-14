@@ -1,15 +1,16 @@
 package com.spring.ai.user.domain.request;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 /**
- * 用户注册请求。
+ * 新增用户请求。
  */
 @Data
-public class UserRegisterRequest {
+public class UserCreateRequest {
 
     @NotBlank(message = "用户名不能为空")
     @Size(min = 4, max = 64, message = "用户名长度必须在4到64位之间")
@@ -32,4 +33,9 @@ public class UserRegisterRequest {
     @NotBlank(message = "确认密码不能为空")
     @Size(min = 8, max = 64, message = "确认密码长度必须在8到64位之间")
     private String confirmPassword;
+
+    @NotNull(message = "用户状态不能为空")
+    private Integer status;
+
+    private Long tenantId;
 }

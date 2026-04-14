@@ -1,17 +1,15 @@
 package com.spring.ai.common.constants;
 
 /**
- * 常见的sql
- *
- * @author zhouqi
- * @version 初次构建
- * @since 2026/4/14
+ * SQL 相关常量。
  */
-public class SqlConstants {
+public final class SqlConstants {
+
+    private SqlConstants() {
+    }
 
     /**
-     * 查询一条
+     * 查询单条记录限制。
      */
     public static final String LIMIT_ONE = "limit 1";
-
 }

@@ -6,11 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 /**
- * 用户状态 1-启用, 0-禁用
- *
- * @author zhouqi
- * @version 初次构建
- * @since 2026/4/14
+ * 用户状态枚举。
  */
 @Getter
 @AllArgsConstructor
@@ -18,19 +14,27 @@ public enum UserStatusEnum {
 
     ENABLE(1, "启用"),
     DISABLED(0, "禁用");
+
     /**
-     * 编码
+     * 状态编码。
      */
     private final Integer code;
+
     /**
-     * 描述
+     * 状态描述。
      */
     private final String desc;
 
-
+    /**
+     * 按编码解析枚举。
+     *
+     * @param val 状态编码
+     * @return 用户状态枚举
+     */
     public static UserStatusEnum fromVal(Integer val) {
-        return Stream.of(UserStatusEnum.values()).filter(userStatusEnum -> userStatusEnum.getCode().equals(val))
-                .findFirst().orElseThrow(() -> new EnumException("未知的编码"));
+        return Stream.of(UserStatusEnum.values())
+                .filter(userStatusEnum -> userStatusEnum.getCode().equals(val))
+                .findFirst()
+                .orElseThrow(() -> new EnumException("未知的用户状态编码"));
     }
-
 }
