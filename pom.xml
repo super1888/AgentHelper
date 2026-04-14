@@ -38,7 +38,7 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <alibaba.ai.version>1.1.2.0</alibaba.ai.version>
         <alibaba.ai.extensions.ersion>1.1.2.1</alibaba.ai.extensions.ersion>
-        <mybatis-plus.version>3.5.7</mybatis-plus.version>
+        <mybatis-plus.version>3.5.15</mybatis-plus.version>
         <mysql.java>8.0.33</mysql.java>
         <druid.version>1.2.19</druid.version>
         <lombok.version>1.18.30</lombok.version>
@@ -101,6 +101,12 @@
             <groupId>com.github.pagehelper</groupId>
             <artifactId>pagehelper-spring-boot-starter</artifactId>
             <version>${pagehelper.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+            <version>${mybatis-plus.version}</version>
         </dependency>
         <!-- Mysql数据库驱动 -->
         <dependency>

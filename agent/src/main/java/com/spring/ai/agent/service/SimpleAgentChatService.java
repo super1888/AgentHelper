@@ -8,7 +8,7 @@ import com.spring.ai.agent.domain.request.SimpleAgentChatRequest;
 import com.spring.ai.agent.domain.response.SimpleAgentWsEvent;
 import com.spring.ai.agent.store.SimpleAgentRegistry;
 import com.spring.ai.agent.store.SimpleAgentRegistry.StoredSimpleAgent;
-import com.spring.ai.common.config.CommonAsyncConfig;
+import com.spring.ai.common.config.async.CommonAsyncConfig;
 import com.spring.ai.common.enums.ErrorCodeEnum;
 import com.spring.ai.common.exception.BusinessException;
 import com.spring.ai.websocket.annotation.WebSocketPush;

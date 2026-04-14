@@ -9,7 +9,7 @@ import static com.spring.ai.common.constants.VectorStoreManagerConstants.METADAT
 import static com.spring.ai.common.constants.VectorStoreManagerConstants.METADATA_UPLOADED_AT;
 import static com.spring.ai.common.constants.VectorStoreManagerConstants.MODULE_NAME;
 
-import com.spring.ai.common.config.CommonAsyncConfig;
+import com.spring.ai.common.config.async.CommonAsyncConfig;
 import com.spring.ai.common.utils.ParallelExecutionUtils;
 import com.spring.ai.vectorstore.config.VectorStoreProperties;
 import com.spring.ai.vectorstore.domain.response.VectorStoreDeleteResponse;

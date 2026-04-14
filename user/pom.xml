@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
+
     <parent>
         <groupId>com.spring.ai</groupId>
         <artifactId>springAi</artifactId>
@@ -11,13 +13,13 @@
     <artifactId>user</artifactId>
     <version>1.0-SNAPSHOT</version>
     <name>user</name>
-    <description>用户模块</description>
+    <description>user module</description>
 
     <properties>
         <java.version>21</java.version>
     </properties>
+
     <dependencies>
-        <!--本地包-->
         <dependency>
             <groupId>com.spring.ai</groupId>
             <artifactId>common</artifactId>
@@ -25,7 +27,10 @@
             <scope>compile</scope>
         </dependency>
 
-
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-core</artifactId>
+            <version>${mybatis-plus.version}</version>
+        </dependency>
     </dependencies>
-
 </project>

@@ -1,4 +1,4 @@
-package com.spring.ai.common.config;
+package com.spring.ai.common.config.async;
 
 import java.util.concurrent.Executor;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
