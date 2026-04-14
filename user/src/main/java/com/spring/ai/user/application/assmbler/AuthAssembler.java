@@ -8,13 +8,13 @@ import com.spring.ai.user.domain.vo.UserTokenVO;
 import org.springframework.util.StringUtils;
 
 /**
- * user实体转化类
+ * 登录实体转化类
  *
  * @author zhouqi
  * @version 初次构建
  * @since 2026/4/14
  */
-public class UserAssembler {
+public class AuthAssembler {
 
     public static UserTokenVO buildToken(Long userId) {
         String tokenName = SaManager.getConfig().getTokenName();

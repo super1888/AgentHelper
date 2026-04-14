@@ -1,4 +1,4 @@
-package com.spring.ai.user.domain.dto;
+package com.spring.ai.user.domain.request;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;

@@ -2,57 +2,39 @@ package com.spring.ai.user.application.manager;
 
 import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.spring.ai.common.constants.SqlConstants;
+import com.spring.ai.common.constants.UserAuthConstants;
 import com.spring.ai.common.enums.ErrorCodeEnum;
 import com.spring.ai.common.exception.BusinessException;
 import com.spring.ai.common.repository.enitiy.SyUser;
 import com.spring.ai.common.repository.service.SyUserService;
-import com.spring.ai.user.application.assmbler.UserAssembler;
-import com.spring.ai.user.domain.dto.UserLoginRequest;
-import com.spring.ai.user.domain.dto.UserRegisterRequest;
+import com.spring.ai.user.application.assmbler.AuthAssembler;
+import com.spring.ai.user.domain.request.UserLoginRequest;
 import com.spring.ai.user.domain.vo.UserAuthLoginVO;
 import com.spring.ai.user.domain.vo.UserProfileVO;
-import lombok.RequiredArgsConstructor;
+import jakarta.annotation.Resource;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
-@Service
-@RequiredArgsConstructor
-public class UserAuthApplicationManager {
+@Component
+public class AuthApplicationManager {
 
     private static final int USER_STATUS_ENABLED = 1;
 
-    private final SyUserService syUserService;
+    @Resource
+    SyUserService syUserService;
 
-    private final PasswordEncoder passwordEncoder;
-
-    @Transactional(rollbackFor = Exception.class)
-    public void register(UserRegisterRequest request) {
-        validateRegisterRequest(request);
-
-        String username = normalize(request.getUsername());
-        String phone = normalizeNullable(request.getPhone());
-        String email = normalizeNullable(request.getEmail());
-
-        SyUser entity = new SyUser();
-        entity.setUsername(username);
-        entity.setNickname(resolveNickname(request));
-        entity.setPhone(phone);
-        entity.setEmail(email);
-        entity.setPasswordHash(passwordEncoder.encode(request.getPassword()));
-        entity.setStatus(USER_STATUS_ENABLED);
-        entity.setTenantId(null);
-        syUserService.save(entity);
-    }
+    @Resource
+    PasswordEncoder passwordEncoder;
 
     public UserAuthLoginVO login(UserLoginRequest request) {
         String username = normalize(request.getUsername());
         SyUser user = syUserService.getOne(
                 new LambdaQueryWrapper<SyUser>()
                         .eq(SyUser::getUsername, username)
-                        .last("limit 1")
+                        .last(SqlConstants.LIMIT_ONE)
         );
 
         if (user == null || !passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
@@ -72,10 +54,10 @@ public class UserAuthApplicationManager {
         }
 
         StpUtil.login(user.getId());
-
+        StpUtil.getSession().set(UserAuthConstants.LOGIN_NAME, user.getUsername());
         return UserAuthLoginVO.builder()
-                .user(UserAssembler.toUserProfile(user))
-                .token(UserAssembler.buildToken(user.getId()))
+                .user(AuthAssembler.toUserProfile(user))
+                .token(AuthAssembler.buildToken(user.getId()))
                 .build();
     }
 
@@ -86,7 +68,7 @@ public class UserAuthApplicationManager {
 
     public UserProfileVO currentUser() {
         StpUtil.checkLogin();
-        SyUser user = syUserService.getById(Long.valueOf(String.valueOf(StpUtil.getLoginId())));
+        SyUser user = syUserService.getById(StpUtil.getLoginIdAsLong());
         if (user == null) {
             throw new BusinessException(
                     ErrorCodeEnum.NOT_FOUND,
@@ -94,22 +76,9 @@ public class UserAuthApplicationManager {
                     "当前登录用户不存在"
             );
         }
-        return UserAssembler.toUserProfile(user);
+        return AuthAssembler.toUserProfile(user);
     }
 
-    private void validateRegisterRequest(UserRegisterRequest request) {
-        if (!request.getPassword().equals(request.getConfirmPassword())) {
-            throw new IllegalArgumentException("两次输入的密码不一致");
-        }
-    }
-
-
-
-
-    private String resolveNickname(UserRegisterRequest request) {
-        String nickname = normalizeNullable(request.getNickname());
-        return StringUtils.hasText(nickname) ? nickname : normalize(request.getUsername());
-    }
 
     private String normalize(String value) {
         return value == null ? null : value.trim();

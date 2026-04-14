@@ -15,8 +15,8 @@ public class UserAuthWebConfig implements WebMvcConfigurer {
         registry.addInterceptor(new SaInterceptor(handle -> StpUtil.checkLogin()))
                 .addPathPatterns("/agentHelper/**")
                 .excludePathPatterns(
-                        "/agentHelper/users/auth/register",
-                        "/agentHelper/users/auth/login",
+                        "/agentHelper/users/register",
+                        "/agentHelper/auth/login",
                         "/error"
                 );
     }
