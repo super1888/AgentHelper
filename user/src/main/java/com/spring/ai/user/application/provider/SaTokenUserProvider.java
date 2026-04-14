@@ -3,6 +3,7 @@ package com.spring.ai.user.application.provider;
 import cn.dev33.satoken.stp.StpUtil;
 import com.spring.ai.common.constants.UserAuthConstants;
 import com.spring.ai.common.providerInterface.UserProvider;
+import org.springframework.stereotype.Component;
 
 /**
  * class information
@@ -11,6 +12,7 @@ import com.spring.ai.common.providerInterface.UserProvider;
  * @version 初次构建
  * @since 2026/4/14
  */
+@Component
 public class SaTokenUserProvider implements UserProvider {
 
     @Override

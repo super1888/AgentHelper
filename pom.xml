@@ -43,7 +43,6 @@
         <druid.version>1.2.19</druid.version>
         <lombok.version>1.18.30</lombok.version>
         <sa-token.version>1.45.0</sa-token.version>
-        <mybatis.springboot.version>3.0.3</mybatis.springboot.version>
         <pagehelper.version>2.1.0</pagehelper.version>
         <mysql-connector-java>3.0.3</mysql-connector-java>
         <spring-ai.version>1.1.2</spring-ai.version>
@@ -85,11 +84,6 @@
             <version>${lombok.version}</version>
         </dependency>
 
-        <dependency>
-            <groupId>org.mybatis.spring.boot</groupId>
-            <artifactId>mybatis-spring-boot-starter</artifactId>
-            <version>${mybatis.springboot.version}</version>
-        </dependency>
         <!-- MyBatis分页插件 -->
         <dependency>
             <groupId>com.github.pagehelper</groupId>
