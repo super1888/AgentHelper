@@ -1,4 +1,4 @@
-﻿package com.spring.ai.common.domain.base;
+package com.spring.ai.common.domain.base;
 
 import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.IdType;
