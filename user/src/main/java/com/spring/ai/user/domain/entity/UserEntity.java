@@ -2,7 +2,7 @@ package com.spring.ai.user.domain.entity;
 
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.spring.ai.common.persistence.entity.BaseEntity;
+import com.spring.ai.common.domain.base.BaseEntity;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -57,9 +57,4 @@ public class UserEntity extends BaseEntity {
     @TableField("tenant_id")
     private Long tenantId;
 
-    /**
-     * 备注信息。
-     */
-    @TableField("remark")
-    private String remark;
 }

@@ -16,12 +16,17 @@ public class CommonMetaObjectHandler implements MetaObjectHandler {
         LocalDateTime now = LocalDateTime.now();
         this.strictInsertFill(metaObject, "createTime", LocalDateTime.class, now);
         this.strictInsertFill(metaObject, "updateTime", LocalDateTime.class, now);
-        this.strictInsertFill(metaObject, "deleteFlag", Integer.class, 0);
         this.strictInsertFill(metaObject, "version", Integer.class, 0);
+        // ===================== 新增：创建人信息 =====================
+//        this.strictInsertFill(metaObject, "createId", Long.class, getCurrentUserId());
+//        this.strictInsertFill(metaObject, "createName", String.class, getCurrentUserName());
     }
 
     @Override
     public void updateFill(MetaObject metaObject) {
         this.strictUpdateFill(metaObject, "updateTime", LocalDateTime.class, LocalDateTime.now());
+        // ===================== 新增：更新人信息 =====================
+//        this.strictUpdateFill(metaObject, "updateId", Long.class, getCurrentUserId());
+//        this.strictUpdateFill(metaObject, "updateName", String.class, getCurrentUserName());
     }
 }
