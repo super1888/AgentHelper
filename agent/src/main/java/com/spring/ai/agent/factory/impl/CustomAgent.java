@@ -2,7 +2,7 @@ package com.spring.ai.agent.factory.impl;
 
 import com.alibaba.cloud.ai.graph.agent.Builder;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
-import com.spring.ai.agent.domian.dto.AgentInfoDTO;
+import com.spring.ai.agent.domain.dto.AgentInfoDTO;
 import com.spring.ai.agent.factory.AbstractAgent;
 import com.spring.ai.agent.factory.AgentCreator;
 import com.spring.ai.common.enums.AgentTypeEnum;

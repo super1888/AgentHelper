@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
-import { LogOut, ShieldCheck } from 'lucide-vue-next'
+import { Bot, LogOut, ShieldCheck, Users } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
@@ -34,7 +34,7 @@ async function handleLogout() {
         <div class="shell__copy">
           <p class="section-kicker">Agent Helper</p>
           <h1>Agent Helper 控制台</h1>
-          <p class="shell__description">统一用户认证与工作台入口</p>
+          <p class="shell__description">统一承载 Agent 管理、用户管理和控制台能力入口</p>
         </div>
       </div>
 
@@ -60,10 +60,20 @@ async function handleLogout() {
 
     <nav class="shell__nav" aria-label="主导航">
       <RouterLink
+        to="/agents"
+        class="shell__nav-link"
+        :class="{ 'shell__nav-link--active': String(route.path).startsWith('/agents') }"
+      >
+        <Bot :size="15" aria-hidden="true" />
+        Agent 管理
+      </RouterLink>
+
+      <RouterLink
         to="/users"
         class="shell__nav-link"
         :class="{ 'shell__nav-link--active': route.name === 'users' }"
       >
+        <Users :size="15" aria-hidden="true" />
         用户管理
       </RouterLink>
     </nav>
@@ -76,7 +86,7 @@ async function handleLogout() {
 
 <style scoped>
 .shell {
-  width: min(1200px, calc(100% - 32px));
+  width: min(1280px, calc(100% - 32px));
   margin: 0 auto;
   padding: 28px 0 40px;
 }
@@ -125,7 +135,7 @@ async function handleLogout() {
 }
 
 .shell__description {
-  max-width: 24rem;
+  max-width: 28rem;
   margin: 0;
   color: var(--color-ink-soft);
   line-height: 1.5;
@@ -162,6 +172,7 @@ async function handleLogout() {
 
 .shell__nav {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   margin: 18px 0 24px;
 }
@@ -170,6 +181,7 @@ async function handleLogout() {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 8px;
   min-height: 42px;
   padding: 0 18px;
   color: var(--color-ink-soft);

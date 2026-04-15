@@ -1,7 +1,7 @@
 package com.spring.ai.agent.factory.impl;
 
 import com.alibaba.cloud.ai.graph.agent.flow.agent.SupervisorAgent;
-import com.spring.ai.agent.domian.dto.SupervisorAgentDTO;
+import com.spring.ai.agent.domain.dto.SupervisorAgentDTO;
 import com.spring.ai.agent.factory.AbstractAgent;
 import com.spring.ai.agent.factory.AgentCreator;
 import com.spring.ai.common.enums.AgentTypeEnum;

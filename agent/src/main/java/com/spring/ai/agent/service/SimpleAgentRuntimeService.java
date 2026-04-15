@@ -1,0 +1,93 @@
+package com.spring.ai.agent.service;
+
+import com.alibaba.cloud.ai.graph.agent.ReactAgent;
+import com.spring.ai.agent.domain.dto.AgentInfoDTO;
+import com.spring.ai.agent.domain.dto.SimpleAgentVersionConfigDTO;
+import com.spring.ai.agent.factory.AgentFactory;
+import com.spring.ai.agent.store.SimpleAgentRegistry;
+import com.spring.ai.agent.store.SimpleAgentRegistry.StoredSimpleAgent;
+import com.spring.ai.common.enums.AgentTypeEnum;
+import com.spring.ai.common.repository.enitiy.SyAgent;
+import com.spring.ai.common.repository.enitiy.SyAgentVersion;
+import com.spring.ai.core.facotry.GetChatModel;
+import jakarta.annotation.Resource;
+import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+
+/**
+ * Agent 运行时构建服务。
+ *
+ * <p>根据版本快照恢复运行时 ReactAgent，并缓存到内存中，
+ * 避免每次会话请求都重新初始化模型和工具链。</p>
+ */
+@Service
+public class SimpleAgentRuntimeService {
+
+    @Resource
+    private SimpleAgentRegistry simpleAgentRegistry;
+
+    @Resource
+    private SimpleAgentSupportService simpleAgentSupportService;
+
+    @Resource
+    private AgentFactory agentFactory;
+
+    @Resource
+    private GetChatModel getChatModel;
+
+    public ReactAgent getOrCreate(SyAgent agent, SyAgentVersion version) {
+        StoredSimpleAgent storedSimpleAgent = simpleAgentRegistry.get(version.getId());
+        if (storedSimpleAgent != null) {
+            return storedSimpleAgent.getReactAgent();
+        }
+
+        // 运行时实例必须严格基于版本快照恢复，确保会话行为可追溯。
+        SimpleAgentVersionConfigDTO config = simpleAgentSupportService.parseConfig(version.getConfigSnapshotJson());
+        AgentInfoDTO agentInfoDTO = AgentInfoDTO.builder()
+                .agentId(agent.getId())
+                .agentName(config.getAgentName())
+                .description(buildDescription(config))
+                .instruction(buildInstruction(config))
+                .model(getChatModel.creatDashScopeChatModel())
+                .enableLogging(Boolean.FALSE)
+                .build();
+
+        ReactAgent reactAgent = (ReactAgent) agentFactory.createAgent(AgentTypeEnum.REACT, agentInfoDTO);
+        simpleAgentRegistry.save(StoredSimpleAgent.builder()
+                .versionId(version.getId())
+                .agentId(agent.getId())
+                .agentName(config.getAgentName())
+                .description(agentInfoDTO.getDescription())
+                .versionNo(version.getVersionNo())
+                .reactAgent(reactAgent)
+                .build());
+        return reactAgent;
+    }
+
+    private String buildDescription(SimpleAgentVersionConfigDTO config) {
+        if (StringUtils.hasText(config.getDescription())) {
+            return config.getDescription().trim();
+        }
+        if (config.getSelectedCapabilities() == null || config.getSelectedCapabilities().isEmpty()) {
+            return "Simple agent created from selected frontend options";
+        }
+        return "Simple agent with selected capabilities: " + String.join(", ", config.getSelectedCapabilities());
+    }
+
+    private String buildInstruction(SimpleAgentVersionConfigDTO config) {
+        StringBuilder builder = new StringBuilder();
+        if (StringUtils.hasText(config.getSystemPrompt())) {
+            builder.append(config.getSystemPrompt().trim()).append("\n");
+        } else {
+            builder.append("You are a configurable assistant created from frontend options.\n");
+        }
+        if (config.getSelectedCapabilities() != null && !config.getSelectedCapabilities().isEmpty()) {
+            builder.append("Enabled capabilities: ")
+                    .append(String.join(", ", config.getSelectedCapabilities()))
+                    .append(".\n");
+            builder.append("When answering the user, keep these selected capabilities in mind.\n");
+        }
+        builder.append("Reply clearly and directly to the user.");
+        return builder.toString();
+    }
+}

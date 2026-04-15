@@ -22,20 +22,17 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 用户管理控制器
+ * 用户管理控制器。
  */
 @RestController
-@RequestMapping("/agentHelper/users")
+@RequestMapping("/users")
 @RequiredArgsConstructor
 public class UserController {
 
     private final UserApplicationManager userApplicationManager;
 
     /**
-     * 用户注册
-     *
-     * @param request 注册请求
-     * @return 处理结果
+     * 用户注册。
      */
     @PostMapping("/register")
     public ApiResponse<Void> register(@Valid @RequestBody UserRegisterRequest request) {
@@ -44,10 +41,7 @@ public class UserController {
     }
 
     /**
-     * 新增用户
-     *
-     * @param request 新增请求
-     * @return 处理结果
+     * 新增用户。
      */
     @PostMapping("/add")
     public ApiResponse<Void> createUser(@Valid @RequestBody UserCreateRequest request) {
@@ -56,10 +50,7 @@ public class UserController {
     }
 
     /**
-     * 删除用户
-     *
-     * @param userId 用户 ID
-     * @return 处理结果
+     * 删除用户。
      */
     @DeleteMapping("/delete/{userId}")
     public ApiResponse<Void> deleteUser(@PathVariable Long userId) {
@@ -68,11 +59,7 @@ public class UserController {
     }
 
     /**
-     * 编辑用户信息
-     *
-     * @param userId  用户 ID
-     * @param request 编辑请求
-     * @return 处理结果
+     * 更新用户。
      */
     @PutMapping("/update/{userId}")
     public ApiResponse<Void> updateUser(@PathVariable Long userId, @Valid @RequestBody UserUpdateRequest request) {
@@ -81,10 +68,7 @@ public class UserController {
     }
 
     /**
-     * 查询用户信息明细
-     *
-     * @param userId 用户 ID
-     * @return 用户信息
+     * 查询用户详情。
      */
     @GetMapping("/select/{userId}")
     public ApiResponse<UserProfileVO> getUserDetail(@PathVariable Long userId) {
@@ -92,9 +76,7 @@ public class UserController {
     }
 
     /**
-     * 查询所有用户
-     *
-     * @return 用户列表
+     * 查询全部用户。
      */
     @GetMapping("/getAllUser")
     public ApiResponse<List<UserProfileVO>> listAllUsers() {
@@ -102,20 +84,16 @@ public class UserController {
     }
 
     /**
-     * 分页条件查询
-     *
-     * @param request 查询请求
-     * @return 分页结果
+     * 分页条件查询。
      */
     @PostMapping("/pageQuery")
     public ApiResponse<PageInfo<UserProfileVO>> pageQuery(@RequestBody(required = false) UserPageQueryRequest request) {
-        return ApiResponse.success(userApplicationManager.pageQueryUsers(request == null ? new UserPageQueryRequest() : request));
+        return ApiResponse.success(userApplicationManager.pageQueryUsers(
+                request == null ? new UserPageQueryRequest() : request));
     }
 
     /**
-     * 用户数量统计
-     *
-     * @return 统计结果
+     * 用户统计。
      */
     @PostMapping("/statistics")
     public ApiResponse<UserStatisticsVO> statistics() {

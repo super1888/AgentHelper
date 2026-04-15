@@ -1,4 +1,4 @@
-package com.spring.ai.agent.domian.dto;
+package com.spring.ai.agent.domain.dto;
 
 import lombok.Builder;
 import lombok.Data;

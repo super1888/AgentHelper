@@ -1,7 +1,7 @@
 package com.spring.ai.agent.factory.impl;
 
 import com.alibaba.cloud.ai.graph.agent.flow.agent.ParallelAgent;
-import com.spring.ai.agent.domian.dto.ParallelAgentDTO;
+import com.spring.ai.agent.domain.dto.ParallelAgentDTO;
 import com.spring.ai.agent.factory.AbstractAgent;
 import com.spring.ai.agent.factory.AgentCreator;
 import com.spring.ai.common.enums.AgentTypeEnum;

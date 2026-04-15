@@ -1,9 +1,6 @@
 package com.spring.ai.agent.store;
 
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
-import com.spring.ai.common.enums.ErrorCodeEnum;
-import com.spring.ai.common.exception.BusinessException;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.Builder;
@@ -11,37 +8,40 @@ import lombok.Getter;
 import org.springframework.stereotype.Component;
 
 /**
- * 简单 Agent 内存注册表。
- * 当前只用于演示创建后的 Agent 可以被后续 WebSocket 会话继续复用。
+ * Agent 运行时缓存。
+ *
+ * <p>数据库负责持久化，内存仅缓存已经构建过的运行时 Agent，
+ * 避免每次会话请求都重新初始化模型与工具链。</p>
  */
 @Component
 public class SimpleAgentRegistry {
 
-    private final Map<String, StoredSimpleAgent> agentStore = new ConcurrentHashMap<>();
+    private final Map<Long, StoredSimpleAgent> agentStore = new ConcurrentHashMap<>();
 
     public void save(StoredSimpleAgent storedSimpleAgent) {
-        agentStore.put(storedSimpleAgent.getAgentId(), storedSimpleAgent);
+        agentStore.put(storedSimpleAgent.getVersionId(), storedSimpleAgent);
     }
 
-    public StoredSimpleAgent get(String agentId) {
-        StoredSimpleAgent storedSimpleAgent = agentStore.get(agentId);
-        if (storedSimpleAgent == null) {
-            throw new BusinessException(ErrorCodeEnum.NOT_FOUND, "agent not found: " + agentId);
-        }
-        return storedSimpleAgent;
+    /**
+     * 按版本主键获取运行时缓存。
+     */
+    public StoredSimpleAgent get(Long versionId) {
+        return agentStore.get(versionId);
     }
 
     @Getter
     @Builder
     public static class StoredSimpleAgent {
 
-        private String agentId;
+        private Long versionId;
+
+        private Long agentId;
 
         private String agentName;
 
         private String description;
 
-        private List<String> selectedCapabilities;
+        private Integer versionNo;
 
         private ReactAgent reactAgent;
     }

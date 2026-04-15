@@ -26,7 +26,7 @@ import com.alibaba.cloud.ai.graph.skills.registry.filesystem.FileSystemSkillRegi
 import com.alibaba.cloud.ai.graph.state.strategy.ReplaceStrategy;
 import com.alibaba.cloud.ai.graph.streaming.OutputType;
 import com.alibaba.cloud.ai.graph.streaming.StreamingOutput;
-import com.spring.ai.agent.domian.dto.AgentInfoDTO;
+import com.spring.ai.agent.domain.dto.AgentInfoDTO;
 import com.spring.ai.agent.factory.AgentFactory;
 import com.spring.ai.common.enums.AgentTypeEnum;
 import com.spring.ai.core.facotry.GetChatModel;

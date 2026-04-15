@@ -7,7 +7,7 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      redirect: '/users',
+      redirect: '/agents',
     },
     {
       path: '/login',
@@ -23,6 +23,22 @@ const router = createRouter({
       component: () => import('@/views/auth/RegisterView.vue'),
       meta: {
         guestOnly: true,
+      },
+    },
+    {
+      path: '/agents',
+      name: 'agents',
+      component: () => import('@/views/agents/AgentManagementView.vue'),
+      meta: {
+        requiresAuth: true,
+      },
+    },
+    {
+      path: '/agents/:agentId/chat',
+      name: 'agent-chat',
+      component: () => import('@/views/agents/AgentChatView.vue'),
+      meta: {
+        requiresAuth: true,
       },
     },
     {
@@ -57,7 +73,7 @@ router.beforeEach(async (to) => {
 
   if (to.meta.guestOnly && authStore.isAuthenticated) {
     return {
-      name: 'users',
+      name: 'agents',
     }
   }
 

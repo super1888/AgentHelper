@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
  * 认证控制器。
  */
 @RestController
-@RequestMapping("/agentHelper/auth")
+@RequestMapping("/auth")
 @RequiredArgsConstructor
 public class AuthController {
 
@@ -26,15 +26,12 @@ public class AuthController {
 
     /**
      * 用户登录。
-     *
-     * @param request  登录请求
-     * @param response 响应对象
-     * @return 登录结果
      */
     @PostMapping("/login")
     public ApiResponse<UserAuthLoginVO> login(
             @Valid @RequestBody UserLoginRequest request,
-            HttpServletResponse response) {
+            HttpServletResponse response
+    ) {
         UserAuthLoginVO loginVO = authApplicationManager.login(request);
         response.setHeader(loginVO.getToken().getTokenName(), loginVO.getToken().getAuthorizationValue());
         return ApiResponse.success("登录成功", loginVO);
@@ -42,8 +39,6 @@ public class AuthController {
 
     /**
      * 退出登录。
-     *
-     * @return 处理结果
      */
     @PostMapping("/logout")
     public ApiResponse<Void> logout() {
@@ -52,9 +47,7 @@ public class AuthController {
     }
 
     /**
-     * 获取当前登录用户信息。
-     *
-     * @return 当前登录用户信息
+     * 查询当前登录用户。
      */
     @GetMapping("/currentUser")
     public ApiResponse<UserProfileVO> currentUser() {

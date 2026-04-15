@@ -78,7 +78,7 @@ async function handleSubmit() {
       password: form.password.trim(),
     })
 
-    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/users'
+    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/agents'
     await router.replace(redirect)
   } catch (error) {
     errors.form = getErrorMessage(error, '登录失败，请稍后重试。')

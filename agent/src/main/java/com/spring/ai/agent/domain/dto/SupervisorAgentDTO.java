@@ -1,4 +1,4 @@
-package com.spring.ai.agent.domian.dto;
+package com.spring.ai.agent.domain.dto;
 
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import lombok.Builder;
