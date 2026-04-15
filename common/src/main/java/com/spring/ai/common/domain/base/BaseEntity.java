@@ -39,7 +39,7 @@ public abstract class BaseEntity implements Serializable {
     @TableField(value = "update_name", fill = FieldFill.UPDATE)
     private String updateName;
 
-    @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
+    @TableField(value = "update_time", fill = FieldFill.UPDATE)
     private LocalDateTime updateTime;
 
     @Version
