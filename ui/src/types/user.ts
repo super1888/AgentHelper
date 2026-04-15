@@ -65,9 +65,6 @@ export interface UserQueryPayload {
 
 export interface UserStatistics {
   totalCount: number
-  enabledCount: number
-  disabledCount: number
-  tenantCount: number
 }
 
 export type UserPageResult = PageInfoResponse<UserProfile>

@@ -34,7 +34,7 @@ async function handleLogout() {
         <div class="shell__copy">
           <p class="section-kicker">Agent Helper</p>
           <h1>Agent Helper 控制台</h1>
-          <p class="shell__description">统一用户认证、账号管理与工作台入口。</p>
+          <p class="shell__description">统一用户认证与工作台入口</p>
         </div>
       </div>
 
@@ -98,6 +98,9 @@ async function handleLogout() {
 
 .shell__copy {
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .shell__logo {
@@ -113,7 +116,7 @@ async function handleLogout() {
 }
 
 .shell__brand h1 {
-  margin: 8px 0 10px;
+  margin: 0;
   color: var(--color-ink-strong);
   font-size: clamp(1.8rem, 2.2vw, 2.4rem);
   line-height: 1.08;
@@ -122,10 +125,11 @@ async function handleLogout() {
 }
 
 .shell__description {
-  max-width: 32rem;
+  max-width: 24rem;
   margin: 0;
   color: var(--color-ink-soft);
-  line-height: 1.65;
+  line-height: 1.5;
+  text-wrap: balance;
 }
 
 .shell__actions {

@@ -149,12 +149,8 @@ public class UserApplicationManager {
      * @return 统计结果
      */
     public UserStatisticsVO userStatistics() {
-
         UserStatisticsVO statisticsVO = new UserStatisticsVO();
-        statisticsVO.setTotalCount(syUserService.countUsers(null, null, null, null, null));
-        statisticsVO.setEnabledCount(syUserService.countUsers(null, null, null, null, UserStatusEnum.ENABLE.getCode()));
-        statisticsVO.setDisabledCount(statisticsVO.getTotalCount() - statisticsVO.getEnabledCount());
-        statisticsVO.setTenantCount(statisticsVO.getTotalCount());
+        statisticsVO.setTotalCount(syUserService.countAllUsers());
         return statisticsVO;
     }
 

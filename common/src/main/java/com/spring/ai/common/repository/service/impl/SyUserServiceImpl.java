@@ -7,9 +7,7 @@ import com.spring.ai.common.constants.SqlConstants;
 import com.spring.ai.common.repository.dao.SyUserMapper;
 import com.spring.ai.common.repository.enitiy.SyUser;
 import com.spring.ai.common.repository.service.SyUserService;
-import java.util.ArrayList;
 import java.util.List;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -18,12 +16,6 @@ import org.springframework.util.StringUtils;
  */
 @Service
 public class SyUserServiceImpl extends ServiceImpl<SyUserMapper, SyUser> implements SyUserService {
-
-    private final JdbcTemplate jdbcTemplate;
-
-    public SyUserServiceImpl(JdbcTemplate jdbcTemplate) {
-        this.jdbcTemplate = jdbcTemplate;
-    }
 
     @Override
     public SyUser getByUsername(String username) {
@@ -75,11 +67,13 @@ public class SyUserServiceImpl extends ServiceImpl<SyUserMapper, SyUser> impleme
         return list(buildLambdaQuery(username, nickname, phone, email, status));
     }
 
+    /**
+     * 统计系统总用户数，不接收筛选条件
+     */
     @Override
-    public Integer countUsers(String username, String nickname, String phone, String email, Integer status) {
-        return count(buildLambdaQuery(username, nickname, phone, email, status));
+    public long countAllUsers() {
+        return count();
     }
-
 
     @Override
     public boolean deleteByUserId(Long userId) {
@@ -114,5 +108,4 @@ public class SyUserServiceImpl extends ServiceImpl<SyUserMapper, SyUser> impleme
         }
         return queryWrapper;
     }
-
 }

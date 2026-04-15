@@ -23,7 +23,7 @@
         <pdfbox.version>3.0.3</pdfbox.version>
         <poi.version>5.2.5</poi.version>
         <poi-ooxml.version>5.2.5</poi-ooxml.version>
-        <mybatis-plus-generator.version>3.4.0</mybatis-plus-generator.version>
+        <mybatis-plus-generator.version>3.5.15</mybatis-plus-generator.version>
         <velocity-engine-core.version>2.3</velocity-engine-core.version>
     </properties>
 

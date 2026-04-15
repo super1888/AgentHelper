@@ -160,6 +160,14 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+
+            <!-- 强制统一 mybatis-plus-extension 版本为 3.5.15 -->
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-extension</artifactId>
+                <version>${mybatis-plus.version}</version>
+            </dependency>
+
         </dependencies>
     </dependencyManagement>
 

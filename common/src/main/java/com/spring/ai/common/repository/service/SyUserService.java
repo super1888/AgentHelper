@@ -61,23 +61,20 @@ public interface SyUserService extends IService<SyUser> {
     List<SyUser> pageQueryUsers(String username, String nickname, String phone, String email, Integer status);
 
     /**
-     * 统计
+     * 统计系统用户总数
      *
-     * @param username 用户名
-     * @param nickname 昵称
-     * @param phone    手机号
-     * @param email    邮箱
-     * @param status   状态
-     * @return 用户列表
+     * @return 用户总数
      */
-    Integer countUsers(String username, String nickname, String phone, String email, Integer status);
-
-       /**
+    long countAllUsers();
 
     /**
      * 按主键删除用户
-     *
-     * @param userId 用户 ID
+     * <p>
+
+ * 此方法用于根据用户ID删除对应的用户记录。
+ * 这是一个接口方法，具体实现需要由子类或实现类完成。
+ *
+     * @param userId 用户 ID，用于唯一标识要删除的用户记录。不能为null。
      * @return 是否成功
      */
     boolean deleteByUserId(Long userId);

@@ -10,18 +10,5 @@ public class UserStatisticsVO {
      */
     private long totalCount;
 
-    /**
-     * 启用数量
-     */
-    private long enabledCount;
 
-    /**
-     * 禁用数量
-     */
-    private long disabledCount;
-
-    /**
-     * 租户数量
-     */
-    private long tenantCount;
 }
