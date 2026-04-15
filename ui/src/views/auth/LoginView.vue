@@ -25,7 +25,8 @@ const submitting = ref(false)
 
 const apiEndpointLabel = computed(() => {
   try {
-    return new URL(appConfig.apiBaseUrl).host
+    const endpoint = appConfig.apiBaseUrl.startsWith('/') ? appConfig.proxyTarget : appConfig.apiBaseUrl
+    return new URL(endpoint, window.location.origin).host
   } catch {
     return appConfig.apiBaseUrl
   }
@@ -37,9 +38,9 @@ const registeredNotice = computed(() =>
 
 const highlights = [
   {
-    label: '环境',
+    label: '模式',
     value: 'Development',
-    detail: '192.168.11.7:8881',
+    detail: '本地联调',
   },
   {
     label: '认证',
@@ -49,7 +50,7 @@ const highlights = [
   {
     label: '入口',
     value: 'User Console',
-    detail: '用户工作台',
+    detail: '控制台工作台',
   },
 ]
 
@@ -96,16 +97,14 @@ watchEffect(() => {
 <template>
   <AuthFrame
     eyebrow="Authentication"
-    title="Agent Helper"
-    description="统一认证入口与工作台访问。"
+    title="Agent Helper 控制台"
+    description="统一认证入口与工作台访问，保留必要信息，减少无效说明。"
     panel-title="欢迎回来"
-    panel-description="登录后进入用户域控制台。"
+    panel-description="登录后进入用户工作台，处理账号、状态与权限相关操作。"
     :highlights="highlights"
   >
     <div class="auth-meta">
-      <span class="auth-meta__badge auth-meta__badge--accent">
-        DEV
-      </span>
+      <span class="auth-meta__badge auth-meta__badge--accent">DEV</span>
       <span class="auth-meta__badge">
         <Server :size="14" aria-hidden="true" />
         {{ apiEndpointLabel }}
@@ -179,7 +178,7 @@ watchEffect(() => {
       >
         <span v-if="submitting" class="button-spinner" aria-hidden="true"></span>
         <ArrowRight v-else :size="16" aria-hidden="true" />
-        {{ submitting ? '正在登录...' : '进入用户工作台' }}
+        {{ submitting ? '登录中...' : '进入控制台' }}
       </button>
     </form>
 

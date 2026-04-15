@@ -31,12 +31,10 @@ async function handleLogout() {
           <ShieldCheck :size="22" />
         </div>
 
-        <div>
-          <p class="section-kicker">AgentHelper</p>
-          <h1>用户中心</h1>
-          <p class="shell__description">
-            管理系统账户、状态和基础资料，所有操作都与 `user` 模块接口保持一致。
-          </p>
+        <div class="shell__copy">
+          <p class="section-kicker">Agent Helper</p>
+          <h1>Agent Helper 控制台</h1>
+          <p class="shell__description">统一用户认证、账号管理与工作台入口。</p>
         </div>
       </div>
 
@@ -98,29 +96,36 @@ async function handleLogout() {
   min-width: 0;
 }
 
+.shell__copy {
+  min-width: 0;
+}
+
 .shell__logo {
   display: grid;
+  flex: 0 0 auto;
   place-items: center;
   width: 52px;
   height: 52px;
   color: #ffffff;
   border-radius: 18px;
   background: linear-gradient(135deg, var(--color-accent), var(--color-accent-strong));
-  box-shadow: 0 20px 40px rgba(14, 165, 233, 0.24);
+  box-shadow: 0 18px 36px rgba(83, 184, 255, 0.22);
 }
 
 .shell__brand h1 {
   margin: 8px 0 10px;
-  color: var(--color-text-strong);
-  font-size: clamp(1.8rem, 2.2vw, 2.5rem);
-  line-height: 1.1;
+  color: var(--color-ink-strong);
+  font-size: clamp(1.8rem, 2.2vw, 2.4rem);
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
 }
 
 .shell__description {
-  max-width: 38rem;
+  max-width: 32rem;
   margin: 0;
-  color: var(--color-text-soft);
-  line-height: 1.7;
+  color: var(--color-ink-soft);
+  line-height: 1.65;
 }
 
 .shell__actions {
@@ -138,7 +143,7 @@ async function handleLogout() {
 }
 
 .shell__identity-label {
-  color: var(--color-text-muted);
+  color: var(--color-ink-muted);
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.14em;
@@ -146,8 +151,9 @@ async function handleLogout() {
 }
 
 .shell__identity strong {
-  color: var(--color-text-strong);
+  color: var(--color-ink-strong);
   font-size: 1rem;
+  line-height: 1.4;
 }
 
 .shell__nav {
@@ -161,21 +167,29 @@ async function handleLogout() {
   align-items: center;
   justify-content: center;
   min-height: 42px;
-  padding: 0 16px;
-  color: var(--color-text-soft);
+  padding: 0 18px;
+  color: var(--color-ink-soft);
+  border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 999px;
-  transition: color 180ms ease, background-color 180ms ease, transform 180ms ease;
+  background: rgba(255, 255, 255, 0.04);
+  transition:
+    color 180ms ease,
+    background-color 180ms ease,
+    border-color 180ms ease,
+    transform 180ms ease;
 }
 
 .shell__nav-link:hover {
-  color: var(--color-text-strong);
-  background: rgba(255, 255, 255, 0.7);
+  color: var(--color-ink-strong);
+  border-color: rgba(83, 184, 255, 0.22);
+  background: rgba(83, 184, 255, 0.08);
 }
 
 .shell__nav-link--active {
-  color: var(--color-text-strong);
-  background: rgba(255, 255, 255, 0.88);
-  box-shadow: var(--shadow-soft);
+  color: #04111d;
+  border-color: transparent;
+  background: linear-gradient(135deg, rgba(143, 231, 255, 0.92), rgba(83, 184, 255, 0.92));
+  box-shadow: 0 12px 28px rgba(83, 184, 255, 0.18);
 }
 
 .shell__content {

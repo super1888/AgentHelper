@@ -30,15 +30,15 @@ public final class UserAssembler {
         if (user == null) {
             return null;
         }
-        return UserProfileVO.builder()
-                .id(user.getId())
-                .username(user.getUsername())
-                .nickname(user.getNickname())
-                .phone(user.getPhone())
-                .email(user.getEmail())
-                .status(user.getStatus())
-                .tenantId(user.getTenantId())
-                .build();
+        UserProfileVO profileVO = new UserProfileVO();
+        profileVO.setId(user.getId());
+        profileVO.setUsername(user.getUsername());
+        profileVO.setNickname(user.getNickname());
+        profileVO.setPhone(user.getPhone());
+        profileVO.setEmail(user.getEmail());
+        profileVO.setStatus(user.getStatus());
+        profileVO.setTenantId(user.getTenantId());
+        return profileVO;
     }
 
     /**
@@ -101,14 +101,14 @@ public final class UserAssembler {
         String tokenValue = StpUtil.getTokenValue();
         String authorizationValue = StringUtils.hasText(tokenPrefix) ? tokenPrefix + " " + tokenValue : tokenValue;
 
-        return UserTokenVO.builder()
-                .tokenName(tokenName)
-                .tokenPrefix(tokenPrefix)
-                .tokenValue(tokenValue)
-                .authorizationValue(authorizationValue)
-                .expiresIn(StpUtil.getTokenTimeout())
-                .loginId(userId)
-                .build();
+        UserTokenVO tokenVO = new UserTokenVO();
+        tokenVO.setTokenName(tokenName);
+        tokenVO.setTokenPrefix(tokenPrefix);
+        tokenVO.setTokenValue(tokenValue);
+        tokenVO.setAuthorizationValue(authorizationValue);
+        tokenVO.setExpiresIn(StpUtil.getTokenTimeout());
+        tokenVO.setLoginId(userId);
+        return tokenVO;
     }
 
     private static String resolveNickname(String nickname, String username) {

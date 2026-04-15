@@ -33,18 +33,18 @@ const submitting = ref(false)
 const highlights = [
   {
     label: '字段',
-    value: '统一校验',
-    detail: '规则同步',
+    value: '结构不变',
+    detail: '保持现有表单',
   },
   {
-    label: '界面',
-    value: '统一风格',
-    detail: '认证入口',
+    label: '风格',
+    value: '统一认证',
+    detail: '与登录页一致',
   },
   {
     label: '回跳',
     value: '自动回填',
-    detail: '返回登录',
+    detail: '注册后返回登录',
   },
 ]
 
@@ -95,9 +95,9 @@ async function handleSubmit() {
   <AuthFrame
     eyebrow="Registration"
     title="开通平台账号"
-    description="延续既有字段结构，统一认证体验。"
+    description="保持字段结构不变，统一认证入口风格，减少多余解释。"
     panel-title="创建账号"
-    panel-description="提交后返回登录页，并自动带上用户名。"
+    panel-description="提交后返回登录页，并自动带回用户名，方便继续登录。"
     :highlights="highlights"
   >
     <form class="auth-form" @submit.prevent="handleSubmit">
@@ -251,7 +251,7 @@ async function handleSubmit() {
       >
         <span v-if="submitting" class="button-spinner" aria-hidden="true"></span>
         <ArrowRight v-else :size="16" aria-hidden="true" />
-        {{ submitting ? '正在注册...' : '创建账号并返回登录' }}
+        {{ submitting ? '注册中...' : '创建账号并返回登录' }}
       </button>
     </form>
 

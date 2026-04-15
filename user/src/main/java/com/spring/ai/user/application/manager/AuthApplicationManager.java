@@ -55,10 +55,10 @@ public class AuthApplicationManager {
         StpUtil.login(user.getId());
         StpUtil.getSession().set(UserAuthConstants.LOGIN_NAME, user.getUsername());
 
-        return UserAuthLoginVO.builder()
-                .user(UserAssembler.toUserProfileVO(user))
-                .token(UserAssembler.toUserTokenVO(user.getId()))
-                .build();
+        UserAuthLoginVO loginVO = new UserAuthLoginVO();
+        loginVO.setUser(UserAssembler.toUserProfileVO(user));
+        loginVO.setToken(UserAssembler.toUserTokenVO(user.getId()));
+        return loginVO;
     }
 
     /**

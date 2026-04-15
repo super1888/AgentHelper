@@ -29,17 +29,18 @@ const label = computed(() => (props.status === 1 ? '启用' : '禁用'))
   border-radius: 999px;
   font-size: 0.82rem;
   font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
 .status-badge--enabled {
-  color: #047857;
-  border-color: rgba(16, 185, 129, 0.22);
-  background: rgba(16, 185, 129, 0.12);
+  color: #dcfff4;
+  border-color: rgba(100, 216, 190, 0.26);
+  background: rgba(100, 216, 190, 0.16);
 }
 
 .status-badge--disabled {
-  color: #b45309;
-  border-color: rgba(245, 158, 11, 0.24);
-  background: rgba(245, 158, 11, 0.14);
+  color: #ffe2c5;
+  border-color: rgba(255, 181, 108, 0.22);
+  background: rgba(255, 181, 108, 0.14);
 }
 </style>

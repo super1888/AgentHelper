@@ -1,5 +1,6 @@
 package com.spring.ai.user.config;
 
+import cn.dev33.satoken.context.SaHolder;
 import cn.dev33.satoken.interceptor.SaInterceptor;
 import cn.dev33.satoken.stp.StpUtil;
 import org.springframework.context.annotation.Configuration;
@@ -15,7 +16,12 @@ public class UserAuthWebConfig implements WebMvcConfigurer {
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(new SaInterceptor(handle -> StpUtil.checkLogin()))
+        registry.addInterceptor(new SaInterceptor(handle -> {
+                    if ("OPTIONS".equalsIgnoreCase(SaHolder.getRequest().getMethod())) {
+                        return;
+                    }
+                    StpUtil.checkLogin();
+                }))
                 .addPathPatterns("/agentHelper/**")
                 .excludePathPatterns(
                         "/agentHelper/users/register",

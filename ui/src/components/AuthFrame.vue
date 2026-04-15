@@ -29,28 +29,27 @@ defineProps<{
         </div>
 
         <div class="auth-visual" aria-hidden="true">
-          <div class="auth-visual__ring auth-visual__ring--outer"></div>
-          <div class="auth-visual__ring auth-visual__ring--inner"></div>
+          <div class="auth-visual__halo"></div>
+          <div class="auth-visual__frame auth-visual__frame--outer"></div>
+          <div class="auth-visual__frame auth-visual__frame--inner"></div>
           <div class="auth-visual__grid"></div>
           <div class="auth-visual__core">
             <span>AH</span>
-            <small>Agent Hub</small>
+            <small>Secure Access</small>
           </div>
-          <span class="auth-visual__tag auth-visual__tag--top">智能路由</span>
+          <span class="auth-visual__tag auth-visual__tag--top">统一认证</span>
           <span class="auth-visual__tag auth-visual__tag--left">权限校验</span>
-          <span class="auth-visual__tag auth-visual__tag--right">多环境接入</span>
+          <span class="auth-visual__tag auth-visual__tag--right">环境切换</span>
         </div>
 
-        <div class="auth-story__highlights" aria-label="核心亮点">
+        <div class="auth-story__highlights" aria-label="核心信息">
           <article
             v-for="item in highlights"
             :key="item.label"
             class="auth-story__highlight"
           >
-            <div>
-              <span class="auth-story__highlight-label">{{ item.label }}</span>
-              <strong class="auth-story__highlight-value">{{ item.value }}</strong>
-            </div>
+            <span class="auth-story__highlight-label">{{ item.label }}</span>
+            <strong class="auth-story__highlight-value">{{ item.value }}</strong>
             <p v-if="item.detail" class="auth-story__highlight-detail">{{ item.detail }}</p>
           </article>
         </div>
@@ -90,7 +89,7 @@ defineProps<{
   left: -8%;
   width: 420px;
   height: 420px;
-  background: radial-gradient(circle, rgba(107, 231, 255, 0.18) 0%, transparent 72%);
+  background: radial-gradient(circle, rgba(107, 231, 255, 0.16) 0%, transparent 72%);
 }
 
 .auth-scene__glow--right {
@@ -98,7 +97,7 @@ defineProps<{
   bottom: 10%;
   width: 460px;
   height: 460px;
-  background: radial-gradient(circle, rgba(98, 125, 255, 0.16) 0%, transparent 72%);
+  background: radial-gradient(circle, rgba(98, 125, 255, 0.14) 0%, transparent 72%);
 }
 
 .auth-scene__grid {
@@ -127,11 +126,11 @@ defineProps<{
 }
 
 .auth-story__copy {
-  max-width: 42rem;
+  max-width: 40rem;
 }
 
 .auth-story__title {
-  max-width: 14ch;
+  max-width: 12ch;
   margin-top: 20px;
   font-size: clamp(2.8rem, 4.5vw, 4.2rem);
   line-height: 1.02;
@@ -140,23 +139,33 @@ defineProps<{
 }
 
 .auth-story__description {
-  max-width: 28rem;
-  margin-top: 12px;
+  max-width: 30rem;
+  margin-top: 14px;
   color: var(--color-ink-soft);
-  font-size: 0.92rem;
-  line-height: 1.6;
+  font-size: 0.94rem;
+  line-height: 1.7;
 }
 
 .auth-visual {
   position: relative;
   height: 360px;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 28px;
+  border-radius: 30px;
   overflow: hidden;
   background:
-    radial-gradient(circle at 50% 50%, rgba(107, 231, 255, 0.14), transparent 28%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02)),
-    linear-gradient(135deg, rgba(6, 16, 32, 0.95), rgba(11, 20, 38, 0.92));
+    radial-gradient(circle at 50% 50%, rgba(107, 231, 255, 0.12), transparent 26%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.015)),
+    linear-gradient(135deg, rgba(6, 16, 32, 0.98), rgba(10, 18, 36, 0.92));
+}
+
+.auth-visual__halo {
+  position: absolute;
+  inset: 50%;
+  width: 320px;
+  height: 320px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(107, 231, 255, 0.15), transparent 70%);
+  transform: translate(-50%, -50%);
 }
 
 .auth-visual__grid {
@@ -166,27 +175,27 @@ defineProps<{
     linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
   background-size: 36px 36px;
-  mask-image: radial-gradient(circle at center, black 32%, transparent 88%);
+  mask-image: radial-gradient(circle at center, black 34%, transparent 88%);
 }
 
-.auth-visual__ring {
+.auth-visual__frame {
   position: absolute;
   inset: 50%;
   border-radius: 999px;
   transform: translate(-50%, -50%);
 }
 
-.auth-visual__ring--outer {
-  width: 300px;
-  height: 300px;
+.auth-visual__frame--outer {
+  width: 296px;
+  height: 296px;
   border: 1px solid rgba(107, 231, 255, 0.14);
-  box-shadow: 0 0 0 28px rgba(107, 231, 255, 0.03);
+  box-shadow: 0 0 0 24px rgba(107, 231, 255, 0.03);
 }
 
-.auth-visual__ring--inner {
-  width: 188px;
-  height: 188px;
-  border: 1px solid rgba(107, 231, 255, 0.32);
+.auth-visual__frame--inner {
+  width: 184px;
+  height: 184px;
+  border: 1px solid rgba(107, 231, 255, 0.26);
 }
 
 .auth-visual__core {
@@ -197,15 +206,15 @@ defineProps<{
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 136px;
-  height: 136px;
+  width: 144px;
+  height: 144px;
   border: 1px solid rgba(107, 231, 255, 0.18);
-  border-radius: 26px;
+  border-radius: 28px;
   background:
-    radial-gradient(circle at top, rgba(107, 231, 255, 0.24), transparent 52%),
+    radial-gradient(circle at top, rgba(107, 231, 255, 0.2), transparent 50%),
     rgba(10, 22, 40, 0.96);
   box-shadow:
-    0 0 40px rgba(107, 231, 255, 0.12),
+    0 0 40px rgba(107, 231, 255, 0.1),
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
   transform: translate(-50%, -50%);
 }
@@ -218,9 +227,9 @@ defineProps<{
 }
 
 .auth-visual__core small {
-  margin-top: 6px;
+  margin-top: 7px;
   color: var(--color-ink-muted);
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   letter-spacing: 0.18em;
   text-transform: uppercase;
 }
@@ -262,11 +271,7 @@ defineProps<{
 }
 
 .auth-story__highlight {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 8px;
-  min-height: 112px;
+  min-height: 108px;
   padding: 16px 18px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 22px;
@@ -284,16 +289,17 @@ defineProps<{
 
 .auth-story__highlight-value {
   display: block;
-  margin-top: 8px;
+  margin-top: 10px;
   color: var(--color-ink-strong);
-  font-size: 1.12rem;
-  line-height: 1.3;
+  font-size: 1.06rem;
+  line-height: 1.35;
 }
 
 .auth-story__highlight-detail {
+  margin-top: 8px;
   color: var(--color-ink-soft);
   font-size: 0.8rem;
-  line-height: 1.45;
+  line-height: 1.5;
 }
 
 .auth-panel {
@@ -310,13 +316,14 @@ defineProps<{
   margin-top: 14px;
   font-size: clamp(2rem, 3vw, 2.5rem);
   line-height: 1.08;
+  text-wrap: balance;
 }
 
 .auth-panel__header p {
   margin-top: 12px;
   color: var(--color-ink-soft);
   font-size: 0.95rem;
-  line-height: 1.65;
+  line-height: 1.7;
 }
 
 @media (max-width: 1080px) {

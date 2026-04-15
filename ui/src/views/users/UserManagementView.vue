@@ -6,6 +6,7 @@ import {
   Plus,
   RefreshCw,
   Search,
+  SlidersHorizontal,
   Trash2,
   UserCheck,
   UserRoundPen,
@@ -21,6 +22,7 @@ import type { CreateUserPayload, UpdateUserPayload, UserProfile } from '@/types/
 import { getErrorMessage } from '@/utils/errors'
 
 type FilterStatus = 'all' | 'enabled' | 'disabled'
+type SearchField = 'all' | 'username' | 'nickname' | 'phone' | 'email' | 'tenantId' | 'id'
 type DialogMode = 'create' | 'edit'
 type FeedbackTone = 'success' | 'error' | 'info'
 
@@ -41,8 +43,19 @@ const feedback = ref<FeedbackState | null>(null)
 
 const filters = reactive({
   query: '',
+  field: 'all' as SearchField,
   status: 'all' as FilterStatus,
 })
+
+const fieldOptions: Array<{ label: string; value: SearchField }> = [
+  { label: '全部字段', value: 'all' },
+  { label: '用户名', value: 'username' },
+  { label: '昵称', value: 'nickname' },
+  { label: '手机号', value: 'phone' },
+  { label: '邮箱', value: 'email' },
+  { label: '租户 ID', value: 'tenantId' },
+  { label: '用户 ID', value: 'id' },
+]
 
 const statCards = computed(() => {
   const total = users.value.length
@@ -58,25 +71,25 @@ const statCards = computed(() => {
     {
       label: '用户总数',
       value: String(total),
-      detail: '当前系统中的全部账号数量。',
+      detail: '当前目录',
       icon: Users,
     },
     {
       label: '启用账号',
       value: String(enabledCount),
-      detail: '可以正常登录并访问受保护资源的账号。',
+      detail: '可正常登录',
       icon: UserCheck,
     },
     {
       label: '禁用账号',
       value: String(disabledCount),
-      detail: '状态为 0 的账号，后端登录时会直接拒绝。',
+      detail: '已冻结访问',
       icon: UserX,
     },
     {
       label: '租户分布',
       value: String(tenantCount),
-      detail: '已设置租户 ID 的不同租户数量。',
+      detail: '已绑定租户',
       icon: Layers3,
     },
   ]
@@ -91,20 +104,31 @@ const filteredUsers = computed(() => {
       (filters.status === 'enabled' && user.status === 1) ||
       (filters.status === 'disabled' && user.status === 0)
 
-    const matchesKeyword =
-      !keyword ||
-      [
-        user.username,
-        user.nickname,
-        user.email,
-        user.phone,
-        String(user.id),
-        user.tenantId !== null ? String(user.tenantId) : '',
-      ]
-        .filter(Boolean)
-        .some((value) => String(value).toLowerCase().includes(keyword))
+    if (!matchesStatus) {
+      return false
+    }
 
-    return matchesStatus && matchesKeyword
+    if (!keyword) {
+      return true
+    }
+
+    const fields: Record<SearchField, string> = {
+      all: '',
+      username: user.username || '',
+      nickname: user.nickname || '',
+      phone: user.phone || '',
+      email: user.email || '',
+      tenantId: user.tenantId !== null ? String(user.tenantId) : '',
+      id: String(user.id),
+    }
+
+    if (filters.field === 'all') {
+      return Object.values(fields)
+        .filter(Boolean)
+        .some((value) => value.toLowerCase().includes(keyword))
+    }
+
+    return fields[filters.field].toLowerCase().includes(keyword)
   })
 })
 
@@ -113,11 +137,11 @@ const resultsSummary = computed(() => {
     return '正在同步用户列表...'
   }
 
-  return `共 ${filteredUsers.value.length} 条结果`
+  return `筛选结果 ${filteredUsers.value.length} / 全部 ${users.value.length}`
 })
 
 const deleteDescription = computed(() =>
-  deleteTarget.value ? `确认删除用户 ${deleteTarget.value.username} 吗？该操作无法撤销。` : '',
+  deleteTarget.value ? `确认删除用户 ${deleteTarget.value.username} 吗？该操作不可撤销。` : '',
 )
 
 function showFeedback(tone: FeedbackTone, message: string) {
@@ -130,12 +154,13 @@ function clearFeedback() {
 
 function resetFilters() {
   filters.query = ''
+  filters.field = 'all'
   filters.status = 'all'
 }
 
 function formatContact(user: UserProfile) {
   const contactItems = [user.phone, user.email].filter(Boolean)
-  return contactItems.length > 0 ? contactItems.join(' / ') : '暂无联系方式'
+  return contactItems.length > 0 ? contactItems.join(' / ') : '未填写'
 }
 
 function formatTenant(tenantId: number | null) {
@@ -241,7 +266,7 @@ onMounted(() => {
         <div class="stats-card__icon" aria-hidden="true">
           <component :is="card.icon" :size="18" />
         </div>
-        <div>
+        <div class="stats-card__content">
           <p class="stats-card__label">{{ card.label }}</p>
           <strong class="stats-card__value">{{ card.value }}</strong>
           <p class="stats-card__detail">{{ card.detail }}</p>
@@ -257,16 +282,16 @@ onMounted(() => {
     >
       <span>{{ feedback.message }}</span>
       <button type="button" class="app-button app-button--ghost" @click="clearFeedback">
-        知道了
+        关闭
       </button>
     </section>
 
     <section class="workspace panel-card">
       <header class="workspace__header">
-        <div>
-          <p class="section-kicker">User Management</p>
+        <div class="workspace__headline">
+          <p class="section-kicker">User Directory</p>
           <h2>用户管理</h2>
-          <p>支持搜索、状态筛选、新增、编辑和删除，所有操作都直接调用后端用户接口。</p>
+          <p>统一查看账号、状态、联系方式与租户归属，支持指定字段筛选。</p>
         </div>
 
         <div class="workspace__actions">
@@ -287,9 +312,19 @@ onMounted(() => {
         </div>
       </header>
 
-      <div class="workspace__toolbar">
+      <div class="workspace__toolbar panel-card">
+        <div class="workspace__toolbar-title">
+          <div class="workspace__toolbar-icon" aria-hidden="true">
+            <SlidersHorizontal :size="18" />
+          </div>
+          <div>
+            <strong>筛选条件</strong>
+            <p>按字段、关键字和状态快速定位目标账号。</p>
+          </div>
+        </div>
+
         <label class="field workspace__search">
-          <span class="field__label">搜索用户</span>
+          <span class="field__label">关键字</span>
           <div class="input-shell">
             <span class="input-shell__icon" aria-hidden="true">
               <Search :size="16" />
@@ -298,13 +333,22 @@ onMounted(() => {
               v-model="filters.query"
               class="app-input"
               type="search"
-              placeholder="按用户名、昵称、邮箱、手机号、ID 或租户搜索"
+              placeholder="输入关键字后，结合指定字段筛选"
             />
           </div>
         </label>
 
+        <label class="field workspace__field">
+          <span class="field__label">指定字段</span>
+          <select v-model="filters.field" class="app-select">
+            <option v-for="option in fieldOptions" :key="option.value" :value="option.value">
+              {{ option.label }}
+            </option>
+          </select>
+        </label>
+
         <label class="field workspace__filter">
-          <span class="field__label">状态筛选</span>
+          <span class="field__label">账号状态</span>
           <select v-model="filters.status" class="app-select">
             <option value="all">全部状态</option>
             <option value="enabled">仅启用</option>
@@ -343,7 +387,7 @@ onMounted(() => {
                   <div class="user-cell__avatar" aria-hidden="true">
                     <CircleUserRound :size="18" />
                   </div>
-                  <div>
+                  <div class="user-cell__copy">
                     <strong>{{ user.nickname || user.username }}</strong>
                     <p>{{ user.username }} / ID {{ user.id }}</p>
                   </div>
@@ -381,7 +425,7 @@ onMounted(() => {
               <td colspan="5">
                 <div class="empty-state">
                   <strong>没有匹配的用户</strong>
-                  <p>试试调整关键字或状态筛选，或者直接新增一个用户。</p>
+                  <p>调整关键字、字段或状态条件后再试。</p>
                 </div>
               </td>
             </tr>
@@ -419,6 +463,7 @@ onMounted(() => {
 
 .stats-card {
   display: flex;
+  align-items: center;
   gap: 16px;
   padding: 22px;
 }
@@ -427,16 +472,25 @@ onMounted(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 46px;
-  height: 46px;
-  border-radius: 16px;
+  width: 48px;
+  height: 48px;
+  border-radius: 18px;
   color: var(--color-accent-strong);
-  background: rgba(255, 255, 255, 0.06);
+  background:
+    linear-gradient(135deg, rgba(143, 231, 255, 0.12), rgba(83, 184, 255, 0.08)),
+    rgba(255, 255, 255, 0.04);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+.stats-card__content {
+  min-width: 0;
 }
 
 .stats-card__label {
   color: var(--color-ink-muted);
-  font-size: 0.82rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
 }
 
 .stats-card__value {
@@ -444,12 +498,13 @@ onMounted(() => {
   margin-top: 8px;
   color: var(--color-ink-strong);
   font-size: 1.8rem;
+  line-height: 1;
 }
 
 .stats-card__detail {
   margin-top: 10px;
   color: var(--color-ink-soft);
-  line-height: 1.65;
+  font-size: 0.88rem;
 }
 
 .workspace {
@@ -464,15 +519,20 @@ onMounted(() => {
   gap: 20px;
 }
 
-.workspace__header h2 {
-  margin-top: 10px;
-  font-size: 2rem;
+.workspace__headline {
+  max-width: 38rem;
 }
 
-.workspace__header p:last-child {
+.workspace__headline h2 {
+  margin-top: 10px;
+  font-size: 2rem;
+  line-height: 1.08;
+}
+
+.workspace__headline p:last-child {
   margin-top: 10px;
   color: var(--color-ink-soft);
-  line-height: 1.75;
+  line-height: 1.7;
 }
 
 .workspace__actions {
@@ -482,10 +542,46 @@ onMounted(() => {
 
 .workspace__toolbar {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) 220px auto;
+  grid-template-columns: minmax(220px, 0.95fr) minmax(0, 1.45fr) 180px 180px auto;
   gap: 16px;
   align-items: end;
   margin-top: 26px;
+  padding: 18px;
+  border-radius: 26px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.018)),
+    rgba(4, 10, 20, 0.58);
+}
+
+.workspace__toolbar-title {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 56px;
+}
+
+.workspace__toolbar-title strong {
+  display: block;
+  color: var(--color-ink-strong);
+  font-size: 1rem;
+}
+
+.workspace__toolbar-title p {
+  margin-top: 4px;
+  color: var(--color-ink-soft);
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+.workspace__toolbar-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 18px;
+  color: var(--color-accent-strong);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .workspace__meta {
@@ -493,11 +589,13 @@ onMounted(() => {
   align-items: center;
   justify-content: flex-end;
   gap: 12px;
+  min-height: 56px;
 }
 
 .workspace__summary {
   color: var(--color-ink-soft);
   font-size: 0.92rem;
+  white-space: nowrap;
 }
 
 .app-select {
@@ -506,12 +604,26 @@ onMounted(() => {
   border: 1px solid var(--color-border);
   border-radius: 18px;
   color: var(--color-ink-strong);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.06);
   outline: 0;
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.app-select:hover {
+  border-color: rgba(83, 184, 255, 0.22);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.app-select option {
+  color: #f0f5ff;
+  background: #0a1524;
 }
 
 .app-select:focus {
-  border-color: rgba(243, 201, 145, 0.42);
+  border-color: rgba(83, 184, 255, 0.42);
   box-shadow: var(--shadow-focus);
 }
 
@@ -520,6 +632,7 @@ onMounted(() => {
   overflow-x: auto;
   border: 1px solid var(--color-border);
   border-radius: 24px;
+  background: rgba(7, 12, 22, 0.72);
 }
 
 .user-table {
@@ -536,10 +649,11 @@ onMounted(() => {
 
 .user-table th {
   color: var(--color-ink-muted);
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   font-weight: 700;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
+  background: rgba(255, 255, 255, 0.02);
 }
 
 .user-table td {
@@ -547,7 +661,7 @@ onMounted(() => {
 }
 
 .user-table tbody tr:hover {
-  background: rgba(255, 255, 255, 0.035);
+  background: rgba(83, 184, 255, 0.05);
 }
 
 .user-cell {
@@ -567,11 +681,12 @@ onMounted(() => {
   background: rgba(255, 255, 255, 0.06);
 }
 
-.user-cell strong {
+.user-cell__copy strong {
+  display: block;
   color: var(--color-ink-strong);
 }
 
-.user-cell p {
+.user-cell__copy p {
   margin-top: 4px;
   color: var(--color-ink-muted);
   font-size: 0.84rem;
@@ -584,7 +699,7 @@ onMounted(() => {
 
 .table-wrap__loading,
 .empty-state {
-  padding: 28px 16px;
+  padding: 34px 16px;
   text-align: center;
 }
 
@@ -611,13 +726,18 @@ onMounted(() => {
   box-shadow: inset 0 0 0 1px rgba(244, 140, 140, 0.16);
 }
 
-@media (max-width: 1120px) {
+@media (max-width: 1220px) {
   .stats-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .workspace__toolbar {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .workspace__toolbar-title,
+  .workspace__meta {
+    grid-column: 1 / -1;
   }
 
   .workspace__meta {
@@ -647,6 +767,14 @@ onMounted(() => {
 @media (max-width: 640px) {
   .stats-grid {
     grid-template-columns: 1fr;
+  }
+
+  .workspace__toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .workspace__summary {
+    white-space: normal;
   }
 
   .user-table thead {
