@@ -140,7 +140,7 @@ function formatContact(user: UserProfile) {
   return contactItems.length > 0 ? contactItems.join(' / ') : '未填写'
 }
 
-function formatTenant(tenantId: number | null) {
+function formatTenant(tenantId: string | null) {
   return tenantId === null ? '默认租户' : `租户 ${tenantId}`
 }
 

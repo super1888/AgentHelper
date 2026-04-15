@@ -18,7 +18,7 @@ export async function fetchUserStats() {
   return unwrapResponse<UserStatistics>(response)
 }
 
-export async function fetchUserDetail(userId: number) {
+export async function fetchUserDetail(userId: string | number) {
   const response = await apiClient.get(`/users/select/${userId}`)
   return unwrapResponse<UserProfile>(response)
 }
@@ -28,12 +28,12 @@ export async function createUser(payload: CreateUserPayload) {
   return unwrapResponse<void>(response)
 }
 
-export async function updateUser(userId: number, payload: UpdateUserPayload) {
+export async function updateUser(userId: string | number, payload: UpdateUserPayload) {
   const response = await apiClient.put(`/users/update/${userId}`, payload)
   return unwrapResponse<void>(response)
 }
 
-export async function removeUser(userId: number) {
+export async function removeUser(userId: string | number) {
   const response = await apiClient.delete(`/users/delete/${userId}`)
   return unwrapResponse<void>(response)
 }

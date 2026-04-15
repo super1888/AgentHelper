@@ -97,7 +97,6 @@ public final class CommonRepositoryCodeGeneratorUtil {
                     if (options.fileOverride) {
                         entityBuilder.enableFileOverride();
                     }
-                    entityBuilder.build();
 
                     var mapperBuilder = builder.mapperBuilder()
                             .enableBaseResultMap()
@@ -105,14 +104,12 @@ public final class CommonRepositoryCodeGeneratorUtil {
                     if (options.fileOverride) {
                         mapperBuilder.enableFileOverride();
                     }
-                    mapperBuilder.build();
 
                     var serviceBuilder = builder.serviceBuilder()
                             .formatServiceFileName("%sService");
                     if (options.fileOverride) {
                         serviceBuilder.enableFileOverride();
                     }
-                    serviceBuilder.build();
                 })
                 .templateConfig(builder -> builder.disable(TemplateType.XML, TemplateType.CONTROLLER))
                 .templateEngine(new VelocityTemplateEngine())

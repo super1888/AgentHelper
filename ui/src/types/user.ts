@@ -3,13 +3,13 @@ import type { PageInfoResponse } from '@/types/api'
 export type UserStatus = 0 | 1
 
 export interface UserProfile {
-  id: number
+  id: string
   username: string
   nickname: string
   phone: string | null
   email: string | null
   status: UserStatus
-  tenantId: number | null
+  tenantId: string | null
 }
 
 export interface UserToken {
@@ -18,7 +18,7 @@ export interface UserToken {
   tokenValue: string
   authorizationValue: string
   expiresIn: number
-  loginId: number
+  loginId: string
 }
 
 export interface UserAuthLoginResult {
