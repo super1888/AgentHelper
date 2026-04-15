@@ -34,7 +34,7 @@ public class SimpleAgentVersionConfigDTO {
     private String systemPrompt;
 
     /**
-     * 能力选择快照。
+     * 能力项快照。
      */
     private List<String> selectedCapabilities;
 }

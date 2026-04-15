@@ -10,22 +10,22 @@ import lombok.Data;
 public class SimpleAgentUpdateRequest {
 
     /**
-     * 更新后的 Agent 名称。
+     * Agent 名称。
      */
     private String agentName;
 
     /**
-     * 更新后的描述。
+     * Agent 描述。
      */
     private String description;
 
     /**
-     * 更新后的系统提示词。
+     * 系统提示词。
      */
     private String systemPrompt;
 
     /**
-     * 更新后的能力选择。
+     * 前端勾选的能力项。
      */
     private List<String> selectedCapabilities;
 }

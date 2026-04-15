@@ -5,14 +5,14 @@ import lombok.Builder;
 import lombok.Value;
 
 /**
- * Agent 创建或更新结果。
+ * 创建或更新 Agent 后的响应。
  */
 @Value
 @Builder
 public class SimpleAgentCreateResponse {
 
     /**
-     * Agent 外部编码。
+     * Agent 业务编码。
      */
     String agentId;
 
@@ -27,12 +27,12 @@ public class SimpleAgentCreateResponse {
     String description;
 
     /**
-     * 当前版本对应的能力选择。
+     * 当前选择的能力项。
      */
     List<String> selectedCapabilities;
 
     /**
-     * 当前最新版本号。
+     * 当前版本号。
      */
     Integer currentVersionNo;
 
@@ -42,17 +42,17 @@ public class SimpleAgentCreateResponse {
     Integer publishedVersionNo;
 
     /**
-     * WebSocket 连接入口。
+     * WebSocket 接入端点。
      */
     String websocketEndpoint;
 
     /**
-     * 会话订阅主题模板。
+     * WebSocket 订阅主题模板。
      */
     String websocketTopic;
 
     /**
-     * 前端发送聊天消息的目标地址。
+     * WebSocket 发送目标地址。
      */
     String websocketSendDestination;
 }

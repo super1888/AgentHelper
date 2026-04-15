@@ -1,8 +1,8 @@
 package com.spring.ai.agent.controller;
 
+import com.spring.ai.agent.application.manager.SimpleAgentChatApplicationManager;
 import com.spring.ai.agent.domain.request.SimpleAgentRecoverRequest;
 import com.spring.ai.agent.domain.response.SimpleAgentRecoverResponse;
-import com.spring.ai.agent.service.SimpleAgentChatService;
 import com.spring.ai.common.web.ApiResponse;
 import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -19,16 +19,20 @@ import org.springframework.web.bind.annotation.RestController;
 class SimpleAgentSessionController {
 
     @Resource
-    private SimpleAgentChatService simpleAgentChatService;
+    private SimpleAgentChatApplicationManager simpleAgentChatApplicationManager;
 
     /**
      * 恢复失败任务。
+     *
+     * @param sessionId 会话编码
+     * @param request 恢复请求
+     * @return 恢复结果
      */
     @PostMapping("/{sessionId}/recover")
     public ApiResponse<SimpleAgentRecoverResponse> recoverTask(
             @PathVariable("sessionId") String sessionId,
             @RequestBody(required = false) SimpleAgentRecoverRequest request
     ) {
-        return ApiResponse.success(simpleAgentChatService.recoverTask(sessionId, request));
+        return ApiResponse.success(simpleAgentChatApplicationManager.recoverTask(sessionId, request));
     }
 }

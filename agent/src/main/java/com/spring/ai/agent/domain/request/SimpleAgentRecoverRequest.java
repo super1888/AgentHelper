@@ -9,9 +9,9 @@ import lombok.Data;
 public class SimpleAgentRecoverRequest {
 
     /**
-     * 需要恢复的任务外部编码。
+     * 待恢复的任务编码。
      *
-     * <p>为空时默认恢复当前会话最近一次失败任务。</p>
+     * <p>为空时默认恢复该会话最近一次失败任务。</p>
      */
     private String taskId;
 }

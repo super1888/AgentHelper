@@ -4,39 +4,39 @@ import lombok.Builder;
 import lombok.Value;
 
 /**
- * WebSocket 推送事件。
+ * WebSocket 事件消息体。
  */
 @Value
 @Builder
 public class SimpleAgentWsEvent {
 
     /**
-     * Agent 外部编码。
+     * Agent 业务编码。
      */
     String agentId;
 
     /**
-     * 会话外部编码。
+     * 会话业务编码。
      */
     String sessionId;
 
     /**
-     * 任务外部编码。
+     * 任务业务编码。
      */
     String taskId;
 
     /**
-     * 绑定版本主键。
+     * Agent 版本主键。
      */
     Long agentVersionId;
 
     /**
-     * 绑定版本号。
+     * Agent 版本号。
      */
     Integer agentVersionNo;
 
     /**
-     * 单会话内严格递增的事件序号。
+     * 会话内事件序号。
      */
     Long eventSequence;
 

@@ -1,4 +1,4 @@
-package com.spring.ai.agent.service;
+package com.spring.ai.agent.application.manager;
 
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import com.spring.ai.agent.domain.dto.AgentInfoDTO;
@@ -11,23 +11,23 @@ import com.spring.ai.common.repository.enitiy.SyAgent;
 import com.spring.ai.common.repository.enitiy.SyAgentVersion;
 import com.spring.ai.core.facotry.GetChatModel;
 import jakarta.annotation.Resource;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 /**
- * Agent 运行时构建服务。
+ * Agent 运行时管理器。
  *
- * <p>根据版本快照恢复运行时 ReactAgent，并缓存到内存中，
- * 避免每次会话请求都重新初始化模型和工具链。</p>
+ * <p>根据版本快照恢复运行时 ReactAgent，并缓存到注册表中，
+ * 避免每次会话请求都重复初始化模型与工具链。</p>
  */
-@Service
-public class SimpleAgentRuntimeService {
+@Component
+public class SimpleAgentRuntimeManager {
 
     @Resource
     private SimpleAgentRegistry simpleAgentRegistry;
 
     @Resource
-    private SimpleAgentSupportService simpleAgentSupportService;
+    private SimpleAgentSupportManager simpleAgentSupportManager;
 
     @Resource
     private AgentFactory agentFactory;
@@ -41,8 +41,7 @@ public class SimpleAgentRuntimeService {
             return storedSimpleAgent.getReactAgent();
         }
 
-        // 运行时实例必须严格基于版本快照恢复，确保会话行为可追溯。
-        SimpleAgentVersionConfigDTO config = simpleAgentSupportService.parseConfig(version.getConfigSnapshotJson());
+        SimpleAgentVersionConfigDTO config = simpleAgentSupportManager.parseConfig(version.getConfigSnapshotJson());
         AgentInfoDTO agentInfoDTO = AgentInfoDTO.builder()
                 .agentId(agent.getId())
                 .agentName(config.getAgentName())
