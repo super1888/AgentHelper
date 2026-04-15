@@ -16,7 +16,7 @@ public class SaTokenUserProvider implements UserProvider {
         if (StpUtil.isLogin()) {
             return StpUtil.getLoginIdAsLong();
         }
-        return null;
+        return 1L;
     }
 
     @Override
@@ -24,6 +24,6 @@ public class SaTokenUserProvider implements UserProvider {
         if (StpUtil.isLogin()) {
             return (String) StpUtil.getSession().get(UserAuthConstants.LOGIN_NAME);
         }
-        return null;
+        return "admin";
     }
 }

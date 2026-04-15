@@ -24,19 +24,19 @@ public abstract class BaseEntity implements Serializable {
     @TableField("remark")
     private String remark;
 
-    @TableField("create_id")
+    @TableField(value = "create_id", fill = FieldFill.INSERT)
     private Long createId;
 
-    @TableField("create_name")
+    @TableField(value = "create_name", fill = FieldFill.INSERT)
     private String createName;
 
     @TableField(value = "create_time", fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 
-    @TableField("update_id")
+    @TableField(value = "update_id", fill = FieldFill.UPDATE)
     private Long updateId;
 
-    @TableField("update_name")
+    @TableField(value = "update_name", fill = FieldFill.UPDATE)
     private String updateName;
 
     @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)

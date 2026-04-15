@@ -1,9 +1,8 @@
 package com.spring.ai.common.repository.enitiy;
 
-import com.baomidou.mybatisplus.annotation.TableName;
-import com.baomidou.mybatisplus.annotation.Version;
-import com.spring.ai.common.domain.base.BaseEntity;
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableName;
+import com.spring.ai.common.domain.base.BaseEntity;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 

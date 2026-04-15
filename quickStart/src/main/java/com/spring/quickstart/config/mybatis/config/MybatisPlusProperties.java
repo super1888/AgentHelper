@@ -13,11 +13,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class MybatisPlusProperties {
 
     /**
-     * 是否开启乐观锁插件，默认关闭。
-     */
-    private boolean enableOptimisticLocker = false;
-
-    /**
      * 是否开启 SQL 打印，默认关闭。
      */
     private boolean enableSqlLog = false;

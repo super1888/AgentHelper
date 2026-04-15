@@ -20,9 +20,9 @@ public class MybatisPlusConfig {
     @Bean
     public MybatisPlusInterceptor mybatisPlusInterceptor(MybatisPlusProperties properties) {
         MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
-        if (properties.isEnableOptimisticLocker()) {
-            interceptor.addInnerInterceptor(new OptimisticLockerInnerInterceptor());
-        }
+
+        interceptor.addInnerInterceptor(new OptimisticLockerInnerInterceptor());
+
         interceptor.addInnerInterceptor(new BlockAttackInnerInterceptor());
         if (properties.isEnableSqlLog()) {
             interceptor.addInnerInterceptor(new SqlPrintInterceptor());
