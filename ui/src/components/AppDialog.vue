@@ -186,8 +186,8 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background: rgba(15, 23, 42, 0.48);
-  backdrop-filter: blur(12px);
+  background: rgba(3, 9, 20, 0.62);
+  backdrop-filter: blur(14px);
 }
 
 .app-dialog__panel {
@@ -214,14 +214,14 @@ onBeforeUnmount(() => {
 
 .app-dialog__header h2 {
   margin: 0;
-  color: var(--color-text-strong);
+  color: var(--color-ink-strong);
   font-size: 1.35rem;
 }
 
 .app-dialog__header p {
   margin: 8px 0 0;
-  color: var(--color-text-soft);
-  line-height: 1.6;
+  color: var(--color-ink-soft);
+  line-height: 1.65;
 }
 
 .app-dialog__body {
@@ -235,6 +235,28 @@ onBeforeUnmount(() => {
   margin-top: 24px;
 }
 
+.app-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  color: var(--color-ink-soft);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+  transition:
+    background-color 180ms ease,
+    color 180ms ease,
+    transform 180ms ease;
+}
+
+.app-icon-button:hover {
+  color: var(--color-ink-strong);
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-1px);
+}
+
 @media (max-width: 640px) {
   .app-dialog {
     padding: 12px;
@@ -246,6 +268,10 @@ onBeforeUnmount(() => {
     max-height: calc(100vh - 24px);
     padding: 22px;
     border-radius: 24px 24px 0 0;
+  }
+
+  .app-dialog__footer {
+    flex-direction: column;
   }
 }
 </style>

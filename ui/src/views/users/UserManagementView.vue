@@ -1,14 +1,18 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import {
+  ChevronLeft,
+  ChevronRight,
   CircleUserRound,
   Layers3,
+  Mail,
+  Phone,
   Plus,
   RefreshCw,
   Search,
-  SlidersHorizontal,
   Trash2,
   UserCheck,
+  UserRound,
   UserRoundPen,
   UserX,
   Users,
@@ -17,12 +21,11 @@ import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import MainShell from '@/components/MainShell.vue'
 import StatusBadge from '@/components/StatusBadge.vue'
 import UserFormDialog from '@/components/UserFormDialog.vue'
-import { createUser, fetchUsers, removeUser, updateUser } from '@/api/user'
-import type { CreateUserPayload, UpdateUserPayload, UserProfile } from '@/types/user'
+import { createUser, fetchUserStats, queryUsers, removeUser, updateUser } from '@/api/user'
+import type { CreateUserPayload, UpdateUserPayload, UserPageResult, UserProfile, UserStatistics } from '@/types/user'
 import { getErrorMessage } from '@/utils/errors'
 
 type FilterStatus = 'all' | 'enabled' | 'disabled'
-type SearchField = 'all' | 'username' | 'nickname' | 'phone' | 'email' | 'tenantId' | 'id'
 type DialogMode = 'create' | 'edit'
 type FeedbackTone = 'success' | 'error' | 'info'
 
@@ -31,8 +34,8 @@ interface FeedbackState {
   message: string
 }
 
-const users = ref<UserProfile[]>([])
 const loading = ref(false)
+const statsLoading = ref(false)
 const submitting = ref(false)
 const deletePending = ref(false)
 const dialogOpen = ref(false)
@@ -42,107 +45,97 @@ const deleteTarget = ref<UserProfile | null>(null)
 const feedback = ref<FeedbackState | null>(null)
 
 const filters = reactive({
-  query: '',
-  field: 'all' as SearchField,
+  username: '',
+  nickname: '',
+  phone: '',
+  email: '',
   status: 'all' as FilterStatus,
 })
 
-const fieldOptions: Array<{ label: string; value: SearchField }> = [
-  { label: '全部字段', value: 'all' },
-  { label: '用户名', value: 'username' },
-  { label: '昵称', value: 'nickname' },
-  { label: '手机号', value: 'phone' },
-  { label: '邮箱', value: 'email' },
-  { label: '租户 ID', value: 'tenantId' },
-  { label: '用户 ID', value: 'id' },
-]
-
-const statCards = computed(() => {
-  const total = users.value.length
-  const enabledCount = users.value.filter((user) => user.status === 1).length
-  const disabledCount = total - enabledCount
-  const tenantCount = new Set(
-    users.value
-      .filter((user) => user.tenantId !== null)
-      .map((user) => user.tenantId),
-  ).size
-
-  return [
-    {
-      label: '用户总数',
-      value: String(total),
-      detail: '当前目录',
-      icon: Users,
-    },
-    {
-      label: '启用账号',
-      value: String(enabledCount),
-      detail: '可正常登录',
-      icon: UserCheck,
-    },
-    {
-      label: '禁用账号',
-      value: String(disabledCount),
-      detail: '已冻结访问',
-      icon: UserX,
-    },
-    {
-      label: '租户分布',
-      value: String(tenantCount),
-      detail: '已绑定租户',
-      icon: Layers3,
-    },
-  ]
+const pageState = ref<UserPageResult>({
+  list: [],
+  total: 0,
+  pageNum: 1,
+  pageSize: 20,
+  pages: 0,
 })
 
-const filteredUsers = computed(() => {
-  const keyword = filters.query.trim().toLowerCase()
-
-  return users.value.filter((user) => {
-    const matchesStatus =
-      filters.status === 'all' ||
-      (filters.status === 'enabled' && user.status === 1) ||
-      (filters.status === 'disabled' && user.status === 0)
-
-    if (!matchesStatus) {
-      return false
-    }
-
-    if (!keyword) {
-      return true
-    }
-
-    const fields: Record<SearchField, string> = {
-      all: '',
-      username: user.username || '',
-      nickname: user.nickname || '',
-      phone: user.phone || '',
-      email: user.email || '',
-      tenantId: user.tenantId !== null ? String(user.tenantId) : '',
-      id: String(user.id),
-    }
-
-    if (filters.field === 'all') {
-      return Object.values(fields)
-        .filter(Boolean)
-        .some((value) => value.toLowerCase().includes(keyword))
-    }
-
-    return fields[filters.field].toLowerCase().includes(keyword)
-  })
+const statistics = ref<UserStatistics>({
+  totalCount: 0,
+  enabledCount: 0,
+  disabledCount: 0,
+  tenantCount: 0,
 })
+
+const statCards = computed(() => [
+  {
+    label: '用户总数',
+    value: String(statistics.value.totalCount),
+    detail: '当前条件',
+    icon: Users,
+  },
+  {
+    label: '启用账号',
+    value: String(statistics.value.enabledCount),
+    detail: '状态 1',
+    icon: UserCheck,
+  },
+  {
+    label: '禁用账号',
+    value: String(statistics.value.disabledCount),
+    detail: '状态 0',
+    icon: UserX,
+  },
+  {
+    label: '租户分布',
+    value: String(statistics.value.tenantCount),
+    detail: '独立租户数',
+    icon: Layers3,
+  },
+])
 
 const resultsSummary = computed(() => {
   if (loading.value) {
-    return '正在同步用户列表...'
+    return '正在查询用户数据...'
   }
 
-  return `筛选结果 ${filteredUsers.value.length} / 全部 ${users.value.length}`
+  const pages = Math.max(pageState.value.pages, 1)
+  return `共 ${pageState.value.total} 条，第 ${pageState.value.pageNum} / ${pages} 页，每页 ${pageState.value.pageSize} 条`
 })
 
 const deleteDescription = computed(() =>
   deleteTarget.value ? `确认删除用户 ${deleteTarget.value.username} 吗？该操作不可撤销。` : '',
 )
+
+const canGoPrev = computed(() => pageState.value.pageNum > 1)
+const canGoNext = computed(() => pageState.value.pageNum < Math.max(pageState.value.pages, 1))
+
+function normalizeText(value: string) {
+  const normalized = value.trim()
+  return normalized ? normalized : undefined
+}
+
+function normalizeStatus() {
+  if (filters.status === 'enabled') {
+    return 1 as const
+  }
+  if (filters.status === 'disabled') {
+    return 0 as const
+  }
+  return null
+}
+
+function buildQuery(pageNum = 1) {
+  return {
+    pageNum,
+    pageSize: 20,
+    username: normalizeText(filters.username),
+    nickname: normalizeText(filters.nickname),
+    phone: normalizeText(filters.phone),
+    email: normalizeText(filters.email),
+    status: normalizeStatus(),
+  }
+}
 
 function showFeedback(tone: FeedbackTone, message: string) {
   feedback.value = { tone, message }
@@ -153,9 +146,13 @@ function clearFeedback() {
 }
 
 function resetFilters() {
-  filters.query = ''
-  filters.field = 'all'
+  filters.username = ''
+  filters.nickname = ''
+  filters.phone = ''
+  filters.email = ''
   filters.status = 'all'
+  clearFeedback()
+  void executeSearch()
 }
 
 function formatContact(user: UserProfile) {
@@ -167,11 +164,11 @@ function formatTenant(tenantId: number | null) {
   return tenantId === null ? '默认租户' : `租户 ${tenantId}`
 }
 
-async function loadUsers(successMessage?: string) {
+async function loadUsers(pageNum = 1, successMessage?: string) {
   loading.value = true
 
   try {
-    users.value = await fetchUsers()
+    pageState.value = await queryUsers(buildQuery(pageNum))
     if (successMessage) {
       showFeedback('success', successMessage)
     }
@@ -180,6 +177,34 @@ async function loadUsers(successMessage?: string) {
   } finally {
     loading.value = false
   }
+}
+
+async function loadStatistics() {
+  statsLoading.value = true
+
+  try {
+    statistics.value = await fetchUserStats(buildQuery())
+  } catch (error) {
+    showFeedback('error', getErrorMessage(error, '统计数据加载失败。'))
+  } finally {
+    statsLoading.value = false
+  }
+}
+
+async function executeSearch() {
+  await Promise.all([loadUsers(1), loadStatistics()])
+}
+
+async function refreshCurrentPage() {
+  await Promise.all([loadUsers(pageState.value.pageNum), loadStatistics()])
+}
+
+async function goToPage(pageNum: number) {
+  if (pageNum < 1 || pageNum > Math.max(pageState.value.pages, 1) || pageNum === pageState.value.pageNum) {
+    return
+  }
+
+  await loadUsers(pageNum)
 }
 
 function openCreateDialog() {
@@ -203,7 +228,7 @@ async function handleDialogSubmit(event: { mode: DialogMode; payload: CreateUser
     if (event.mode === 'create') {
       await createUser(event.payload as CreateUserPayload)
       dialogOpen.value = false
-      await loadUsers('用户已创建。')
+      await Promise.all([loadUsers(1, '用户已创建。'), loadStatistics()])
       return
     }
 
@@ -213,7 +238,7 @@ async function handleDialogSubmit(event: { mode: DialogMode; payload: CreateUser
 
     await updateUser(selectedUser.value.id, event.payload as UpdateUserPayload)
     dialogOpen.value = false
-    await loadUsers('用户信息已更新。')
+    await Promise.all([loadUsers(pageState.value.pageNum, '用户信息已更新。'), loadStatistics()])
   } catch (error) {
     showFeedback('error', getErrorMessage(error, '保存用户失败。'))
   } finally {
@@ -245,8 +270,13 @@ async function confirmDelete() {
   try {
     await removeUser(deleteTarget.value.id)
     const deletedUsername = deleteTarget.value.username
+    const nextPage =
+      pageState.value.list.length === 1 && pageState.value.pageNum > 1
+        ? pageState.value.pageNum - 1
+        : pageState.value.pageNum
+
     deleteTarget.value = null
-    await loadUsers(`用户 ${deletedUsername} 已删除。`)
+    await Promise.all([loadUsers(nextPage, `用户 ${deletedUsername} 已删除。`), loadStatistics()])
   } catch (error) {
     showFeedback('error', getErrorMessage(error, '删除用户失败。'))
   } finally {
@@ -255,18 +285,18 @@ async function confirmDelete() {
 }
 
 onMounted(() => {
-  void loadUsers()
+  void Promise.all([loadUsers(), loadStatistics()])
 })
 </script>
 
 <template>
   <MainShell>
-    <section class="stats-grid">
+    <section class="stats-grid" :aria-busy="statsLoading">
       <article v-for="card in statCards" :key="card.label" class="stats-card panel-card">
         <div class="stats-card__icon" aria-hidden="true">
           <component :is="card.icon" :size="18" />
         </div>
-        <div class="stats-card__content">
+        <div>
           <p class="stats-card__label">{{ card.label }}</p>
           <strong class="stats-card__value">{{ card.value }}</strong>
           <p class="stats-card__detail">{{ card.detail }}</p>
@@ -291,15 +321,15 @@ onMounted(() => {
         <div class="workspace__headline">
           <p class="section-kicker">User Directory</p>
           <h2>用户管理</h2>
-          <p>统一查看账号、状态、联系方式与租户归属，支持指定字段筛选。</p>
+          <p>按用户名、昵称、手机号、邮箱和状态组合查询，默认第 1 页，每页 20 条。</p>
         </div>
 
         <div class="workspace__actions">
           <button
             type="button"
             class="app-button app-button--secondary"
-            :disabled="loading"
-            @click="loadUsers()"
+            :disabled="loading || statsLoading"
+            @click="refreshCurrentPage"
           >
             <RefreshCw :size="16" aria-hidden="true" />
             刷新列表
@@ -313,54 +343,90 @@ onMounted(() => {
       </header>
 
       <div class="workspace__toolbar panel-card">
-        <div class="workspace__toolbar-title">
-          <div class="workspace__toolbar-icon" aria-hidden="true">
-            <SlidersHorizontal :size="18" />
+        <label class="field">
+          <span class="field__label">用户名</span>
+          <div class="input-shell">
+            <span class="input-shell__icon" aria-hidden="true">
+              <UserRound :size="16" />
+            </span>
+            <input
+              v-model="filters.username"
+              class="app-input"
+              type="text"
+              placeholder="按用户名查询"
+              @keyup.enter="executeSearch"
+            />
           </div>
-          <div>
-            <strong>筛选条件</strong>
-            <p>按字段、关键字和状态快速定位目标账号。</p>
-          </div>
-        </div>
+        </label>
 
-        <label class="field workspace__search">
-          <span class="field__label">关键字</span>
+        <label class="field">
+          <span class="field__label">昵称</span>
           <div class="input-shell">
             <span class="input-shell__icon" aria-hidden="true">
               <Search :size="16" />
             </span>
             <input
-              v-model="filters.query"
+              v-model="filters.nickname"
               class="app-input"
-              type="search"
-              placeholder="输入关键字后，结合指定字段筛选"
+              type="text"
+              placeholder="按昵称查询"
+              @keyup.enter="executeSearch"
             />
           </div>
         </label>
 
-        <label class="field workspace__field">
-          <span class="field__label">指定字段</span>
-          <select v-model="filters.field" class="app-select">
-            <option v-for="option in fieldOptions" :key="option.value" :value="option.value">
-              {{ option.label }}
-            </option>
+        <label class="field">
+          <span class="field__label">手机号</span>
+          <div class="input-shell">
+            <span class="input-shell__icon" aria-hidden="true">
+              <Phone :size="16" />
+            </span>
+            <input
+              v-model="filters.phone"
+              class="app-input"
+              type="text"
+              placeholder="按手机号查询"
+              @keyup.enter="executeSearch"
+            />
+          </div>
+        </label>
+
+        <label class="field">
+          <span class="field__label">邮箱</span>
+          <div class="input-shell">
+            <span class="input-shell__icon" aria-hidden="true">
+              <Mail :size="16" />
+            </span>
+            <input
+              v-model="filters.email"
+              class="app-input"
+              type="text"
+              placeholder="按邮箱查询"
+              @keyup.enter="executeSearch"
+            />
+          </div>
+        </label>
+
+        <label class="field">
+          <span class="field__label">状态</span>
+          <select v-model="filters.status" class="app-select">
+            <option value="all">全部状态</option>
+            <option value="enabled">启用</option>
+            <option value="disabled">禁用</option>
           </select>
         </label>
 
-        <label class="field workspace__filter">
-          <span class="field__label">账号状态</span>
-          <select v-model="filters.status" class="app-select">
-            <option value="all">全部状态</option>
-            <option value="enabled">仅启用</option>
-            <option value="disabled">仅禁用</option>
-          </select>
-        </label>
+        <div class="workspace__query-actions">
+          <button type="button" class="app-button" :disabled="loading" @click="executeSearch">
+            查询
+          </button>
+          <button type="button" class="app-button app-button--ghost" @click="resetFilters">
+            重置
+          </button>
+        </div>
 
         <div class="workspace__meta">
           <span class="workspace__summary">{{ resultsSummary }}</span>
-          <button type="button" class="app-button app-button--ghost" @click="resetFilters">
-            重置筛选
-          </button>
         </div>
       </div>
 
@@ -380,8 +446,8 @@ onMounted(() => {
               <td colspan="5" class="table-wrap__loading">正在加载用户列表...</td>
             </tr>
           </tbody>
-          <tbody v-else-if="filteredUsers.length > 0">
-            <tr v-for="user in filteredUsers" :key="user.id">
+          <tbody v-else-if="pageState.list.length > 0">
+            <tr v-for="user in pageState.list" :key="user.id">
               <td data-label="用户">
                 <div class="user-cell">
                   <div class="user-cell__avatar" aria-hidden="true">
@@ -425,13 +491,42 @@ onMounted(() => {
               <td colspan="5">
                 <div class="empty-state">
                   <strong>没有匹配的用户</strong>
-                  <p>调整关键字、字段或状态条件后再试。</p>
+                  <p>调整查询条件后重新搜索。</p>
                 </div>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
+
+      <footer class="pagination-bar">
+        <div class="pagination-bar__info">
+          <span>当前页 {{ pageState.pageNum }}</span>
+          <span>总页数 {{ Math.max(pageState.pages, 1) }}</span>
+        </div>
+
+        <div class="pagination-bar__actions">
+          <button
+            type="button"
+            class="app-button app-button--ghost"
+            :disabled="!canGoPrev || loading"
+            @click="goToPage(pageState.pageNum - 1)"
+          >
+            <ChevronLeft :size="16" aria-hidden="true" />
+            上一页
+          </button>
+
+          <button
+            type="button"
+            class="app-button app-button--ghost"
+            :disabled="!canGoNext || loading"
+            @click="goToPage(pageState.pageNum + 1)"
+          >
+            下一页
+            <ChevronRight :size="16" aria-hidden="true" />
+          </button>
+        </div>
+      </footer>
     </section>
 
     <UserFormDialog
@@ -479,11 +574,6 @@ onMounted(() => {
   background:
     linear-gradient(135deg, rgba(143, 231, 255, 0.12), rgba(83, 184, 255, 0.08)),
     rgba(255, 255, 255, 0.04);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
-}
-
-.stats-card__content {
-  min-width: 0;
 }
 
 .stats-card__label {
@@ -520,13 +610,12 @@ onMounted(() => {
 }
 
 .workspace__headline {
-  max-width: 38rem;
+  max-width: 40rem;
 }
 
 .workspace__headline h2 {
   margin-top: 10px;
   font-size: 2rem;
-  line-height: 1.08;
 }
 
 .workspace__headline p:last-child {
@@ -542,7 +631,7 @@ onMounted(() => {
 
 .workspace__toolbar {
   display: grid;
-  grid-template-columns: minmax(220px, 0.95fr) minmax(0, 1.45fr) 180px 180px auto;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 16px;
   align-items: end;
   margin-top: 26px;
@@ -553,43 +642,14 @@ onMounted(() => {
     rgba(4, 10, 20, 0.58);
 }
 
-.workspace__toolbar-title {
+.workspace__query-actions {
   display: flex;
-  align-items: center;
-  gap: 14px;
-  min-height: 56px;
-}
-
-.workspace__toolbar-title strong {
-  display: block;
-  color: var(--color-ink-strong);
-  font-size: 1rem;
-}
-
-.workspace__toolbar-title p {
-  margin-top: 4px;
-  color: var(--color-ink-soft);
-  font-size: 0.88rem;
-  line-height: 1.55;
-}
-
-.workspace__toolbar-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 48px;
-  height: 48px;
-  border-radius: 18px;
-  color: var(--color-accent-strong);
-  background: rgba(255, 255, 255, 0.05);
+  gap: 10px;
 }
 
 .workspace__meta {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: 12px;
-  min-height: 56px;
 }
 
 .workspace__summary {
@@ -606,25 +666,11 @@ onMounted(() => {
   color: var(--color-ink-strong);
   background: rgba(255, 255, 255, 0.06);
   outline: 0;
-  transition:
-    border-color 180ms ease,
-    background-color 180ms ease,
-    box-shadow 180ms ease;
-}
-
-.app-select:hover {
-  border-color: rgba(83, 184, 255, 0.22);
-  background: rgba(255, 255, 255, 0.08);
 }
 
 .app-select option {
   color: #f0f5ff;
   background: #0a1524;
-}
-
-.app-select:focus {
-  border-color: rgba(83, 184, 255, 0.42);
-  box-shadow: var(--shadow-focus);
 }
 
 .table-wrap {
@@ -714,6 +760,26 @@ onMounted(() => {
   color: var(--color-ink-soft);
 }
 
+.pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.pagination-bar__info {
+  display: flex;
+  gap: 14px;
+  color: var(--color-ink-soft);
+  font-size: 0.92rem;
+}
+
+.pagination-bar__actions {
+  display: flex;
+  gap: 10px;
+}
+
 .app-button--ghost {
   color: var(--color-ink-strong);
   background: rgba(255, 255, 255, 0.06);
@@ -726,22 +792,20 @@ onMounted(() => {
   box-shadow: inset 0 0 0 1px rgba(244, 140, 140, 0.16);
 }
 
-@media (max-width: 1220px) {
-  .stats-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
+@media (max-width: 1280px) {
   .workspace__toolbar {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .workspace__toolbar-title,
+  .workspace__query-actions,
   .workspace__meta {
     grid-column: 1 / -1;
   }
+}
 
-  .workspace__meta {
-    justify-content: flex-start;
+@media (max-width: 1180px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -750,31 +814,27 @@ onMounted(() => {
     padding: 20px;
   }
 
-  .workspace__header {
-    flex-direction: column;
-  }
-
-  .workspace__actions {
-    width: 100%;
-    flex-direction: column;
-  }
-
-  .table-actions {
+  .workspace__header,
+  .workspace__actions,
+  .table-actions,
+  .pagination-bar,
+  .pagination-bar__actions,
+  .workspace__query-actions {
     flex-direction: column;
   }
 }
 
 @media (max-width: 640px) {
-  .stats-grid {
-    grid-template-columns: 1fr;
-  }
-
+  .stats-grid,
   .workspace__toolbar {
     grid-template-columns: 1fr;
   }
 
-  .workspace__summary {
+  .workspace__summary,
+  .pagination-bar__info {
     white-space: normal;
+    flex-direction: column;
+    gap: 6px;
   }
 
   .user-table thead {

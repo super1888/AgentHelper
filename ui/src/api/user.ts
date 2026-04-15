@@ -1,9 +1,21 @@
 import { apiClient, unwrapResponse } from '@/api/client'
-import type { CreateUserPayload, UpdateUserPayload, UserProfile } from '@/types/user'
+import type {
+  CreateUserPayload,
+  UpdateUserPayload,
+  UserPageResult,
+  UserProfile,
+  UserQueryPayload,
+  UserStatistics,
+} from '@/types/user'
 
-export async function fetchUsers() {
-  const response = await apiClient.get('/users/getAllUser')
-  return unwrapResponse<UserProfile[]>(response)
+export async function queryUsers(payload: UserQueryPayload) {
+  const response = await apiClient.post('/users/pageQuery', payload)
+  return unwrapResponse<UserPageResult>(response)
+}
+
+export async function fetchUserStats() {
+  const response = await apiClient.post('/users/statistics')
+  return unwrapResponse<UserStatistics>(response)
 }
 
 export async function fetchUserDetail(userId: number) {

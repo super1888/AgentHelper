@@ -74,14 +74,14 @@ const emit = defineEmits<{
   place-items: center;
   width: 38px;
   height: 38px;
-  color: #b45309;
+  color: #f7b05b;
   border-radius: 14px;
   background: rgba(245, 158, 11, 0.14);
 }
 
 .confirm-dialog__description {
   margin: 0;
-  color: var(--color-text-soft);
+  color: var(--color-ink-soft);
   line-height: 1.7;
 }
 </style>

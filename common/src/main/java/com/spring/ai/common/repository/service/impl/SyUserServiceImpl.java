@@ -1,17 +1,29 @@
 package com.spring.ai.common.repository.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.spring.ai.common.constants.SqlConstants;
 import com.spring.ai.common.repository.dao.SyUserMapper;
 import com.spring.ai.common.repository.enitiy.SyUser;
 import com.spring.ai.common.repository.service.SyUserService;
+import java.util.ArrayList;
 import java.util.List;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+/**
+ * 用户仓储服务实现
+ */
 @Service
 public class SyUserServiceImpl extends ServiceImpl<SyUserMapper, SyUser> implements SyUserService {
+
+    private final JdbcTemplate jdbcTemplate;
+
+    public SyUserServiceImpl(JdbcTemplate jdbcTemplate) {
+        this.jdbcTemplate = jdbcTemplate;
+    }
 
     @Override
     public SyUser getByUsername(String username) {
@@ -51,12 +63,56 @@ public class SyUserServiceImpl extends ServiceImpl<SyUserMapper, SyUser> impleme
     @Override
     public List<SyUser> listAllUsers() {
         return list(Wrappers.lambdaQuery(SyUser.class)
-                .orderByDesc(SyUser::getCreateTime)
+                .orderByDesc(SyUser::getUpdateTime)
                 .orderByDesc(SyUser::getId));
     }
+
+    /**
+     * 统一复用分页查询条件，排序按修改时间倒序
+     */
+    @Override
+    public List<SyUser> pageQueryUsers(String username, String nickname, String phone, String email, Integer status) {
+        return list(buildLambdaQuery(username, nickname, phone, email, status));
+    }
+
+    @Override
+    public Integer countUsers(String username, String nickname, String phone, String email, Integer status) {
+        return count(buildLambdaQuery(username, nickname, phone, email, status));
+    }
+
 
     @Override
     public boolean deleteByUserId(Long userId) {
         return removeById(userId);
     }
+
+    private LambdaQueryWrapper<SyUser> buildLambdaQuery(
+            String username,
+            String nickname,
+            String phone,
+            String email,
+            Integer status
+    ) {
+        LambdaQueryWrapper<SyUser> queryWrapper = Wrappers.lambdaQuery(SyUser.class)
+                .orderByDesc(SyUser::getUpdateTime)
+                .orderByDesc(SyUser::getId);
+
+        if (StringUtils.hasText(username)) {
+            queryWrapper.like(SyUser::getUsername, username.trim());
+        }
+        if (StringUtils.hasText(nickname)) {
+            queryWrapper.like(SyUser::getNickname, nickname.trim());
+        }
+        if (StringUtils.hasText(phone)) {
+            queryWrapper.like(SyUser::getPhone, phone.trim());
+        }
+        if (StringUtils.hasText(email)) {
+            queryWrapper.like(SyUser::getEmail, email.trim());
+        }
+        if (status != null) {
+            queryWrapper.eq(SyUser::getStatus, status);
+        }
+        return queryWrapper;
+    }
+
 }

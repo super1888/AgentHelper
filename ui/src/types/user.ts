@@ -1,3 +1,5 @@
+import type { PageInfoResponse } from '@/types/api'
+
 export type UserStatus = 0 | 1
 
 export interface UserProfile {
@@ -50,3 +52,22 @@ export interface UpdateUserPayload {
   status: UserStatus
   tenantId: number | null
 }
+
+export interface UserQueryPayload {
+  pageNum?: number
+  pageSize?: number
+  username?: string
+  nickname?: string
+  phone?: string
+  email?: string
+  status?: UserStatus | null
+}
+
+export interface UserStatistics {
+  totalCount: number
+  enabledCount: number
+  disabledCount: number
+  tenantCount: number
+}
+
+export type UserPageResult = PageInfoResponse<UserProfile>
