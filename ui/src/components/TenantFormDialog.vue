@@ -30,8 +30,8 @@ const errors = reactive<Partial<Record<TenantField, string>>>({})
 const dialogTitle = computed(() => (props.mode === 'create' ? '新增租户' : '编辑租户'))
 const dialogDescription = computed(() =>
   props.mode === 'create'
-    ? '建立新的租户边界，用于承载用户、Agent 与会话数据。?'
-    : '维护租户的名称、编码、联系人与启用状态。?,
+    ? '创建新的租户边界，用于承载用户、Agent 和会话数据。'
+    : '维护租户名称、编码、联系人与启用状态。',
 )
 
 function createEmptyForm(): TenantFormState {
@@ -68,7 +68,6 @@ function syncFormWithProps() {
 }
 
 function handleSubmit() {
-  // 弹窗内部先完成字段校验，只有合法数据才上抛给页面层提交。
   clearErrors()
   const nextErrors = validateTenantForm(form)
   Object.assign(errors, nextErrors)
@@ -112,9 +111,10 @@ watch(
           <span class="tenant-form__identity-label">租户 ID</span>
           <strong>#{{ tenant.id }}</strong>
         </div>
+
         <div class="tenant-form__identity-card">
           <span class="tenant-form__identity-label">当前成员</span>
-          <strong>{{ tenant.memberCount }} 人?/strong>
+          <strong>{{ tenant.memberCount }} 人</strong>
         </div>
       </div>
 
@@ -156,7 +156,7 @@ watch(
         </label>
 
         <label class="field">
-          <span class="field__label">联系人?/span>
+          <span class="field__label">联系人</span>
           <div class="input-shell" :class="{ 'input-shell--invalid': Boolean(errors.contactName) }">
             <span class="input-shell__icon" aria-hidden="true">
               <ContactRound :size="16" />
@@ -165,7 +165,7 @@ watch(
               v-model="form.contactName"
               class="app-input"
               type="text"
-              placeholder="可选?
+              placeholder="可选"
               :disabled="submitting"
               @input="delete errors.contactName"
             />
@@ -193,7 +193,10 @@ watch(
 
         <label class="field field--full">
           <span class="field__label">租户描述</span>
-          <div class="input-shell input-shell--textarea" :class="{ 'input-shell--invalid': Boolean(errors.description) }">
+          <div
+            class="input-shell input-shell--textarea"
+            :class="{ 'input-shell--invalid': Boolean(errors.description) }"
+          >
             <span class="input-shell__icon input-shell__icon--textarea" aria-hidden="true">
               <ScrollText :size="16" />
             </span>
@@ -201,7 +204,7 @@ watch(
               v-model="form.description"
               class="app-textarea"
               rows="4"
-              placeholder="描述租户的用途、组织范围或使用场景"
+              placeholder="描述租户用途、组织范围或使用场景"
               :disabled="submitting"
               @input="delete errors.description"
             />
@@ -242,7 +245,7 @@ watch(
         @click="handleSubmit"
       >
         <span v-if="submitting" class="button-spinner" aria-hidden="true"></span>
-        {{ submitting ? '提交中...? : mode === 'create' ? '创建租户' : '保存修改' }}
+        {{ submitting ? '提交中...' : mode === 'create' ? '创建租户' : '保存修改' }}
       </button>
     </template>
   </AppDialog>

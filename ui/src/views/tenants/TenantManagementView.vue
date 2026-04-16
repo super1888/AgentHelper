@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import {
-  BadgeCheck,
   Building2,
   ChevronLeft,
   ChevronRight,
@@ -10,9 +9,9 @@ import {
   Plus,
   RefreshCw,
   Search,
+  ShieldCheck,
   Trash2,
   UserRoundPen,
-  Users,
 } from 'lucide-vue-next'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import MainShell from '@/components/MainShell.vue'
@@ -74,11 +73,17 @@ const totalTenantsLabel = computed(() => {
   return `总租户 ${statistics.value.totalCount}`
 })
 
+const statsSummary = computed(() => {
+  if (statsLoading.value) {
+    return '正在刷新统计...'
+  }
+  return `启用 ${statistics.value.enabledCount} / 禁用 ${statistics.value.disabledCount}`
+})
+
 const resultsSummary = computed(() => {
   if (loading.value) {
     return '正在加载租户数据...'
   }
-
   const pages = Math.max(pageState.value.pages, 1)
   return `共 ${pageState.value.total} 条，当前第 ${pageState.value.pageNum} / ${pages} 页，每页 ${pageState.value.pageSize} 条`
 })
@@ -131,21 +136,13 @@ function resetFilters() {
   void loadTenants(1)
 }
 
-function formatContact(tenant: TenantProfile) {
-  const contactItems = [tenant.contactName, tenant.contactPhone].filter(Boolean)
-  return contactItems.length > 0 ? contactItems.join(' / ') : '未填写'
+function formatOwner(tenant: TenantProfile) {
+  return tenant.ownerUserName || (tenant.ownerUserId ? `用户 ${tenant.ownerUserId}` : '未配置')
 }
 
-function formatOwner(tenant: TenantProfile) {
-  if (!tenant.ownerUserName && !tenant.ownerUserId) {
-    return '未绑定'
-  }
-
-  if (tenant.ownerUserName && tenant.ownerUserId) {
-    return `${tenant.ownerUserName} / ID ${tenant.ownerUserId}`
-  }
-
-  return tenant.ownerUserName || `ID ${tenant.ownerUserId}`
+function formatContact(tenant: TenantProfile) {
+  const parts = [tenant.contactName, tenant.contactPhone].filter(Boolean)
+  return parts.length > 0 ? parts.join(' / ') : '未填写'
 }
 
 async function loadTenants(pageNum = 1, successMessage?: string) {
@@ -187,7 +184,6 @@ async function goToPage(pageNum: number) {
   if (pageNum < 1 || pageNum > Math.max(pageState.value.pages, 1) || pageNum === pageState.value.pageNum) {
     return
   }
-
   await loadTenants(pageNum)
 }
 
@@ -222,7 +218,7 @@ async function handleDialogSubmit(event: { mode: DialogMode; payload: CreateTena
 
     await updateTenant(selectedTenant.value.id, event.payload as UpdateTenantPayload)
     dialogOpen.value = false
-    await Promise.all([loadTenants(pageState.value.pageNum, '租户信息已更新。'), loadStatistics()])
+    await loadTenants(pageState.value.pageNum, '租户信息已更新。')
   } catch (error) {
     showFeedback('error', getErrorMessage(error, '保存租户失败。'))
   } finally {
@@ -252,16 +248,15 @@ async function confirmDelete() {
   deletePending.value = true
 
   try {
-    // 删除后如果当前页只剩最后一条，自动回退到上一页，避免落在空页上。
     await removeTenant(deleteTarget.value.id)
-    const deletedName = deleteTarget.value.tenantName
+    const deletedTenantName = deleteTarget.value.tenantName
     const nextPage =
       pageState.value.list.length === 1 && pageState.value.pageNum > 1
         ? pageState.value.pageNum - 1
         : pageState.value.pageNum
 
     deleteTarget.value = null
-    await Promise.all([loadTenants(nextPage, `租户 ${deletedName} 已删除。`), loadStatistics()])
+    await Promise.all([loadTenants(nextPage, `租户 ${deletedTenantName} 已删除。`), loadStatistics()])
   } catch (error) {
     showFeedback('error', getErrorMessage(error, '删除租户失败。'))
   } finally {
@@ -298,8 +293,12 @@ onMounted(() => {
               <Building2 :size="15" aria-hidden="true" />
               {{ totalTenantsLabel }}
             </span>
+            <span class="workspace__count-badge workspace__count-badge--subtle">
+              <ShieldCheck :size="15" aria-hidden="true" />
+              {{ statsSummary }}
+            </span>
           </div>
-          <p class="workspace__subtitle">统一管理租户编码、成员归属、联系人和启用状态，保持与用户中心一致的操作节奏。</p>
+          <p class="workspace__subtitle">统一管理租户编码、联系人、成员规模和启用状态，支持分页检索与增删改。</p>
         </div>
 
         <div class="workspace__actions">
@@ -320,29 +319,11 @@ onMounted(() => {
         </div>
       </header>
 
-      <section class="stats-grid">
-        <article class="stat-card panel-card">
-          <span class="stat-card__label">启用租户</span>
-          <strong>{{ statsLoading ? '--' : statistics.enabledCount }}</strong>
-          <p>当前可分配给用户的租户数量。</p>
-        </article>
-        <article class="stat-card panel-card">
-          <span class="stat-card__label">禁用租户</span>
-          <strong>{{ statsLoading ? '--' : statistics.disabledCount }}</strong>
-          <p>已停用但仍保留档案的租户数量。</p>
-        </article>
-        <article class="stat-card panel-card">
-          <span class="stat-card__label">全部租户</span>
-          <strong>{{ statsLoading ? '--' : statistics.totalCount }}</strong>
-          <p>包含默认租户与普通业务租户。</p>
-        </article>
-      </section>
-
       <section class="workspace__filters panel-card">
         <div class="workspace__filters-head">
           <div>
             <strong>条件筛选</strong>
-            <p>支持按租户编码、租户名称和状态组合查询，统计卡片始终展示全局总量。</p>
+            <p>按租户编码、租户名称和状态组合查询，便于快速定位目标租户。</p>
           </div>
           <span class="workspace__summary">{{ resultsSummary }}</span>
         </div>
@@ -403,7 +384,7 @@ onMounted(() => {
       <section class="workspace__table panel-card">
         <div class="workspace__table-head">
           <strong>租户列表</strong>
-          <span>默认按修改时间倒序展示</span>
+          <span>默认按更新时间倒序展示</span>
         </div>
 
         <div class="table-wrap">
@@ -413,13 +394,14 @@ onMounted(() => {
                 <th scope="col">租户</th>
                 <th scope="col">状态</th>
                 <th scope="col">联系人</th>
-                <th scope="col">归属与成员</th>
+                <th scope="col">所有者</th>
+                <th scope="col">成员数</th>
                 <th scope="col">操作</th>
               </tr>
             </thead>
             <tbody v-if="loading">
               <tr>
-                <td colspan="5" class="table-wrap__loading">正在加载租户列表...</td>
+                <td colspan="6" class="table-wrap__loading">正在加载租户列表...</td>
               </tr>
             </tbody>
             <tbody v-else-if="pageState.list.length > 0">
@@ -430,13 +412,7 @@ onMounted(() => {
                       <Building2 :size="18" />
                     </div>
                     <div class="tenant-cell__copy">
-                      <div class="tenant-cell__title">
-                        <strong>{{ tenant.tenantName }}</strong>
-                        <span v-if="tenant.isDefault === 1" class="tenant-cell__flag">
-                          <BadgeCheck :size="14" aria-hidden="true" />
-                          默认租户
-                        </span>
-                      </div>
+                      <strong>{{ tenant.tenantName }}</strong>
                       <p>{{ tenant.tenantCode }} / ID {{ tenant.id }}</p>
                     </div>
                   </div>
@@ -444,33 +420,23 @@ onMounted(() => {
                 <td data-label="状态">
                   <StatusBadge :status="tenant.status" />
                 </td>
-                <td data-label="联系人">{{ formatContact(tenant) }}</td>
-                <td data-label="归属与成员">
-                  <div class="tenant-metadata">
-                    <span>
-                      <Users :size="14" aria-hidden="true" />
-                      {{ tenant.memberCount }} 人
-                    </span>
-                    <span>
-                      <ContactRound :size="14" aria-hidden="true" />
-                      {{ formatOwner(tenant) }}
-                    </span>
+                <td data-label="联系人">
+                  <div class="meta-inline">
+                    <ContactRound :size="14" aria-hidden="true" />
+                    <span>{{ formatContact(tenant) }}</span>
                   </div>
                 </td>
+                <td data-label="所有者">{{ formatOwner(tenant) }}</td>
+                <td data-label="成员数">{{ tenant.memberCount }}</td>
                 <td data-label="操作">
                   <div class="table-actions">
-                    <button
-                      type="button"
-                      class="app-button app-button--ghost"
-                      @click="openEditDialog(tenant)"
-                    >
+                    <button type="button" class="app-button app-button--ghost" @click="openEditDialog(tenant)">
                       <UserRoundPen :size="15" aria-hidden="true" />
                       编辑
                     </button>
                     <button
                       type="button"
                       class="app-button app-button--ghost app-button--danger-ghost"
-                      :disabled="tenant.isDefault === 1"
                       @click="requestDelete(tenant)"
                     >
                       <Trash2 :size="15" aria-hidden="true" />
@@ -482,7 +448,7 @@ onMounted(() => {
             </tbody>
             <tbody v-else>
               <tr>
-                <td colspan="5">
+                <td colspan="6">
                   <div class="empty-state">
                     <strong>没有匹配的租户</strong>
                     <p>调整筛选条件后重新查询。</p>
@@ -559,7 +525,7 @@ onMounted(() => {
 
 .workspace__headline {
   min-width: 0;
-  max-width: 42rem;
+  max-width: 44rem;
 }
 
 .workspace__title-row {
@@ -594,6 +560,12 @@ onMounted(() => {
   white-space: nowrap;
 }
 
+.workspace__count-badge--subtle {
+  color: var(--color-ink-soft);
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+}
+
 .workspace__subtitle {
   margin-top: 14px;
   color: var(--color-ink-soft);
@@ -605,45 +577,6 @@ onMounted(() => {
 .workspace__actions {
   display: flex;
   gap: 12px;
-}
-
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
-  margin-bottom: 22px;
-}
-
-.stat-card {
-  padding: 22px;
-  border-radius: 24px;
-  background:
-    radial-gradient(circle at top right, rgba(83, 184, 255, 0.08), transparent 30%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.018)),
-    rgba(4, 10, 20, 0.54);
-}
-
-.stat-card__label {
-  color: var(--color-ink-muted);
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-
-.stat-card strong {
-  display: block;
-  margin-top: 10px;
-  color: var(--color-ink-strong);
-  font-size: clamp(1.8rem, 2vw, 2.2rem);
-  line-height: 1;
-}
-
-.stat-card p {
-  margin-top: 10px;
-  color: var(--color-ink-soft);
-  font-size: 0.9rem;
-  line-height: 1.6;
 }
 
 .workspace__filters,
@@ -799,14 +732,8 @@ onMounted(() => {
 }
 
 .tenant-cell__copy strong {
+  display: block;
   color: var(--color-ink-strong);
-}
-
-.tenant-cell__title {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
 }
 
 .tenant-cell__copy p {
@@ -815,27 +742,7 @@ onMounted(() => {
   font-size: 0.84rem;
 }
 
-.tenant-cell__flag {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 28px;
-  padding: 0 10px;
-  color: #d8f7ff;
-  border: 1px solid rgba(116, 210, 255, 0.18);
-  border-radius: 999px;
-  background: rgba(83, 184, 255, 0.12);
-  font-size: 0.8rem;
-  font-weight: 700;
-}
-
-.tenant-metadata {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.tenant-metadata span {
+.meta-inline {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -895,12 +802,6 @@ onMounted(() => {
   box-shadow: inset 0 0 0 1px rgba(244, 140, 140, 0.16);
 }
 
-@media (max-width: 1280px) {
-  .stats-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
 @media (max-width: 960px) {
   .workspace {
     padding: 22px;
@@ -916,17 +817,19 @@ onMounted(() => {
     flex-direction: column;
     align-items: stretch;
   }
-
-  .workspace__summary {
-    text-align: left;
-  }
-
-  .workspace__filters-grid--tenant {
-    grid-template-columns: 1fr;
-  }
 }
 
 @media (max-width: 720px) {
+  .workspace__filters-grid--tenant {
+    grid-template-columns: 1fr;
+  }
+
+  .pagination-bar__info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
   .tenant-table thead {
     display: none;
   }
@@ -957,12 +860,6 @@ onMounted(() => {
     font-size: 0.75rem;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-  }
-
-  .pagination-bar__info {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 6px;
   }
 }
 </style>
