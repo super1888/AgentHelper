@@ -6,6 +6,7 @@ DROP TABLE IF EXISTS `agent`;
 DROP TABLE IF EXISTS `sy_user`;
 DROP TABLE IF EXISTS `sy_tenant`;
 DROP TABLE IF EXISTS `vector_store_file`;
+DROP TABLE IF EXISTS `prompt_template`;
 
 CREATE TABLE `sy_tenant`
 (
@@ -219,6 +220,37 @@ CREATE TABLE `agent_task`
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci COMMENT ='Agent 任务表';
+
+CREATE TABLE `prompt_template`
+(
+    `id`               BIGINT       NOT NULL COMMENT '主键ID',
+    `template_code`    VARCHAR(64)  NOT NULL COMMENT '模板编码',
+    `template_name`    VARCHAR(128) NOT NULL COMMENT '模板名称',
+    `description`      VARCHAR(500)          DEFAULT NULL COMMENT '模板描述',
+    `template_type`    VARCHAR(64)  NOT NULL COMMENT '模板类型',
+    `source_type`      VARCHAR(32)  NOT NULL COMMENT '来源类型 INLINE_TEXT/FILE_PATH',
+    `template_content` LONGTEXT              DEFAULT NULL COMMENT '模板内容快照',
+    `source_path`      VARCHAR(512)          DEFAULT NULL COMMENT '文件路径',
+    `template_status`  VARCHAR(32)  NOT NULL DEFAULT 'ENABLED' COMMENT '模板状态 ENABLED/DISABLED',
+    `tenant_id`        BIGINT       NOT NULL COMMENT '租户ID',
+    `owner_user_id`    BIGINT       NOT NULL COMMENT '创建人用户ID',
+    `owner_user_name`  VARCHAR(64)           DEFAULT NULL COMMENT '创建人用户名称',
+    `ext`              TEXT                  DEFAULT NULL COMMENT '扩展字段',
+    `remark`           VARCHAR(255)          DEFAULT NULL COMMENT '备注',
+    `create_id`        BIGINT                DEFAULT NULL COMMENT '创建人ID',
+    `create_name`      VARCHAR(64)           DEFAULT NULL COMMENT '创建人名称',
+    `create_time`      DATETIME              DEFAULT NULL COMMENT '创建时间',
+    `update_id`        BIGINT                DEFAULT NULL COMMENT '更新人ID',
+    `update_name`      VARCHAR(64)           DEFAULT NULL COMMENT '更新人名称',
+    `update_time`      DATETIME              DEFAULT NULL COMMENT '更新时间',
+    `version`          INT          NOT NULL DEFAULT 0 COMMENT '版本号',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_prompt_template_code` (`tenant_id`, `template_code`),
+    KEY `idx_prompt_template_status` (`tenant_id`, `template_status`)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_0900_ai_ci COMMENT ='提示词模板表';
+
 
 CREATE TABLE `vector_store_file`
 (

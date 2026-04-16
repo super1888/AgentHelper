@@ -1,3 +1,17 @@
+import type { PromptTemplateVariable } from '@/types/prompt'
+
+export interface AgentPromptConfig {
+  promptTemplateId?: number | null
+  promptTemplateCode?: string | null
+  promptTemplateName?: string | null
+  promptBindingType?: string | null
+  promptSourceType?: string | null
+  promptTemplatePath?: string | null
+  promptTemplateContent?: string | null
+  promptVariableDefinitions?: PromptTemplateVariable[] | null
+  promptVariables?: Record<string, string> | null
+}
+
 export interface AgentSummary {
   agentId: string
   agentName: string
@@ -16,6 +30,15 @@ export interface AgentVersion {
   description: string | null
   systemPrompt: string | null
   selectedCapabilities: string[]
+  promptTemplateId?: number | null
+  promptTemplateCode?: string | null
+  promptTemplateName?: string | null
+  promptBindingType?: string | null
+  promptSourceType?: string | null
+  promptTemplatePath?: string | null
+  promptTemplateContent?: string | null
+  promptVariableDefinitions?: PromptTemplateVariable[] | null
+  promptVariables?: Record<string, string> | null
   published: boolean
   createTime: number | null
 }
@@ -39,6 +62,7 @@ export interface AgentCreatePayload {
   systemPrompt: string | null
   selectedCapabilities: string[]
   agentType?: string
+  promptConfig?: AgentPromptConfig | null
 }
 
 export interface AgentCreateResult {

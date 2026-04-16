@@ -2,7 +2,9 @@ package com.spring.ai.agent.application.manager;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.spring.ai.agent.application.assmbler.SimpleAgentAssembler;
+import com.spring.ai.agent.domain.dto.AgentPromptTemplateVariableDTO;
 import com.spring.ai.agent.domain.dto.SimpleAgentVersionConfigDTO;
+import com.spring.ai.agent.domain.dto.SimpleAgentPromptConfigDTO;
 import com.spring.ai.agent.domain.request.SimpleAgentCreateRequest;
 import com.spring.ai.agent.domain.request.SimpleAgentReconnectRequest;
 import com.spring.ai.agent.domain.request.SimpleAgentSessionCreateRequest;
@@ -27,6 +29,10 @@ import com.spring.ai.common.repository.service.AgentSessionEventService;
 import com.spring.ai.common.repository.service.AgentSessionService;
 import com.spring.ai.common.repository.service.AgentTaskService;
 import com.spring.ai.common.repository.service.AgentVersionService;
+import com.spring.ai.prompt.application.manager.PromptTemplateResolver;
+import com.spring.ai.prompt.config.PromptTemplateConstants;
+import com.spring.ai.prompt.domain.dto.PromptTemplateBindDTO;
+import com.spring.ai.prompt.domain.dto.PromptTemplateResolvedDTO;
 import jakarta.annotation.Resource;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -61,6 +67,9 @@ public class SimpleAgentApplicationManager {
     @Resource
     private SimpleAgentSupportManager simpleAgentSupportManager;
 
+    @Resource
+    private PromptTemplateResolver promptTemplateResolver;
+
     public List<SimpleAgentSummaryResponse> listAgents() {
         Long tenantId = simpleAgentSupportManager.getCurrentTenantId();
         Long currentUserId = simpleAgentSupportManager.getCurrentUserId();
@@ -91,7 +100,8 @@ public class SimpleAgentApplicationManager {
                 request.getAgentName(),
                 request.getDescription(),
                 request.getSystemPrompt(),
-                request.getSelectedCapabilities()
+                request.getSelectedCapabilities(),
+                request.getPromptConfig()
         );
         agent.setCurrentVersionId(version.getId());
         agent.setLatestVersionNo(version.getVersionNo());
@@ -109,7 +119,8 @@ public class SimpleAgentApplicationManager {
                 request.getAgentName(),
                 request.getDescription(),
                 request.getSystemPrompt(),
-                request.getSelectedCapabilities()
+                request.getSelectedCapabilities(),
+                request.getPromptConfig()
         );
         SimpleAgentAssembler.mergeAgentForUpdate(agent, request);
         agent.setCurrentVersionId(version.getId());
@@ -187,10 +198,14 @@ public class SimpleAgentApplicationManager {
         Agent agent = simpleAgentSupportManager.requireAgent(agentCode);
         List<SimpleAgentVersionResponse> versions = agentVersionService.listByAgentId(agent.getId(), agent.getTenantId())
                 .stream()
-                .map(version -> SimpleAgentAssembler.toVersionResponse(
-                        version,
-                        simpleAgentSupportManager.parseCapabilities(version.getSelectedCapabilitiesJson())
-                ))
+                .map(version -> {
+                    SimpleAgentVersionConfigDTO config = simpleAgentSupportManager.parseConfig(version.getConfigSnapshotJson());
+                    return SimpleAgentAssembler.toVersionResponse(
+                            version,
+                            simpleAgentSupportManager.parseCapabilities(version.getSelectedCapabilitiesJson()),
+                            config
+                    );
+                })
                 .toList();
         return SimpleAgentAssembler.toDetailResponse(agent, versions);
     }
@@ -235,15 +250,18 @@ public class SimpleAgentApplicationManager {
             String agentName,
             String description,
             String systemPrompt,
-            List<String> selectedCapabilities
+            List<String> selectedCapabilities,
+            SimpleAgentPromptConfigDTO promptConfig
     ) {
         int nextVersionNo = agent.getLatestVersionNo() == null ? 1 : agent.getLatestVersionNo() + 1;
         List<String> capabilities = SimpleAgentAssembler.normalizeCapabilities(selectedCapabilities);
+        PromptTemplateResolvedDTO promptResolved = resolvePromptConfig(promptConfig, systemPrompt);
         SimpleAgentVersionConfigDTO config = SimpleAgentAssembler.toVersionConfig(
                 agentName,
                 description,
-                systemPrompt,
-                capabilities
+                promptResolved.getEffectiveSystemPrompt(),
+                capabilities,
+                toAgentPromptConfig(promptResolved, promptConfig)
         );
         AgentVersion version = SimpleAgentAssembler.toCreateVersion(
                 agent,
@@ -254,6 +272,55 @@ public class SimpleAgentApplicationManager {
         );
         agentVersionService.save(version);
         return version;
+    }
+
+    private PromptTemplateResolvedDTO resolvePromptConfig(SimpleAgentPromptConfigDTO promptConfig, String systemPrompt) {
+        if (promptConfig != null) {
+            if (promptConfig.getPromptTemplateId() != null) {
+                return promptTemplateResolver.resolveTemplateById(
+                        promptConfig.getPromptTemplateId(),
+                        promptConfig.getPromptVariables()
+                );
+            }
+            if (PromptTemplateConstants.BINDING_TYPE_CUSTOM.equalsIgnoreCase(promptConfig.getPromptBindingType())
+                    || StringUtils.hasText(promptConfig.getPromptSourceType())) {
+                return promptTemplateResolver.resolveCustomTemplate(PromptTemplateBindDTO.builder()
+                        .promptBindingType(promptConfig.getPromptBindingType())
+                        .promptSourceType(promptConfig.getPromptSourceType())
+                        .promptTemplateContent(promptConfig.getPromptTemplateContent())
+                        .promptTemplatePath(promptConfig.getPromptTemplatePath())
+                        .build());
+            }
+        }
+        if (StringUtils.hasText(systemPrompt)) {
+            return PromptTemplateResolvedDTO.builder()
+                    .promptBindingType(PromptTemplateConstants.BINDING_TYPE_CUSTOM)
+                    .promptSourceType(PromptTemplateConstants.SOURCE_TYPE_INLINE)
+                    .effectiveSystemPrompt(systemPrompt.trim())
+                    .build();
+        }
+        return PromptTemplateResolvedDTO.builder()
+                .promptBindingType(PromptTemplateConstants.BINDING_TYPE_CUSTOM)
+                .promptSourceType(PromptTemplateConstants.SOURCE_TYPE_INLINE)
+                .effectiveSystemPrompt(null)
+                .build();
+    }
+
+    private SimpleAgentPromptConfigDTO toAgentPromptConfig(
+            PromptTemplateResolvedDTO promptResolved,
+            SimpleAgentPromptConfigDTO promptConfig
+    ) {
+        return SimpleAgentPromptConfigDTO.builder()
+                .promptTemplateId(promptResolved.getPromptTemplateId())
+                .promptTemplateCode(promptResolved.getPromptTemplateCode())
+                .promptTemplateName(promptResolved.getPromptTemplateName())
+                .promptBindingType(promptResolved.getPromptBindingType())
+                .promptSourceType(promptResolved.getPromptSourceType())
+                .promptTemplatePath(promptResolved.getPromptTemplatePath())
+                .promptTemplateContent(promptConfig == null ? null : promptConfig.getPromptTemplateContent())
+                .promptVariableDefinitions(SimpleAgentAssembler.toPromptVariableDefinitions(promptResolved.getVariableDefinitions()))
+                .promptVariables(promptResolved.getPromptVariables())
+                .build();
     }
 
     private void validateCreateRequest(SimpleAgentCreateRequest request) {

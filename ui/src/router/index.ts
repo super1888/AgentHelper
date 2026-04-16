@@ -42,6 +42,14 @@ const router = createRouter({
       },
     },
     {
+      path: '/prompts',
+      name: 'prompts',
+      component: () => import('@/views/prompts/PromptTemplateManagementView.vue'),
+      meta: {
+        requiresAuth: true,
+      },
+    },
+    {
       path: '/vectors',
       name: 'vectors',
       component: () => import('@/views/vectors/VectorManagementView.vue'),

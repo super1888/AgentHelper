@@ -53,6 +53,7 @@ description: SpringAi/AgentHelper 项目仓库开发规范与结构约束。Use 
 - `domain/request`、`domain/response`: 入参与返回对象
 - `config`: 模块配置
 - `exception`: 模块异常
+- `assmbler`: 应用层对象组装器。
 
 ## Page Rules
 

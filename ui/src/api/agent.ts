@@ -28,6 +28,11 @@ export async function createAgent(payload: AgentCreatePayload) {
   return unwrapResponse<AgentCreateResult>(response)
 }
 
+export async function updateAgent(agentId: string, payload: AgentCreatePayload) {
+  const response = await apiClient.patch(`/agents/simple/${agentId}`, payload)
+  return unwrapResponse<AgentCreateResult>(response)
+}
+
 export async function publishAgent(agentId: string, versionNo?: number) {
   const response = await apiClient.post(`/agents/simple/${agentId}/publish`, null, {
     params: versionNo ? { versionNo } : undefined,

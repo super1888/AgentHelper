@@ -1,6 +1,8 @@
 package com.spring.ai.agent.application.assmbler;
 
 import com.spring.ai.agent.domain.dto.SimpleAgentVersionConfigDTO;
+import com.spring.ai.agent.domain.dto.AgentPromptTemplateVariableDTO;
+import com.spring.ai.agent.domain.dto.SimpleAgentPromptConfigDTO;
 import com.spring.ai.agent.domain.request.SimpleAgentCreateRequest;
 import com.spring.ai.agent.domain.request.SimpleAgentUpdateRequest;
 import com.spring.ai.agent.domain.response.SimpleAgentCreateResponse;
@@ -17,6 +19,7 @@ import com.spring.ai.common.repository.enitiy.AgentSession;
 import com.spring.ai.common.repository.enitiy.AgentSessionEvent;
 import com.spring.ai.common.repository.enitiy.AgentTask;
 import com.spring.ai.common.repository.enitiy.AgentVersion;
+import com.spring.ai.prompt.domain.dto.PromptTemplateVariableDTO;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
@@ -64,13 +67,15 @@ public final class SimpleAgentAssembler {
             String agentName,
             String description,
             String systemPrompt,
-            List<String> selectedCapabilities
+            List<String> selectedCapabilities,
+            SimpleAgentPromptConfigDTO promptConfig
     ) {
         return SimpleAgentVersionConfigDTO.builder()
                 .agentName(trim(agentName))
                 .description(trimToNull(description))
                 .systemPrompt(trimToNull(systemPrompt))
                 .selectedCapabilities(normalizeCapabilities(selectedCapabilities))
+                .promptConfig(promptConfig)
                 .build();
     }
 
@@ -205,7 +210,8 @@ public final class SimpleAgentAssembler {
 
     public static SimpleAgentVersionResponse toVersionResponse(
             AgentVersion version,
-            List<String> selectedCapabilities
+            List<String> selectedCapabilities,
+            SimpleAgentVersionConfigDTO config
     ) {
         return SimpleAgentVersionResponse.builder()
                 .versionId(version.getId())
@@ -214,6 +220,15 @@ public final class SimpleAgentAssembler {
                 .description(version.getDescription())
                 .systemPrompt(version.getSystemPrompt())
                 .selectedCapabilities(normalizeCapabilities(selectedCapabilities))
+                .promptTemplateId(config.getPromptConfig() == null ? null : config.getPromptConfig().getPromptTemplateId())
+                .promptTemplateCode(config.getPromptConfig() == null ? null : config.getPromptConfig().getPromptTemplateCode())
+                .promptTemplateName(config.getPromptConfig() == null ? null : config.getPromptConfig().getPromptTemplateName())
+                .promptBindingType(config.getPromptConfig() == null ? null : config.getPromptConfig().getPromptBindingType())
+                .promptSourceType(config.getPromptConfig() == null ? null : config.getPromptConfig().getPromptSourceType())
+                .promptTemplatePath(config.getPromptConfig() == null ? null : config.getPromptConfig().getPromptTemplatePath())
+                .promptTemplateContent(config.getPromptConfig() == null ? null : config.getPromptConfig().getPromptTemplateContent())
+                .promptVariableDefinitions(config.getPromptConfig() == null ? null : config.getPromptConfig().getPromptVariableDefinitions())
+                .promptVariables(config.getPromptConfig() == null ? null : config.getPromptConfig().getPromptVariables())
                 .published(version.getIsPublished() != null && version.getIsPublished() == 1)
                 .createTime(toEpochMilli(version.getCreateTime()))
                 .build();
@@ -295,6 +310,22 @@ public final class SimpleAgentAssembler {
                 .filter(StringUtils::hasText)
                 .map(String::trim)
                 .distinct()
+                .toList();
+    }
+
+    public static List<AgentPromptTemplateVariableDTO> toPromptVariableDefinitions(
+            List<PromptTemplateVariableDTO> variableDefinitions
+    ) {
+        if (CollectionUtils.isEmpty(variableDefinitions)) {
+            return List.of();
+        }
+        return variableDefinitions.stream()
+                .map(item -> AgentPromptTemplateVariableDTO.builder()
+                        .variableName(item.getVariableName())
+                        .required(item.getRequired())
+                        .defaultValue(item.getDefaultValue())
+                        .description(item.getDescription())
+                        .build())
                 .toList();
     }
 
