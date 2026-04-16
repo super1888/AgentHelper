@@ -1,0 +1,298 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!--
+    文件用途：向量存储管理页面
+    作者：Codex
+    创建时间：2026-04-16
+    核心功能：提供向量文件上传、文件列表管理、语义检索、单文件删除、全量清空与状态提示能力。
+  -->
+  <title>向量存储管理台</title>
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;700&display=swap");
+    :root {
+      --bg: #f3ede3;
+      --panel: rgba(255, 251, 245, 0.92);
+      --ink: #1f1b17;
+      --muted: #6f655a;
+      --line: rgba(78, 60, 38, 0.14);
+      --accent: #b24a2f;
+      --accent-dark: #8f341d;
+      --danger: #b3261e;
+      --shadow: 0 24px 60px rgba(84, 61, 28, 0.14);
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; min-height: 100%; color: var(--ink);
+      background: radial-gradient(circle at top left, rgba(178, 74, 47, 0.18), transparent 22%), radial-gradient(circle at 85% 15%, rgba(31, 122, 82, 0.16), transparent 18%), linear-gradient(135deg, #efe5d4 0%, #f5efe5 45%, #efe7db 100%);
+      font-family: "Noto Sans SC", sans-serif;
+    }
+    body::before { content: ""; position: fixed; inset: 0; background-image: linear-gradient(rgba(31, 27, 23, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(31, 27, 23, 0.03) 1px, transparent 1px); background-size: 26px 26px; pointer-events: none; }
+    .page { position: relative; z-index: 1; width: min(1400px, calc(100% - 28px)); margin: 18px auto 28px; }
+    .panel { border: 1px solid var(--line); border-radius: 30px; background: var(--panel); box-shadow: var(--shadow); backdrop-filter: blur(12px); }
+    .hero, .layout { display: grid; gap: 18px; }
+    .hero { grid-template-columns: 1.2fr 0.9fr; margin-bottom: 18px; }
+    .layout { grid-template-columns: 400px minmax(0, 1fr); }
+    .hero-main, .hero-stats, .section { padding: 24px; }
+    .eyebrow, .mono { font-family: "IBM Plex Mono", monospace; }
+    .eyebrow { display: inline-flex; align-items: center; gap: 10px; color: var(--accent); letter-spacing: 0.16em; text-transform: uppercase; font-size: 12px; }
+    .eyebrow::before { content: ""; width: 34px; height: 1px; background: currentColor; }
+    h1, h2, h3, p { margin: 0; }
+    h1 { margin-top: 16px; max-width: 9ch; font-size: clamp(36px, 5vw, 64px); line-height: 0.98; letter-spacing: -0.04em; }
+    .hero-main p, .section-title p, .status-text { color: var(--muted); }
+    .hero-main p { margin-top: 14px; line-height: 1.8; font-size: 14px; max-width: 42rem; }
+    .tag-list, .actions, .meta-list, .inline-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+    .tag, .meta-chip, .score-chip { display: inline-flex; align-items: center; min-height: 28px; padding: 0 10px; border-radius: 999px; background: rgba(255,255,255,0.66); border: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+    .hero-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .stat { border: 1px solid var(--line); border-radius: 24px; background: rgba(255,255,255,0.7); padding: 16px; }
+    .stat strong { display: block; margin-top: 8px; font-size: 30px; line-height: 1; letter-spacing: -0.05em; }
+    .stat span { color: var(--muted); font-size: 12px; }
+    .section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+    .section-title { display: grid; gap: 6px; }
+    .section-title h2 { font-size: 22px; letter-spacing: -0.03em; }
+    label { display: block; margin-bottom: 8px; color: var(--muted); font-size: 13px; }
+    input, button { font: inherit; }
+    input { width: 100%; min-height: 46px; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line); background: rgba(255,255,255,0.72); outline: none; transition: .2s ease; }
+    input:focus { border-color: rgba(178, 74, 47, 0.45); box-shadow: 0 0 0 4px rgba(178, 74, 47, 0.12); transform: translateY(-1px); }
+    .form-grid { display: grid; gap: 14px; }
+    .split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .drop { position: relative; min-height: 170px; border: 1.5px dashed rgba(178, 74, 47, 0.35); border-radius: 22px; background: linear-gradient(135deg, rgba(178, 74, 47, 0.08), transparent 55%), rgba(255,255,255,0.72); padding: 22px; cursor: pointer; transition: .2s ease; }
+    .drop.active, .drop:hover { border-color: rgba(178, 74, 47, 0.55); transform: translateY(-1px); }
+    .drop input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    .drop p { margin-top: 12px; color: var(--muted); line-height: 1.7; font-size: 14px; }
+    .file-meta, .status { margin-top: 14px; padding: 14px; border: 1px solid var(--line); border-radius: 16px; background: rgba(255,255,255,0.65); }
+    .btn { min-height: 44px; padding: 0 18px; border-radius: 999px; border: 1px solid transparent; cursor: pointer; transition: .18s ease; }
+    .btn:hover { transform: translateY(-1px); }
+    .btn:disabled { opacity: .55; cursor: not-allowed; transform: none; }
+    .btn-primary { color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent-dark)); }
+    .btn-secondary { background: rgba(255,255,255,0.76); border-color: var(--line); }
+    .btn-danger { color: #fff; background: linear-gradient(135deg, #cf3f35, #9f241d); }
+    .table-wrap { overflow: hidden; border: 1px solid var(--line); border-radius: 22px; background: rgba(255,255,255,0.7); }
+    table { width: 100%; border-collapse: collapse; }
+    thead { background: rgba(31, 27, 23, 0.05); }
+    th, td { padding: 14px 16px; border-bottom: 1px solid rgba(78, 60, 38, 0.08); text-align: left; font-size: 13px; vertical-align: top; }
+    th { color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; font-family: "IBM Plex Mono", monospace; font-size: 11px; }
+    tbody tr:hover { background: rgba(178, 74, 47, 0.04); }
+    .file-name { font-weight: 700; font-size: 14px; }
+    .mini-btn { min-height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line); background: #fff; cursor: pointer; font-size: 12px; }
+    .mini-btn.danger { color: var(--danger); border-color: rgba(179, 38, 30, 0.18); }
+    .result-list { display: grid; gap: 14px; }
+    .result-card { padding: 18px; border: 1px solid var(--line); border-radius: 18px; background: rgba(255,255,255,0.72); }
+    .result-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+    .result-content { white-space: pre-wrap; word-break: break-word; line-height: 1.8; color: #3d342c; font-size: 14px; }
+    .empty { padding: 30px 16px; text-align: center; color: var(--muted); border: 1px dashed rgba(78, 60, 38, 0.22); border-radius: 18px; background: rgba(255,255,255,0.5); }
+    .toast-box { position: fixed; top: 20px; right: 20px; z-index: 20; display: grid; gap: 10px; width: min(340px, calc(100% - 24px)); }
+    .toast { color: #fff; padding: 14px 16px; border-radius: 18px; box-shadow: var(--shadow); animation: toast-in .25s ease; }
+    .toast.success { background: linear-gradient(135deg, #1f7a52, #14563a); }
+    .toast.error { background: linear-gradient(135deg, #c7382d, #8f241c); }
+    .toast.info { background: linear-gradient(135deg, #70543b, #4b3624); }
+    @keyframes toast-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+    @media (max-width: 1180px) { .hero, .layout { grid-template-columns: 1fr; } }
+    @media (max-width: 760px) { .hero-stats, .split { grid-template-columns: 1fr; } .page { width: min(100% - 18px, 1400px); } .hero-main, .hero-stats, .section { padding: 18px; } .table-wrap { overflow-x: auto; } th, td { white-space: nowrap; } }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="hero">
+      <section class="panel hero-main">
+        <span class="eyebrow">Vector Store Console</span>
+        <h1>向量存储 管理台</h1>
+        <p>统一完成文件入库、文件汇总查看、语义检索、按文件删除与全量清空操作。页面直接调用当前后端接口，可直接运行使用。</p>
+        <div class="tag-list" style="margin-top: 20px;">
+          <span class="tag">原生 HTML + CSS + JS</span>
+          <span class="tag">接口实时请求</span>
+          <span class="tag">双栏管理布局</span>
+        </div>
+        <div class="status" style="display:flex;justify-content:space-between;gap:12px;margin-top:24px;">
+          <div class="status-text">接口前缀：<strong class="mono">/agentHelper/vectorStore</strong></div>
+          <div class="status-text">最后刷新：<strong id="lastRefreshText">未刷新</strong></div>
+        </div>
+      </section>
+      <section class="panel hero-stats">
+        <article class="stat"><span>文件总数</span><strong id="fileTotalStat">0</strong><span>按文件名聚合</span></article>
+        <article class="stat"><span>切片总数</span><strong id="chunkTotalStat">0</strong><span>向量库存量</span></article>
+        <article class="stat"><span>检索命中</span><strong id="searchTotalStat">0</strong><span>最近一次检索</span></article>
+        <article class="stat"><span>当前状态</span><strong id="globalStatusStat">待命</strong><span>自动同步更新</span></article>
+      </section>
+    </header>
+    <main class="layout">
+      <aside style="display:grid;gap:18px;">
+        <section class="panel section">
+          <div class="section-head"><div class="section-title"><h2>文件上传</h2><p>支持拖拽或点击选择文件，上传成功后自动刷新列表。</p></div></div>
+          <div id="dropZone" class="drop" tabindex="0" role="button">
+            <input id="fileInput" type="file" aria-label="选择文件">
+            <h3>拖拽文件到这里</h3>
+            <p>或点击当前区域选择文件。文件不能为空，上传期间会锁定按钮，避免重复提交。</p>
+            <div id="selectedFileMeta" class="file-meta" hidden>
+              <strong id="selectedFileName">未选择文件</strong>
+              <span id="selectedFileSize">请选择文件后开始上传</span>
+            </div>
+          </div>
+          <div class="actions" style="margin-top:16px;"><button id="uploadButton" class="btn btn-primary" type="button">上传入库</button><button id="resetFileButton" class="btn btn-secondary" type="button">重置选择</button></div>
+        </section>
+        <section class="panel section">
+          <div class="section-head"><div class="section-title"><h2>语义检索</h2><p>支持检索词、文件过滤、TopK 与相似度阈值控制。</p></div></div>
+          <form id="searchForm" class="form-grid">
+            <div><label for="queryInput">检索问题</label><input id="queryInput" type="text" placeholder="请输入语义检索问题"></div>
+            <div><label for="searchFileNameInput">限定文件名</label><input id="searchFileNameInput" type="text" placeholder="可选，精确匹配文件名"></div>
+            <div class="split">
+              <div><label for="topKInput">TopK</label><input id="topKInput" type="number" min="1" step="1" value="5"></div>
+              <div><label for="similarityThresholdInput">相似度阈值</label><input id="similarityThresholdInput" type="number" min="0" max="1" step="0.01" value="0.5"></div>
+            </div>
+            <div class="actions"><button id="searchButton" class="btn btn-primary" type="submit">执行检索</button><button id="resetSearchButton" class="btn btn-secondary" type="button">重置条件</button></div>
+          </form>
+        </section>
+      </aside>
+      <section style="display:grid;gap:18px;">
+        <section class="panel section">
+          <div class="section-head"><div class="section-title"><h2>文件管理</h2><p>查看已入库文件，支持刷新、按文件删除和一键清空。</p></div><div class="actions"><button id="refreshButton" class="btn btn-secondary" type="button">刷新列表</button><button id="deleteAllButton" class="btn btn-danger" type="button">清空向量库</button></div></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>文件名</th><th>后缀</th><th>大小</th><th>切片数</th><th>上传时间</th><th>操作</th></tr></thead>
+              <tbody id="fileTableBody"></tbody>
+            </table>
+          </div>
+          <div id="fileEmptyState" class="empty" hidden>当前没有已入库文件，请先上传文档。</div>
+        </section>
+        <section class="panel section">
+          <div class="section-head"><div class="section-title"><h2>检索结果</h2><p>展示向量检索命中的内容、分数与元数据。</p></div></div>
+          <div class="status" style="display:flex;justify-content:space-between;gap:12px;margin-bottom:16px;"><div class="status-text">最近检索状态：<strong id="searchSummaryText">尚未执行检索</strong></div><div class="status-text">结果数：<strong id="searchSummaryCount">0</strong></div></div>
+          <div id="resultList" class="result-list"></div>
+          <div id="resultEmptyState" class="empty">请输入检索问题并执行搜索，结果会展示在这里。</div>
+        </section>
+      </section>
+    </main>
+  </div>
+  <div id="toastBox" class="toast-box"></div>
+  <script>
+    /**
+     * 文件用途：向量存储管理页面脚本
+     * 作者：Codex
+     * 创建时间：2026-04-16
+     * 核心功能：负责上传、查询、文件列表渲染、删除操作、状态控制与异常提示。
+     */
+    (function initPage() {
+      "use strict";
+      const API_BASE = "/agentHelper/vectorStore";
+      const state = { selectedFile: null, fileItems: [], searchItems: [], isUploading: false, isRefreshing: false, isSearching: false };
+      const elements = {
+        dropZone: document.getElementById("dropZone"), fileInput: document.getElementById("fileInput"), uploadButton: document.getElementById("uploadButton"), resetFileButton: document.getElementById("resetFileButton"), refreshButton: document.getElementById("refreshButton"), deleteAllButton: document.getElementById("deleteAllButton"), searchForm: document.getElementById("searchForm"), searchButton: document.getElementById("searchButton"), resetSearchButton: document.getElementById("resetSearchButton"), queryInput: document.getElementById("queryInput"), searchFileNameInput: document.getElementById("searchFileNameInput"), topKInput: document.getElementById("topKInput"), similarityThresholdInput: document.getElementById("similarityThresholdInput"), selectedFileMeta: document.getElementById("selectedFileMeta"), selectedFileName: document.getElementById("selectedFileName"), selectedFileSize: document.getElementById("selectedFileSize"), fileTableBody: document.getElementById("fileTableBody"), fileEmptyState: document.getElementById("fileEmptyState"), resultList: document.getElementById("resultList"), resultEmptyState: document.getElementById("resultEmptyState"), toastBox: document.getElementById("toastBox"), fileTotalStat: document.getElementById("fileTotalStat"), chunkTotalStat: document.getElementById("chunkTotalStat"), searchTotalStat: document.getElementById("searchTotalStat"), globalStatusStat: document.getElementById("globalStatusStat"), lastRefreshText: document.getElementById("lastRefreshText"), searchSummaryText: document.getElementById("searchSummaryText"), searchSummaryCount: document.getElementById("searchSummaryCount")
+      };
+      bindEvents();
+      refreshFileList();
+      function bindEvents() {
+        elements.fileInput.addEventListener("change", function () { state.selectedFile = elements.fileInput.files && elements.fileInput.files.length ? elements.fileInput.files[0] : null; syncSelectedFile(); });
+        elements.uploadButton.addEventListener("click", handleUpload);
+        elements.resetFileButton.addEventListener("click", resetSelectedFile);
+        elements.refreshButton.addEventListener("click", refreshFileList);
+        elements.deleteAllButton.addEventListener("click", handleDeleteAll);
+        elements.searchForm.addEventListener("submit", handleSearch);
+        elements.resetSearchButton.addEventListener("click", resetSearchForm);
+        ["dragenter", "dragover"].forEach(function (name) { elements.dropZone.addEventListener(name, function (event) { event.preventDefault(); elements.dropZone.classList.add("active"); }); });
+        ["dragleave", "drop"].forEach(function (name) { elements.dropZone.addEventListener(name, function (event) { event.preventDefault(); elements.dropZone.classList.remove("active"); }); });
+        elements.dropZone.addEventListener("drop", function (event) { const files = event.dataTransfer && event.dataTransfer.files; if (!files || !files.length) { return; } state.selectedFile = files[0]; syncSelectedFile(); });
+        elements.dropZone.addEventListener("keydown", function (event) { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); elements.fileInput.click(); } });
+      }
+      function syncSelectedFile() {
+        if (!state.selectedFile) { elements.selectedFileMeta.hidden = true; elements.selectedFileName.textContent = "未选择文件"; elements.selectedFileSize.textContent = "请选择文件后开始上传"; return; }
+        elements.selectedFileMeta.hidden = false; elements.selectedFileName.textContent = state.selectedFile.name; elements.selectedFileSize.textContent = formatFileSize(state.selectedFile.size);
+      }
+      function resetSelectedFile() { state.selectedFile = null; elements.fileInput.value = ""; syncSelectedFile(); }
+      async function handleUpload() {
+        if (state.isUploading) { return; }
+        if (!state.selectedFile) { showToast("请先选择需要上传的文件。", "error"); return; }
+        state.isUploading = true; setStatus("上传中"); updateButtons();
+        try {
+          const formData = new FormData(); formData.append("file", state.selectedFile);
+          const response = await request(API_BASE + "/upload", { method: "POST", body: formData });
+          showToast(response.message || "文件上传成功。", "success"); resetSelectedFile(); await refreshFileList();
+        } catch (error) { showToast(resolveError(error, "文件上传失败，请稍后重试。"), "error"); }
+        finally { state.isUploading = false; setStatus("待命"); updateButtons(); }
+      }
+      async function refreshFileList() {
+        if (state.isRefreshing) { return; }
+        state.isRefreshing = true; setStatus("刷新中"); updateButtons();
+        try {
+          const response = await request(API_BASE + "/files"); state.fileItems = Array.isArray(response.items) ? response.items : []; renderFileTable(); renderStats(); elements.lastRefreshText.textContent = formatDateTime(new Date().toISOString());
+        } catch (error) { showToast(resolveError(error, "文件列表刷新失败，请检查后端服务。"), "error"); }
+        finally { state.isRefreshing = false; setStatus("待命"); updateButtons(); }
+      }
+      async function handleSearch(event) {
+        event.preventDefault(); if (state.isSearching) { return; }
+        const query = elements.queryInput.value.trim(); const fileName = elements.searchFileNameInput.value.trim(); const topK = parseInteger(elements.topKInput.value.trim()); const threshold = parseNumber(elements.similarityThresholdInput.value.trim());
+        if (!query) { showToast("检索问题不能为空。", "error"); elements.queryInput.focus(); return; }
+        if (topK === null || topK <= 0) { showToast("TopK 必须是大于 0 的整数。", "error"); elements.topKInput.focus(); return; }
+        if (threshold === null || threshold < 0 || threshold > 1) { showToast("相似度阈值必须在 0 到 1 之间。", "error"); elements.similarityThresholdInput.focus(); return; }
+        state.isSearching = true; setStatus("检索中"); updateButtons();
+        try {
+          const params = new URLSearchParams(); params.set("query", query); params.set("topK", String(topK)); params.set("similarityThreshold", String(threshold)); if (fileName) { params.set("fileName", fileName); }
+          const response = await request(API_BASE + "/search?" + params.toString()); state.searchItems = Array.isArray(response.items) ? response.items : []; renderSearchResults(response); renderStats(); showToast("检索执行完成。", "success");
+        } catch (error) { showToast(resolveError(error, "检索失败，请稍后重试。"), "error"); }
+        finally { state.isSearching = false; setStatus("待命"); updateButtons(); }
+      }
+      function resetSearchForm() { elements.searchForm.reset(); elements.topKInput.value = "5"; elements.similarityThresholdInput.value = "0.5"; state.searchItems = []; renderSearchResults({ total: 0, query: "", fileName: "" }); renderStats(); }
+      async function handleDeleteByFileName(fileName) {
+        if (!fileName) { return; }
+        if (!window.confirm("确认删除文件 “" + fileName + "” 对应的全部向量数据吗？")) { return; }
+        setStatus("删除中"); updateButtons();
+        try {
+          const formData = new FormData(); formData.append("fileName", fileName);
+          const response = await request(API_BASE + "/deleteByFileName", { method: "POST", body: formData });
+          showToast(response.message || "文件向量删除成功。", "success"); await refreshFileList();
+        } catch (error) { showToast(resolveError(error, "文件删除失败。"), "error"); }
+        finally { setStatus("待命"); updateButtons(); }
+      }
+      async function handleDeleteAll() {
+        if (!window.confirm("确认清空当前模块下的全部向量数据吗？该操作不可恢复。")) { return; }
+        setStatus("清空中"); updateButtons();
+        try {
+          const response = await request(API_BASE + "/deleteAll", { method: "POST" });
+          state.searchItems = []; renderSearchResults({ total: 0, query: "", fileName: "" }); showToast(response.message || "向量库已清空。", "success"); await refreshFileList();
+        } catch (error) { showToast(resolveError(error, "清空向量库失败。"), "error"); }
+        finally { setStatus("待命"); updateButtons(); }
+      }
+      function renderFileTable() {
+        elements.fileTableBody.innerHTML = "";
+        if (!state.fileItems.length) { elements.fileEmptyState.hidden = false; return; }
+        elements.fileEmptyState.hidden = true;
+        state.fileItems.forEach(function (item) {
+          const row = document.createElement("tr");
+          row.innerHTML = ["<td><div class=\"file-name\">" + escapeHtml(item.fileName || "-") + "</div></td>", "<td>" + escapeHtml(item.fileExtension || "-") + "</td>", "<td>" + escapeHtml(formatFileSize(item.fileSize)) + "</td>", "<td>" + escapeHtml(String(item.chunkCount || 0)) + "</td>", "<td>" + escapeHtml(formatDateTime(item.uploadedAt)) + "</td>", "<td><div class=\"inline-actions\"><button class=\"mini-btn\" type=\"button\" data-fill>检索此文件</button><button class=\"mini-btn danger\" type=\"button\" data-delete>删除文件</button></div></td>"].join("");
+          row.querySelector("[data-fill]").addEventListener("click", function () { elements.searchFileNameInput.value = item.fileName || ""; elements.queryInput.focus(); });
+          row.querySelector("[data-delete]").addEventListener("click", function () { handleDeleteByFileName(item.fileName || ""); });
+          elements.fileTableBody.appendChild(row);
+        });
+      }
+      function renderSearchResults(response) {
+        const total = Number(response && response.total) || 0; const query = response && response.query ? response.query : ""; const fileName = response && response.fileName ? response.fileName : ""; elements.resultList.innerHTML = ""; elements.searchSummaryCount.textContent = String(total);
+        if (!query) { elements.searchSummaryText.textContent = "尚未执行检索"; elements.resultEmptyState.hidden = false; elements.resultEmptyState.textContent = "请输入检索问题并执行搜索，结果会展示在这里。"; return; }
+        elements.searchSummaryText.textContent = fileName ? "已按文件 “" + fileName + "” 检索问题 “" + query + "”" : "已检索问题 “" + query + "”";
+        if (!state.searchItems.length) { elements.resultEmptyState.hidden = false; elements.resultEmptyState.textContent = "本次检索没有命中结果，请调整查询词或阈值后重试。"; return; }
+        elements.resultEmptyState.hidden = true;
+        state.searchItems.forEach(function (item, index) {
+          const metadata = item && item.metadata ? item.metadata : {}; const card = document.createElement("article"); card.className = "result-card";
+          card.innerHTML = ["<div class=\"result-head\"><div><strong>命中结果 #" + String(index + 1) + "</strong><div class=\"mono\" style=\"margin-top:6px;\">" + escapeHtml(metadata.file_name || metadata.source || item.id || "-") + "</div></div><span class=\"score-chip\">相似度：" + escapeHtml(formatScore(item.score)) + "</span></div>", "<div class=\"result-content\">" + escapeHtml(item.content || "") + "</div>", "<div class=\"meta-list\" style=\"margin-top:12px;\">", renderMetaChip("文件", metadata.file_name), renderMetaChip("来源", metadata.source), renderMetaChip("后缀", metadata.file_extension), renderMetaChip("上传时间", formatDateTime(metadata.uploaded_at)), renderMetaChip("大小", formatFileSize(metadata.file_size)), "</div>"].join("");
+          elements.resultList.appendChild(card);
+        });
+      }
+      function renderStats() { const chunkTotal = state.fileItems.reduce(function (sum, item) { return sum + (Number(item.chunkCount) || 0); }, 0); elements.fileTotalStat.textContent = String(state.fileItems.length); elements.chunkTotalStat.textContent = String(chunkTotal); elements.searchTotalStat.textContent = String(state.searchItems.length); }
+      function setStatus(text) { elements.globalStatusStat.textContent = text; }
+      function updateButtons() { elements.uploadButton.disabled = state.isUploading; elements.refreshButton.disabled = state.isRefreshing; elements.searchButton.disabled = state.isSearching; elements.deleteAllButton.disabled = state.isUploading || state.isRefreshing || state.isSearching; elements.uploadButton.textContent = state.isUploading ? "上传中..." : "上传入库"; elements.refreshButton.textContent = state.isRefreshing ? "刷新中..." : "刷新列表"; elements.searchButton.textContent = state.isSearching ? "检索中..." : "执行检索"; }
+      async function request(url, options) { const response = await fetch(url, Object.assign({ method: "GET" }, options || {})); const text = await response.text(); const data = text ? safeParseJson(text) : {}; if (!response.ok) { const error = new Error((data && (data.message || data.msg)) || response.statusText || "请求失败"); error.responseData = data; throw error; } return data || {}; }
+      function safeParseJson(text) { try { return JSON.parse(text); } catch (error) { return { message: text }; } }
+      function resolveError(error, fallbackMessage) { if (!error) { return fallbackMessage; } if (error.responseData && (error.responseData.message || error.responseData.msg)) { return error.responseData.message || error.responseData.msg; } return error.message || fallbackMessage; }
+      function showToast(message, type) { const toast = document.createElement("div"); toast.className = "toast " + (type || "info"); toast.textContent = message; elements.toastBox.appendChild(toast); window.setTimeout(function () { toast.remove(); }, 2600); }
+      function renderMetaChip(label, value) { if (value === null || value === undefined || value === "") { return ""; } return "<span class=\"meta-chip\">" + escapeHtml(label + "：" + String(value)) + "</span>"; }
+      function formatFileSize(size) { const value = Number(size); if (!Number.isFinite(value) || value < 0) { return "-"; } if (value < 1024) { return value + " B"; } if (value < 1024 * 1024) { return (value / 1024).toFixed(2) + " KB"; } if (value < 1024 * 1024 * 1024) { return (value / (1024 * 1024)).toFixed(2) + " MB"; } return (value / (1024 * 1024 * 1024)).toFixed(2) + " GB"; }
+      function formatDateTime(value) { if (!value) { return "-"; } const date = new Date(value); if (Number.isNaN(date.getTime())) { return String(value); } return [date.getFullYear(), "-", pad(date.getMonth() + 1), "-", pad(date.getDate()), " ", pad(date.getHours()), ":", pad(date.getMinutes()), ":", pad(date.getSeconds())].join(""); }
+      function formatScore(score) { const value = Number(score); return Number.isFinite(value) ? value.toFixed(4) : "-"; }
+      function pad(value) { return String(value).padStart(2, "0"); }
+      function parseInteger(value) { if (!value) { return null; } const result = Number.parseInt(value, 10); return Number.isNaN(result) ? null : result; }
+      function parseNumber(value) { if (!value) { return null; } const result = Number(value); return Number.isNaN(result) ? null : result; }
+      function escapeHtml(value) { return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;").replace(/'/g, "&#39;"); }
+    }());
+  </script>
+</body>
+</html>

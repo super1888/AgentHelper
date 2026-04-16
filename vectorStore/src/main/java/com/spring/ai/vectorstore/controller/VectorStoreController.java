@@ -1,6 +1,7 @@
 package com.spring.ai.vectorstore.controller;
 
 import com.spring.ai.vectorstore.domain.response.VectorStoreDeleteResponse;
+import com.spring.ai.vectorstore.domain.response.VectorStoreFileListResponse;
 import com.spring.ai.vectorstore.domain.response.VectorStoreSearchResponse;
 import com.spring.ai.vectorstore.domain.response.VectorStoreUploadResponse;
 import com.spring.ai.vectorstore.service.VectorStoreService;
@@ -15,18 +16,24 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
- * 向量库文档管理控制器。
+ * 文件用途：向量存储管理控制器
+ * 作者：Codex
+ * 创建时间：2026-04-16
+ * 核心功能：对外暴露向量文件上传、文件列表查询、语义检索与删除接口。
  */
-@Tag(name = "向量库管理")
+@Tag(name = "向量存储管理")
 @RestController
 @RequestMapping("/vectorStore")
 public class VectorStoreController {
 
     @Resource
-    VectorStoreService vectorStoreService;
+    private VectorStoreService vectorStoreService;
 
     /**
      * 上传文件并写入向量库。
+     *
+     * @param file 上传文件
+     * @return 上传结果
      */
     @Operation(summary = "上传文件到向量库")
     @PostMapping("/upload")
@@ -35,9 +42,26 @@ public class VectorStoreController {
     }
 
     /**
-     * 按查询词搜索向量库内容。
+     * 查询当前模块下已入库文件的汇总信息。
+     *
+     * @return 文件汇总列表
      */
-    @Operation(summary = "检索向量库内容")
+    @Operation(summary = "查询向量存储文件列表")
+    @GetMapping("/files")
+    public VectorStoreFileListResponse listFiles() {
+        return vectorStoreService.listFiles();
+    }
+
+    /**
+     * 按检索词检索向量库内容。
+     *
+     * @param query 检索问题
+     * @param fileName 文件名过滤条件
+     * @param topK 返回条数
+     * @param similarityThreshold 相似度阈值
+     * @return 检索结果
+     */
+    @Operation(summary = "检索向量存储内容")
     @GetMapping("/search")
     public VectorStoreSearchResponse search(
             @RequestParam String query,
@@ -49,7 +73,9 @@ public class VectorStoreController {
     }
 
     /**
-     * 删除当前模块全部向量数据。
+     * 清空当前模块全部向量数据。
+     *
+     * @return 删除结果
      */
     @Operation(summary = "清空当前模块向量数据")
     @PostMapping("/deleteAll")
@@ -59,6 +85,9 @@ public class VectorStoreController {
 
     /**
      * 按文件名删除向量数据。
+     *
+     * @param fileName 文件名
+     * @return 删除结果
      */
     @Operation(summary = "按文件名删除向量数据")
     @PostMapping("/deleteByFileName")
