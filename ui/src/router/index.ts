@@ -42,6 +42,14 @@ const router = createRouter({
       },
     },
     {
+      path: '/vectors',
+      name: 'vectors',
+      component: () => import('@/views/vectors/VectorManagementView.vue'),
+      meta: {
+        requiresAuth: true,
+      },
+    },
+    {
       path: '/users',
       name: 'users',
       component: () => import('@/views/users/UserManagementView.vue'),

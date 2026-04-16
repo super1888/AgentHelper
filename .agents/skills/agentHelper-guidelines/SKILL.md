@@ -24,9 +24,8 @@ description: SpringAi/AgentHelper 项目仓库开发规范与结构约束。Use 
 
 优先遵守“能力归属模块”原则：
 
-- 通用能力放 `common`
+- 通用能力放 `common` 比如dao，enitiy，service，impl 共用的常量枚举等
 - 明确业务能力放对应业务模块
-- 启动接入、页面映射、静态资源放 `quickStart`
 
 不要为了图省事把所有代码塞进 `quickStart`。
 
@@ -59,16 +58,10 @@ description: SpringAi/AgentHelper 项目仓库开发规范与结构约束。Use 
 
 如果需求是“加页面”或“写页面代码”，默认按这个仓库现状处理：
 
-- 运行入口页面优先放 `quickStart/src/main/resources/static`
-- 页面访问入口优先在 `quickStart/src/main/java/.../web` 下增加一个显式 `PageController`
-- Controller 返回 `ClassPathResource("static/xxx.html")`
+- 使用vue3进行开发。
+- 前端页面要求风格统一，格式清晰，美观大方，简洁明了。 
 - 页面请求地址使用带前缀的真实接口：`/agentHelper/...`
 
-不要默认引入新的前端框架。除非用户明确要求，否则优先：
-
-- 单文件静态页
-- 原生 HTML + CSS + JS
-- 可直接被当前 Spring Boot 服务托管访问
 
 ## Style Rules
 
@@ -130,7 +123,7 @@ description: SpringAi/AgentHelper 项目仓库开发规范与结构约束。Use 
 - Spring AI `1.1.2`
 - 多模块 Maven
 
-因此运行/编译时应使用兼容的较新 JDK。不要按 Java 8 项目处理。
+无需编译
 
 ## Don’ts
 

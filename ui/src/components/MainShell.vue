@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
-import { Bot, LogOut, ShieldCheck, Users } from 'lucide-vue-next'
+import { Bot, Database, LogOut, ShieldCheck, Users } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
@@ -34,7 +34,7 @@ async function handleLogout() {
         <div class="shell__copy">
           <p class="section-kicker">Agent Helper</p>
           <h1>Agent Helper 控制台</h1>
-          <p class="shell__description">统一承载 Agent 管理、用户管理和控制台能力入口</p>
+          <p class="shell__description">统一承载 Agent、向量知识库和用户管理能力。</p>
         </div>
       </div>
 
@@ -66,6 +66,15 @@ async function handleLogout() {
       >
         <Bot :size="15" aria-hidden="true" />
         Agent 管理
+      </RouterLink>
+
+      <RouterLink
+        to="/vectors"
+        class="shell__nav-link"
+        :class="{ 'shell__nav-link--active': route.name === 'vectors' }"
+      >
+        <Database :size="15" aria-hidden="true" />
+        向量管理
       </RouterLink>
 
       <RouterLink

@@ -7,21 +7,17 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/**
- * 向量检索单条命中文档。
- * @author zhuoqi
- */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Schema(description = "向量检索单条命中文档")
+@Schema(description = "向量文档切片响应")
 public class VectorStoreDocumentResponse {
 
-    @Schema(description = "文档唯一标识")
+    @Schema(description = "切片ID")
     private String id;
 
-    @Schema(description = "文档内容")
+    @Schema(description = "内容")
     private String content;
 
     @Schema(description = "相似度分值")

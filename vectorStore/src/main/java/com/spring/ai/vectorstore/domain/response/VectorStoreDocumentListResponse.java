@@ -11,12 +11,15 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Schema(description = "向量文件列表响应")
-public class VectorStoreFileListResponse {
+@Schema(description = "向量文件切片列表响应")
+public class VectorStoreDocumentListResponse {
 
-    @Schema(description = "文件总数")
+    @Schema(description = "文件名")
+    private String fileName;
+
+    @Schema(description = "切片总数")
     private Integer total;
 
-    @Schema(description = "文件列表")
-    private List<VectorStoreFileResponse> items;
+    @Schema(description = "切片列表")
+    private List<VectorStoreDocumentResponse> items;
 }
