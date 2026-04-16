@@ -1,9 +1,36 @@
-DROP TABLE IF EXISTS `sy_agent_task`;
-DROP TABLE IF EXISTS `sy_agent_session_event`;
-DROP TABLE IF EXISTS `sy_agent_session`;
-DROP TABLE IF EXISTS `sy_agent_version`;
-DROP TABLE IF EXISTS `sy_agent`;
+DROP TABLE IF EXISTS `agent_task`;
+DROP TABLE IF EXISTS `agent_session_event`;
+DROP TABLE IF EXISTS `agent_session`;
+DROP TABLE IF EXISTS `agent_version`;
+DROP TABLE IF EXISTS `agent`;
 DROP TABLE IF EXISTS `sy_user`;
+DROP TABLE IF EXISTS `sy_tenant`;
+
+CREATE TABLE `sy_tenant` (
+  `id` BIGINT NOT NULL COMMENT '主键ID',
+  `tenant_code` VARCHAR(64) NOT NULL COMMENT '租户编码',
+  `tenant_name` VARCHAR(128) NOT NULL COMMENT '租户名称',
+  `status` INT NOT NULL DEFAULT 1 COMMENT '租户状态 1-启用 0-禁用',
+  `is_default` TINYINT NOT NULL DEFAULT 0 COMMENT '是否默认租户 1-是 0-否',
+  `owner_user_id` BIGINT DEFAULT NULL COMMENT '默认租户归属用户ID',
+  `owner_user_name` VARCHAR(64) DEFAULT NULL COMMENT '默认租户归属用户名',
+  `contact_name` VARCHAR(64) DEFAULT NULL COMMENT '联系人',
+  `contact_phone` VARCHAR(32) DEFAULT NULL COMMENT '联系电话',
+  `description` VARCHAR(500) DEFAULT NULL COMMENT '租户描述',
+  `ext` TEXT DEFAULT NULL COMMENT '扩展字段',
+  `remark` VARCHAR(255) DEFAULT NULL COMMENT '备注',
+  `create_id` BIGINT DEFAULT NULL COMMENT '创建人ID',
+  `create_name` VARCHAR(64) DEFAULT NULL COMMENT '创建人名称',
+  `create_time` DATETIME DEFAULT NULL COMMENT '创建时间',
+  `update_id` BIGINT DEFAULT NULL COMMENT '更新人ID',
+  `update_name` VARCHAR(64) DEFAULT NULL COMMENT '更新人名称',
+  `update_time` DATETIME DEFAULT NULL COMMENT '更新时间',
+  `version` INT NOT NULL DEFAULT 0 COMMENT '版本号',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_sy_tenant_code` (`tenant_code`),
+  KEY `idx_sy_tenant_status` (`status`),
+  KEY `idx_sy_tenant_owner_default` (`owner_user_id`, `is_default`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='租户表';
 
 CREATE TABLE `sy_user` (
   `id` BIGINT NOT NULL COMMENT '主键ID',
@@ -12,7 +39,7 @@ CREATE TABLE `sy_user` (
   `phone` VARCHAR(32) DEFAULT NULL COMMENT '手机号',
   `email` VARCHAR(128) DEFAULT NULL COMMENT '邮箱',
   `password_hash` VARCHAR(255) DEFAULT NULL COMMENT '密码摘要',
-  `status` INT NOT NULL DEFAULT 1 COMMENT '用户状态 1-启用, 0-禁用',
+  `status` INT NOT NULL DEFAULT 1 COMMENT '用户状态 1-启用 0-禁用',
   `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID',
   `ext` TEXT DEFAULT NULL COMMENT '扩展字段',
   `remark` VARCHAR(255) DEFAULT NULL COMMENT '备注',
@@ -27,7 +54,7 @@ CREATE TABLE `sy_user` (
   KEY `idx_sy_user_tenant_status` (`tenant_id`, `status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='用户表';
 
-CREATE TABLE `sy_agent` (
+CREATE TABLE `agent` (
   `id` BIGINT NOT NULL COMMENT '主键ID',
   `agent_code` VARCHAR(64) NOT NULL COMMENT 'Agent 外部编码',
   `agent_name` VARCHAR(128) NOT NULL COMMENT 'Agent 名称',
@@ -36,7 +63,7 @@ CREATE TABLE `sy_agent` (
   `agent_status` VARCHAR(32) NOT NULL COMMENT 'Agent 状态 DRAFT/PUBLISHED/DISABLED',
   `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID',
   `owner_user_id` BIGINT NOT NULL COMMENT '创建人用户ID',
-  `owner_user_name` VARCHAR(64) DEFAULT NULL COMMENT '创建人名称',
+  `owner_user_name` VARCHAR(64) DEFAULT NULL COMMENT '创建人用户名',
   `current_version_id` BIGINT DEFAULT NULL COMMENT '当前版本ID',
   `published_version_id` BIGINT DEFAULT NULL COMMENT '已发布版本ID',
   `published_version_no` INT DEFAULT NULL COMMENT '已发布版本号',
@@ -56,7 +83,7 @@ CREATE TABLE `sy_agent` (
   KEY `idx_sy_agent_status` (`tenant_id`, `agent_status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Agent 定义表';
 
-CREATE TABLE `sy_agent_version` (
+CREATE TABLE `agent_version` (
   `id` BIGINT NOT NULL COMMENT '主键ID',
   `agent_id` BIGINT NOT NULL COMMENT 'Agent ID',
   `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID',
@@ -82,7 +109,7 @@ CREATE TABLE `sy_agent_version` (
   KEY `idx_sy_agent_version_publish` (`tenant_id`, `is_published`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Agent 版本表';
 
-CREATE TABLE `sy_agent_session` (
+CREATE TABLE `agent_session` (
   `id` BIGINT NOT NULL COMMENT '主键ID',
   `session_code` VARCHAR(64) NOT NULL COMMENT '会话外部编码',
   `agent_id` BIGINT NOT NULL COMMENT 'Agent ID',
@@ -91,7 +118,7 @@ CREATE TABLE `sy_agent_session` (
   `agent_version_no` INT NOT NULL COMMENT '绑定版本号',
   `tenant_id` BIGINT DEFAULT NULL COMMENT '租户ID',
   `owner_user_id` BIGINT NOT NULL COMMENT '会话所属用户ID',
-  `owner_user_name` VARCHAR(64) DEFAULT NULL COMMENT '会话所属用户名称',
+  `owner_user_name` VARCHAR(64) DEFAULT NULL COMMENT '会话所属用户名',
   `session_status` VARCHAR(32) NOT NULL COMMENT '会话状态 ACTIVE/CLOSED/FAILED',
   `connection_status` VARCHAR(32) NOT NULL COMMENT '连接状态 CONNECTED/DISCONNECTED',
   `last_event_sequence` BIGINT NOT NULL DEFAULT 0 COMMENT '最后事件序号',
@@ -114,7 +141,7 @@ CREATE TABLE `sy_agent_session` (
   KEY `idx_sy_agent_session_agent` (`tenant_id`, `agent_id`, `agent_version_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Agent 会话表';
 
-CREATE TABLE `sy_agent_session_event` (
+CREATE TABLE `agent_session_event` (
   `id` BIGINT NOT NULL COMMENT '主键ID',
   `session_id` BIGINT NOT NULL COMMENT '会话ID',
   `session_code` VARCHAR(64) NOT NULL COMMENT '会话外部编码',
@@ -141,7 +168,7 @@ CREATE TABLE `sy_agent_session_event` (
   KEY `idx_sy_agent_session_event_task` (`tenant_id`, `task_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Agent 会话事件表';
 
-CREATE TABLE `sy_agent_task` (
+CREATE TABLE `agent_task` (
   `id` BIGINT NOT NULL COMMENT '主键ID',
   `task_code` VARCHAR(64) NOT NULL COMMENT '任务外部编码',
   `source_task_id` BIGINT DEFAULT NULL COMMENT '来源失败任务ID',

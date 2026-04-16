@@ -13,8 +13,8 @@ import lombok.EqualsAndHashCode;
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
-@TableName("sy_agent")
-public class SyAgent extends BaseEntity {
+@TableName("agent")
+public class Agent extends BaseEntity {
 
     /**
      * Agent 业务编码，对外暴露使用。

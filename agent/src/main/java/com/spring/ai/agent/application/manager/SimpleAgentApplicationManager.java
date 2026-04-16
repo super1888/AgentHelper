@@ -17,16 +17,16 @@ import com.spring.ai.agent.domain.response.SimpleAgentWsEvent;
 import com.spring.ai.common.constants.SimpleAgentConstants;
 import com.spring.ai.common.enums.ErrorCodeEnum;
 import com.spring.ai.common.exception.BusinessException;
-import com.spring.ai.common.repository.enitiy.SyAgent;
-import com.spring.ai.common.repository.enitiy.SyAgentSession;
-import com.spring.ai.common.repository.enitiy.SyAgentSessionEvent;
-import com.spring.ai.common.repository.enitiy.SyAgentTask;
-import com.spring.ai.common.repository.enitiy.SyAgentVersion;
-import com.spring.ai.common.repository.service.SyAgentService;
-import com.spring.ai.common.repository.service.SyAgentSessionEventService;
-import com.spring.ai.common.repository.service.SyAgentSessionService;
-import com.spring.ai.common.repository.service.SyAgentTaskService;
-import com.spring.ai.common.repository.service.SyAgentVersionService;
+import com.spring.ai.common.repository.enitiy.Agent;
+import com.spring.ai.common.repository.enitiy.AgentSession;
+import com.spring.ai.common.repository.enitiy.AgentSessionEvent;
+import com.spring.ai.common.repository.enitiy.AgentTask;
+import com.spring.ai.common.repository.enitiy.AgentVersion;
+import com.spring.ai.common.repository.service.AgentService;
+import com.spring.ai.common.repository.service.AgentSessionEventService;
+import com.spring.ai.common.repository.service.AgentSessionService;
+import com.spring.ai.common.repository.service.AgentTaskService;
+import com.spring.ai.common.repository.service.AgentVersionService;
 import jakarta.annotation.Resource;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -44,19 +44,19 @@ import org.springframework.util.StringUtils;
 public class SimpleAgentApplicationManager {
 
     @Resource
-    private SyAgentService syAgentService;
+    private AgentService agentService;
 
     @Resource
-    private SyAgentVersionService syAgentVersionService;
+    private AgentVersionService agentVersionService;
 
     @Resource
-    private SyAgentSessionService syAgentSessionService;
+    private AgentSessionService agentSessionService;
 
     @Resource
-    private SyAgentSessionEventService syAgentSessionEventService;
+    private AgentSessionEventService agentSessionEventService;
 
     @Resource
-    private SyAgentTaskService syAgentTaskService;
+    private AgentTaskService agentTaskService;
 
     @Resource
     private SimpleAgentSupportManager simpleAgentSupportManager;
@@ -64,7 +64,7 @@ public class SimpleAgentApplicationManager {
     public List<SimpleAgentSummaryResponse> listAgents() {
         Long tenantId = simpleAgentSupportManager.getCurrentTenantId();
         Long currentUserId = simpleAgentSupportManager.getCurrentUserId();
-        return syAgentService.listByOwner(tenantId, currentUserId)
+        return agentService.listByOwner(tenantId, currentUserId)
                 .stream()
                 .map(SimpleAgentAssembler::toSummaryResponse)
                 .toList();
@@ -77,16 +77,16 @@ public class SimpleAgentApplicationManager {
         Long currentUserId = simpleAgentSupportManager.getCurrentUserId();
         String currentUserName = simpleAgentSupportManager.getCurrentUserName();
 
-        SyAgent agent = SimpleAgentAssembler.toCreateAgent(
+        Agent agent = SimpleAgentAssembler.toCreateAgent(
                 request,
                 resolveAgentType(request.getAgentType()),
                 tenantId,
                 currentUserId,
                 currentUserName
         );
-        syAgentService.save(agent);
+        agentService.save(agent);
 
-        SyAgentVersion version = createVersion(
+        AgentVersion version = createVersion(
                 agent,
                 request.getAgentName(),
                 request.getDescription(),
@@ -95,16 +95,16 @@ public class SimpleAgentApplicationManager {
         );
         agent.setCurrentVersionId(version.getId());
         agent.setLatestVersionNo(version.getVersionNo());
-        syAgentService.updateById(agent);
+        agentService.updateById(agent);
         return SimpleAgentAssembler.toCreateResponse(agent, version, request.getSelectedCapabilities());
     }
 
     @Transactional(rollbackFor = Exception.class)
     public SimpleAgentCreateResponse updateAgent(String agentCode, SimpleAgentUpdateRequest request) {
-        SyAgent agent = simpleAgentSupportManager.requireAgent(agentCode);
+        Agent agent = simpleAgentSupportManager.requireAgent(agentCode);
         validateUpdateRequest(request);
 
-        SyAgentVersion version = createVersion(
+        AgentVersion version = createVersion(
                 agent,
                 request.getAgentName(),
                 request.getDescription(),
@@ -117,39 +117,39 @@ public class SimpleAgentApplicationManager {
         if (SimpleAgentConstants.AGENT_STATUS_DISABLED.equals(agent.getAgentStatus())) {
             agent.setAgentStatus(SimpleAgentConstants.AGENT_STATUS_DRAFT);
         }
-        syAgentService.updateById(agent);
+        agentService.updateById(agent);
         return SimpleAgentAssembler.toCreateResponse(agent, version, request.getSelectedCapabilities());
     }
 
     @Transactional(rollbackFor = Exception.class)
     public void publishAgent(String agentCode, Integer versionNo) {
-        SyAgent agent = simpleAgentSupportManager.requireAgent(agentCode);
+        Agent agent = simpleAgentSupportManager.requireAgent(agentCode);
         Integer targetVersionNo = versionNo == null ? agent.getLatestVersionNo() : versionNo;
-        SyAgentVersion version = simpleAgentSupportManager.requireAgentVersion(agent.getId(), targetVersionNo);
+        AgentVersion version = simpleAgentSupportManager.requireAgentVersion(agent.getId(), targetVersionNo);
 
-        syAgentVersionService.update(Wrappers.lambdaUpdate(SyAgentVersion.class)
-                .eq(SyAgentVersion::getAgentId, agent.getId())
-                .eq(SyAgentVersion::getTenantId, agent.getTenantId())
-                .set(SyAgentVersion::getIsPublished, 0));
+        agentVersionService.update(Wrappers.lambdaUpdate(AgentVersion.class)
+                .eq(AgentVersion::getAgentId, agent.getId())
+                .eq(AgentVersion::getTenantId, agent.getTenantId())
+                .set(AgentVersion::getIsPublished, 0));
         version.setIsPublished(1);
-        syAgentVersionService.updateById(version);
+        agentVersionService.updateById(version);
 
         agent.setPublishedVersionId(version.getId());
         agent.setPublishedVersionNo(version.getVersionNo());
         agent.setAgentStatus(SimpleAgentConstants.AGENT_STATUS_PUBLISHED);
-        syAgentService.updateById(agent);
+        agentService.updateById(agent);
     }
 
     @Transactional(rollbackFor = Exception.class)
     public void disableAgent(String agentCode) {
-        SyAgent agent = simpleAgentSupportManager.requireAgent(agentCode);
+        Agent agent = simpleAgentSupportManager.requireAgent(agentCode);
         agent.setAgentStatus(SimpleAgentConstants.AGENT_STATUS_DISABLED);
-        syAgentService.updateById(agent);
+        agentService.updateById(agent);
     }
 
     public SimpleAgentDetailResponse getAgentDetail(String agentCode) {
-        SyAgent agent = simpleAgentSupportManager.requireAgent(agentCode);
-        List<SimpleAgentVersionResponse> versions = syAgentVersionService.listByAgentId(agent.getId(), agent.getTenantId())
+        Agent agent = simpleAgentSupportManager.requireAgent(agentCode);
+        List<SimpleAgentVersionResponse> versions = agentVersionService.listByAgentId(agent.getId(), agent.getTenantId())
                 .stream()
                 .map(version -> SimpleAgentAssembler.toVersionResponse(
                         version,
@@ -161,22 +161,22 @@ public class SimpleAgentApplicationManager {
 
     @Transactional(rollbackFor = Exception.class)
     public SimpleAgentSessionResponse createSession(String agentCode, SimpleAgentSessionCreateRequest request) {
-        SyAgent agent = simpleAgentSupportManager.requireAgent(agentCode);
-        SyAgentVersion version = resolveSessionVersion(agent, request);
-        SyAgentSession session = SimpleAgentAssembler.toCreateSession(agent, version);
-        syAgentSessionService.save(session);
+        Agent agent = simpleAgentSupportManager.requireAgent(agentCode);
+        AgentVersion version = resolveSessionVersion(agent, request);
+        AgentSession session = SimpleAgentAssembler.toCreateSession(agent, version);
+        agentSessionService.save(session);
         return SimpleAgentAssembler.toSessionResponse(session);
     }
 
     @Transactional(rollbackFor = Exception.class)
     public SimpleAgentReconnectResponse reconnectSession(String sessionCode, SimpleAgentReconnectRequest request) {
-        SyAgentSession session = simpleAgentSupportManager.requireSession(sessionCode);
+        AgentSession session = simpleAgentSupportManager.requireSession(sessionCode);
         session.setConnectionStatus(SimpleAgentConstants.CONNECTION_STATUS_CONNECTED);
         session.setLastConnectedTime(LocalDateTime.now());
-        syAgentSessionService.updateById(session);
+        agentSessionService.updateById(session);
 
         Long lastSequence = request == null ? null : request.getLastReceivedEventSequence();
-        List<SimpleAgentWsEvent> missedEvents = syAgentSessionEventService
+        List<SimpleAgentWsEvent> missedEvents = agentSessionEventService
                 .listReplayEvents(session.getId(), session.getTenantId(), lastSequence)
                 .stream()
                 .map(event -> buildReplayEvent(session, event))
@@ -186,15 +186,15 @@ public class SimpleAgentApplicationManager {
 
     @Transactional(rollbackFor = Exception.class)
     public void closeSession(String sessionCode) {
-        SyAgentSession session = simpleAgentSupportManager.requireSession(sessionCode);
+        AgentSession session = simpleAgentSupportManager.requireSession(sessionCode);
         session.setSessionStatus(SimpleAgentConstants.SESSION_STATUS_CLOSED);
         session.setConnectionStatus(SimpleAgentConstants.CONNECTION_STATUS_DISCONNECTED);
         session.setLastDisconnectedTime(LocalDateTime.now());
-        syAgentSessionService.updateById(session);
+        agentSessionService.updateById(session);
     }
 
-    private SyAgentVersion createVersion(
-            SyAgent agent,
+    private AgentVersion createVersion(
+            Agent agent,
             String agentName,
             String description,
             String systemPrompt,
@@ -208,14 +208,14 @@ public class SimpleAgentApplicationManager {
                 systemPrompt,
                 capabilities
         );
-        SyAgentVersion version = SimpleAgentAssembler.toCreateVersion(
+        AgentVersion version = SimpleAgentAssembler.toCreateVersion(
                 agent,
                 nextVersionNo,
                 config,
                 simpleAgentSupportManager.toJson(capabilities),
                 simpleAgentSupportManager.toJson(config)
         );
-        syAgentVersionService.save(version);
+        agentVersionService.save(version);
         return version;
     }
 
@@ -242,7 +242,7 @@ public class SimpleAgentApplicationManager {
         return SimpleAgentConstants.AGENT_TYPE_REACT;
     }
 
-    private SyAgentVersion resolveSessionVersion(SyAgent agent, SimpleAgentSessionCreateRequest request) {
+    private AgentVersion resolveSessionVersion(Agent agent, SimpleAgentSessionCreateRequest request) {
         Integer versionNo = request == null ? null : request.getVersionNo();
         if (versionNo != null) {
             return simpleAgentSupportManager.requireAgentVersion(agent.getId(), versionNo);
@@ -251,7 +251,7 @@ public class SimpleAgentApplicationManager {
             return simpleAgentSupportManager.requireAgentVersion(agent.getId(), agent.getPublishedVersionNo());
         }
         if (agent.getCurrentVersionId() != null) {
-            SyAgentVersion currentVersion = syAgentVersionService.getById(agent.getCurrentVersionId());
+            AgentVersion currentVersion = agentVersionService.getById(agent.getCurrentVersionId());
             if (currentVersion != null) {
                 return currentVersion;
             }
@@ -259,7 +259,7 @@ public class SimpleAgentApplicationManager {
         throw new BusinessException(ErrorCodeEnum.NOT_FOUND, HttpStatus.NOT_FOUND, "agent version not found");
     }
 
-    private SimpleAgentWsEvent buildReplayEvent(SyAgentSession session, SyAgentSessionEvent event) {
+    private SimpleAgentWsEvent buildReplayEvent(AgentSession session, AgentSessionEvent event) {
         return SimpleAgentAssembler.toWsEvent(
                 session,
                 resolveTaskCode(event.getTaskId()),
@@ -276,7 +276,7 @@ public class SimpleAgentApplicationManager {
         if (taskId == null) {
             return null;
         }
-        SyAgentTask task = syAgentTaskService.getById(taskId);
+        AgentTask task = agentTaskService.getById(taskId);
         return task == null ? String.valueOf(taskId) : task.getTaskCode();
     }
 }

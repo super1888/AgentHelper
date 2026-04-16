@@ -5,11 +5,11 @@ import com.spring.ai.agent.domain.response.SimpleAgentWsEvent;
 import com.spring.ai.common.constants.SimpleAgentConstants;
 import com.spring.ai.common.enums.ErrorCodeEnum;
 import com.spring.ai.common.exception.BusinessException;
-import com.spring.ai.common.repository.enitiy.SyAgentSession;
-import com.spring.ai.common.repository.enitiy.SyAgentTask;
-import com.spring.ai.common.repository.service.SyAgentSessionEventService;
-import com.spring.ai.common.repository.service.SyAgentSessionService;
-import com.spring.ai.common.repository.service.SyAgentTaskService;
+import com.spring.ai.common.repository.enitiy.AgentSession;
+import com.spring.ai.common.repository.enitiy.AgentTask;
+import com.spring.ai.common.repository.service.AgentSessionEventService;
+import com.spring.ai.common.repository.service.AgentSessionService;
+import com.spring.ai.common.repository.service.AgentTaskService;
 import com.spring.ai.websocket.service.WebSocketPushService;
 import jakarta.annotation.Resource;
 import java.time.LocalDateTime;
@@ -31,13 +31,13 @@ public class SimpleAgentChatPersistenceManager {
     private final Map<Long, Object> sessionLocks = new ConcurrentHashMap<>();
 
     @Resource
-    private SyAgentSessionService syAgentSessionService;
+    private AgentSessionService agentSessionService;
 
     @Resource
-    private SyAgentSessionEventService syAgentSessionEventService;
+    private AgentSessionEventService agentSessionEventService;
 
     @Resource
-    private SyAgentTaskService syAgentTaskService;
+    private AgentTaskService agentTaskService;
 
     @Resource
     private SimpleAgentSupportManager simpleAgentSupportManager;
@@ -46,35 +46,35 @@ public class SimpleAgentChatPersistenceManager {
     private WebSocketPushService webSocketPushService;
 
     @Transactional(rollbackFor = Exception.class)
-    public SyAgentTask createTask(SyAgentSession session, String requestMessage, Long sourceTaskId, Integer retryCount) {
-        SyAgentTask runningTask = syAgentTaskService.getRunningTask(session.getId(), session.getTenantId());
+    public AgentTask createTask(AgentSession session, String requestMessage, Long sourceTaskId, Integer retryCount) {
+        AgentTask runningTask = agentTaskService.getRunningTask(session.getId(), session.getTenantId());
         if (runningTask != null) {
             throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.CONFLICT,
                     "there is already a running task in this session");
         }
 
-        SyAgentTask task = SimpleAgentAssembler.toCreateTask(session, requestMessage, sourceTaskId, retryCount);
-        syAgentTaskService.save(task);
+        AgentTask task = SimpleAgentAssembler.toCreateTask(session, requestMessage, sourceTaskId, retryCount);
+        agentTaskService.save(task);
 
         session.setSessionStatus(SimpleAgentConstants.SESSION_STATUS_ACTIVE);
         session.setConnectionStatus(SimpleAgentConstants.CONNECTION_STATUS_CONNECTED);
         session.setLastUserMessage(task.getRequestMessage());
         session.setLastConnectedTime(LocalDateTime.now());
-        syAgentSessionService.updateById(session);
+        agentSessionService.updateById(session);
         return task;
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void publishEvent(SyAgentSession session, SyAgentTask task, String eventType, Object data, Integer replayable) {
+    public void publishEvent(AgentSession session, AgentTask task, String eventType, Object data, Integer replayable) {
         Object lock = sessionLocks.computeIfAbsent(session.getId(), key -> new Object());
         SimpleAgentWsEvent wsEvent;
         synchronized (lock) {
-            SyAgentSession freshSession = syAgentSessionService.getById(session.getId());
+            AgentSession freshSession = agentSessionService.getById(session.getId());
             long nextSequence = freshSession.getLastEventSequence() == null ? 1L : freshSession.getLastEventSequence() + 1;
             freshSession.setLastEventSequence(nextSequence);
-            syAgentSessionService.updateById(freshSession);
+            agentSessionService.updateById(freshSession);
 
-            syAgentSessionEventService.save(SimpleAgentAssembler.toCreateSessionEvent(
+            agentSessionEventService.save(SimpleAgentAssembler.toCreateSessionEvent(
                     freshSession,
                     task == null ? null : task.getId(),
                     eventType,
@@ -98,32 +98,32 @@ public class SimpleAgentChatPersistenceManager {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void handleTaskSuccess(SyAgentSession session, SyAgentTask task, String fullResponse) {
-        SyAgentTask freshTask = syAgentTaskService.getById(task.getId());
-        SyAgentSession freshSession = syAgentSessionService.getById(session.getId());
+    public void handleTaskSuccess(AgentSession session, AgentTask task, String fullResponse) {
+        AgentTask freshTask = agentTaskService.getById(task.getId());
+        AgentSession freshSession = agentSessionService.getById(session.getId());
         freshTask.setTaskStatus(SimpleAgentConstants.TASK_STATUS_SUCCESS);
         freshTask.setResponseMessage(fullResponse);
         freshTask.setErrorMessage(null);
-        syAgentTaskService.updateById(freshTask);
+        agentTaskService.updateById(freshTask);
 
         freshSession.setSessionStatus(SimpleAgentConstants.SESSION_STATUS_ACTIVE);
         freshSession.setConnectionStatus(SimpleAgentConstants.CONNECTION_STATUS_CONNECTED);
         freshSession.setLastAssistantMessage(fullResponse);
-        syAgentSessionService.updateById(freshSession);
+        agentSessionService.updateById(freshSession);
 
         publishEvent(freshSession, freshTask, "AGENT_FINISH", fullResponse, 1);
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void handleTaskError(SyAgentSession session, SyAgentTask task, String errorMessage) {
-        SyAgentTask freshTask = syAgentTaskService.getById(task.getId());
-        SyAgentSession freshSession = syAgentSessionService.getById(session.getId());
+    public void handleTaskError(AgentSession session, AgentTask task, String errorMessage) {
+        AgentTask freshTask = agentTaskService.getById(task.getId());
+        AgentSession freshSession = agentSessionService.getById(session.getId());
         freshTask.setTaskStatus(SimpleAgentConstants.TASK_STATUS_FAILED);
         freshTask.setErrorMessage(errorMessage);
-        syAgentTaskService.updateById(freshTask);
+        agentTaskService.updateById(freshTask);
 
         freshSession.setSessionStatus(SimpleAgentConstants.SESSION_STATUS_FAILED);
-        syAgentSessionService.updateById(freshSession);
+        agentSessionService.updateById(freshSession);
 
         publishEvent(freshSession, freshTask, "CHAT_ERROR", errorMessage, 1);
     }

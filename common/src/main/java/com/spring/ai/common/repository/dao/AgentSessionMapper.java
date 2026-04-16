@@ -1,9 +1,9 @@
 package com.spring.ai.common.repository.dao;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.spring.ai.common.repository.enitiy.SyAgentSessionEvent;
+import com.spring.ai.common.repository.enitiy.AgentSession;
 import org.apache.ibatis.annotations.Mapper;
 
 @Mapper
-public interface SyAgentSessionEventMapper extends BaseMapper<SyAgentSessionEvent> {
+public interface AgentSessionMapper extends BaseMapper<AgentSession> {
 }

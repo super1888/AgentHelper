@@ -14,16 +14,16 @@ import com.spring.ai.common.config.async.CommonAsyncConfig;
 import com.spring.ai.common.constants.SimpleAgentConstants;
 import com.spring.ai.common.enums.ErrorCodeEnum;
 import com.spring.ai.common.exception.BusinessException;
-import com.spring.ai.common.repository.enitiy.SyAgent;
-import com.spring.ai.common.repository.enitiy.SyAgentSession;
-import com.spring.ai.common.repository.enitiy.SyAgentSessionEvent;
-import com.spring.ai.common.repository.enitiy.SyAgentTask;
-import com.spring.ai.common.repository.enitiy.SyAgentVersion;
-import com.spring.ai.common.repository.service.SyAgentService;
-import com.spring.ai.common.repository.service.SyAgentSessionEventService;
-import com.spring.ai.common.repository.service.SyAgentSessionService;
-import com.spring.ai.common.repository.service.SyAgentTaskService;
-import com.spring.ai.common.repository.service.SyAgentVersionService;
+import com.spring.ai.common.repository.enitiy.Agent;
+import com.spring.ai.common.repository.enitiy.AgentSession;
+import com.spring.ai.common.repository.enitiy.AgentSessionEvent;
+import com.spring.ai.common.repository.enitiy.AgentTask;
+import com.spring.ai.common.repository.enitiy.AgentVersion;
+import com.spring.ai.common.repository.service.AgentService;
+import com.spring.ai.common.repository.service.AgentSessionEventService;
+import com.spring.ai.common.repository.service.AgentSessionService;
+import com.spring.ai.common.repository.service.AgentTaskService;
+import com.spring.ai.common.repository.service.AgentVersionService;
 import com.spring.ai.websocket.annotation.WebSocketPush;
 import com.spring.ai.websocket.service.WebSocketPushService;
 import jakarta.annotation.Resource;
@@ -49,19 +49,19 @@ import reactor.core.publisher.Flux;
 public class SimpleAgentChatApplicationManager {
 
     @Resource
-    private SyAgentService syAgentService;
+    private AgentService agentService;
 
     @Resource
-    private SyAgentSessionService syAgentSessionService;
+    private AgentSessionService agentSessionService;
 
     @Resource
-    private SyAgentSessionEventService syAgentSessionEventService;
+    private AgentSessionEventService agentSessionEventService;
 
     @Resource
-    private SyAgentTaskService syAgentTaskService;
+    private AgentTaskService agentTaskService;
 
     @Resource
-    private SyAgentVersionService syAgentVersionService;
+    private AgentVersionService agentVersionService;
 
     @Resource
     private SimpleAgentSupportManager simpleAgentSupportManager;
@@ -83,23 +83,23 @@ public class SimpleAgentChatApplicationManager {
     @WebSocketPush(sessionId = "#p0.sessionId", sendResult = false, startEvent = "CHAT_START")
     public void chat(SimpleAgentChatRequest request) {
         validateChatRequest(request);
-        SyAgentSession session = simpleAgentSupportManager.requireSession(request.getSessionId());
+        AgentSession session = simpleAgentSupportManager.requireSession(request.getSessionId());
         validateSessionForChat(session, request.getAgentId());
         if (request.getLastReceivedEventSequence() != null) {
             replayMissedEvents(session, request.getLastReceivedEventSequence());
         }
 
-        SyAgentTask task = simpleAgentChatPersistenceManager.createTask(session, request.getMessage(), null, 0);
+        AgentTask task = simpleAgentChatPersistenceManager.createTask(session, request.getMessage(), null, 0);
         simpleAgentChatPersistenceManager.publishEvent(session, task, "USER_MESSAGE", task.getRequestMessage(), 1);
         CompletableFuture.runAsync(() -> executeTask(session.getSessionCode(), task.getTaskCode()), executor);
     }
 
     @Transactional(rollbackFor = Exception.class)
     public SimpleAgentRecoverResponse recoverTask(String sessionCode, SimpleAgentRecoverRequest request) {
-        SyAgentSession session = simpleAgentSupportManager.requireSession(sessionCode);
-        SyAgentTask failedTask = resolveRecoverTask(session, request);
+        AgentSession session = simpleAgentSupportManager.requireSession(sessionCode);
+        AgentTask failedTask = resolveRecoverTask(session, request);
 
-        SyAgentTask recoverTask = simpleAgentChatPersistenceManager.createTask(
+        AgentTask recoverTask = simpleAgentChatPersistenceManager.createTask(
                 session,
                 failedTask.getRequestMessage(),
                 failedTask.getId(),
@@ -111,18 +111,18 @@ public class SimpleAgentChatApplicationManager {
     }
 
     private void executeTask(String sessionCode, String taskCode) {
-        SyAgentSession session = syAgentSessionService.getOne(Wrappers.lambdaQuery(SyAgentSession.class)
-                .eq(SyAgentSession::getSessionCode, sessionCode)
+        AgentSession session = agentSessionService.getOne(Wrappers.lambdaQuery(AgentSession.class)
+                .eq(AgentSession::getSessionCode, sessionCode)
                 .last("limit 1"));
-        SyAgentTask task = syAgentTaskService.getOne(Wrappers.lambdaQuery(SyAgentTask.class)
-                .eq(SyAgentTask::getTaskCode, taskCode)
+        AgentTask task = agentTaskService.getOne(Wrappers.lambdaQuery(AgentTask.class)
+                .eq(AgentTask::getTaskCode, taskCode)
                 .last("limit 1"));
         if (session == null || task == null) {
             throw new BusinessException(ErrorCodeEnum.NOT_FOUND, HttpStatus.NOT_FOUND, "session or task not found");
         }
 
-        SyAgent agent = syAgentService.getById(session.getAgentId());
-        SyAgentVersion version = syAgentVersionService.getById(session.getAgentVersionId());
+        Agent agent = agentService.getById(session.getAgentId());
+        AgentVersion version = agentVersionService.getById(session.getAgentVersionId());
         if (agent == null || version == null) {
             simpleAgentChatPersistenceManager.handleTaskError(session, task, "agent or version not found");
             return;
@@ -146,8 +146,8 @@ public class SimpleAgentChatApplicationManager {
 
     private void handleStreamingOutput(
             NodeOutput output,
-            SyAgentSession session,
-            SyAgentTask task,
+            AgentSession session,
+            AgentTask task,
             StringBuilder fullContent
     ) {
         if (!(output instanceof StreamingOutput streamingOutput)) {
@@ -182,8 +182,8 @@ public class SimpleAgentChatApplicationManager {
         }
     }
 
-    private void replayMissedEvents(SyAgentSession session, Long lastReceivedSequence) {
-        syAgentSessionEventService.listReplayEvents(session.getId(), session.getTenantId(), lastReceivedSequence)
+    private void replayMissedEvents(AgentSession session, Long lastReceivedSequence) {
+        agentSessionEventService.listReplayEvents(session.getId(), session.getTenantId(), lastReceivedSequence)
                 .forEach(event -> webSocketPushService.sendToSession(
                         session.getSessionCode(),
                         event.getEventType(),
@@ -203,7 +203,7 @@ public class SimpleAgentChatApplicationManager {
         }
     }
 
-    private void validateSessionForChat(SyAgentSession session, String agentCode) {
+    private void validateSessionForChat(AgentSession session, String agentCode) {
         if (SimpleAgentConstants.SESSION_STATUS_CLOSED.equals(session.getSessionStatus())) {
             throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "session has been closed");
         }
@@ -213,9 +213,9 @@ public class SimpleAgentChatApplicationManager {
         }
     }
 
-    private SyAgentTask resolveRecoverTask(SyAgentSession session, SimpleAgentRecoverRequest request) {
+    private AgentTask resolveRecoverTask(AgentSession session, SimpleAgentRecoverRequest request) {
         if (request != null && StringUtils.hasText(request.getTaskId())) {
-            SyAgentTask task = simpleAgentSupportManager.requireTask(request.getTaskId());
+            AgentTask task = simpleAgentSupportManager.requireTask(request.getTaskId());
             if (!task.getSessionId().equals(session.getId())) {
                 throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST,
                         "task does not belong to current session");
@@ -227,14 +227,14 @@ public class SimpleAgentChatApplicationManager {
             return task;
         }
 
-        SyAgentTask failedTask = syAgentTaskService.getLatestFailedTask(session.getId(), session.getTenantId());
+        AgentTask failedTask = agentTaskService.getLatestFailedTask(session.getId(), session.getTenantId());
         if (failedTask == null) {
             throw new BusinessException(ErrorCodeEnum.NOT_FOUND, HttpStatus.NOT_FOUND, "failed task not found");
         }
         return failedTask;
     }
 
-    private SimpleAgentWsEvent buildReplayEvent(SyAgentSession session, SyAgentSessionEvent event) {
+    private SimpleAgentWsEvent buildReplayEvent(AgentSession session, AgentSessionEvent event) {
         return SimpleAgentAssembler.toWsEvent(
                 session,
                 resolveTaskCode(event.getTaskId()),
@@ -253,7 +253,7 @@ public class SimpleAgentChatApplicationManager {
         if (taskId == null) {
             return null;
         }
-        SyAgentTask task = syAgentTaskService.getById(taskId);
+        AgentTask task = agentTaskService.getById(taskId);
         return task == null ? String.valueOf(taskId) : task.getTaskCode();
     }
 
@@ -261,7 +261,7 @@ public class SimpleAgentChatApplicationManager {
         if (sourceTaskId == null) {
             return 0;
         }
-        SyAgentTask sourceTask = syAgentTaskService.getById(sourceTaskId);
+        AgentTask sourceTask = agentTaskService.getById(sourceTaskId);
         if (sourceTask == null || sourceTask.getRetryCount() == null) {
             return 1;
         }

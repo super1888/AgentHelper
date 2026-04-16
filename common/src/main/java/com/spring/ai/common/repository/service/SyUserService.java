@@ -61,6 +61,14 @@ public interface SyUserService extends IService<SyUser> {
     List<SyUser> pageQueryUsers(String username, String nickname, String phone, String email, Integer status);
 
     /**
+     * 统计指定租户下的用户数量。
+     *
+     * @param tenantId 租户 ID
+     * @return 用户数量
+     */
+    long countByTenantId(Long tenantId);
+
+    /**
      * 统计系统用户总数
      *
      * @return 用户总数

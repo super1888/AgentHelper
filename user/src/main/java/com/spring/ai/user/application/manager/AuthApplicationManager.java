@@ -5,7 +5,9 @@ import com.spring.ai.common.constants.UserAuthConstants;
 import com.spring.ai.common.enums.ErrorCodeEnum;
 import com.spring.ai.common.enums.user.UserStatusEnum;
 import com.spring.ai.common.exception.BusinessException;
+import com.spring.ai.common.repository.enitiy.SyTenant;
 import com.spring.ai.common.repository.enitiy.SyUser;
+import com.spring.ai.common.repository.service.SyTenantService;
 import com.spring.ai.common.repository.service.SyUserService;
 import com.spring.ai.user.application.assmbler.UserAssembler;
 import com.spring.ai.user.domain.request.UserLoginRequest;
@@ -24,6 +26,9 @@ public class AuthApplicationManager {
 
     @Resource
     private SyUserService syUserService;
+
+    @Resource
+    private SyTenantService syTenantService;
 
     @Resource
     private PasswordEncoder passwordEncoder;
@@ -56,7 +61,7 @@ public class AuthApplicationManager {
         StpUtil.getSession().set(UserAuthConstants.LOGIN_NAME, user.getUsername());
 
         UserAuthLoginVO loginVO = new UserAuthLoginVO();
-        loginVO.setUser(UserAssembler.toUserProfileVO(user));
+        loginVO.setUser(UserAssembler.toUserProfileVO(user, resolveTenantName(user.getTenantId())));
         loginVO.setToken(UserAssembler.toUserTokenVO(user.getId()));
         return loginVO;
     }
@@ -84,7 +89,15 @@ public class AuthApplicationManager {
                     "当前登录用户不存在"
             );
         }
-        return UserAssembler.toUserProfileVO(user);
+        return UserAssembler.toUserProfileVO(user, resolveTenantName(user.getTenantId()));
+    }
+
+    private String resolveTenantName(Long tenantId) {
+        if (tenantId == null) {
+            return null;
+        }
+        SyTenant tenant = syTenantService.getDetailById(tenantId);
+        return tenant == null ? null : tenant.getTenantName();
     }
 
     private String normalize(String value) {

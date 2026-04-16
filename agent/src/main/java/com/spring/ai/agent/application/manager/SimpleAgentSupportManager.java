@@ -5,17 +5,20 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spring.ai.agent.domain.dto.SimpleAgentVersionConfigDTO;
 import com.spring.ai.common.enums.ErrorCodeEnum;
+import com.spring.ai.common.enums.user.UserStatusEnum;
 import com.spring.ai.common.exception.BusinessException;
 import com.spring.ai.common.providerInterface.UserProvider;
-import com.spring.ai.common.repository.enitiy.SyAgent;
-import com.spring.ai.common.repository.enitiy.SyAgentSession;
-import com.spring.ai.common.repository.enitiy.SyAgentTask;
-import com.spring.ai.common.repository.enitiy.SyAgentVersion;
+import com.spring.ai.common.repository.enitiy.Agent;
+import com.spring.ai.common.repository.enitiy.AgentSession;
+import com.spring.ai.common.repository.enitiy.AgentTask;
+import com.spring.ai.common.repository.enitiy.AgentVersion;
+import com.spring.ai.common.repository.enitiy.SyTenant;
 import com.spring.ai.common.repository.enitiy.SyUser;
-import com.spring.ai.common.repository.service.SyAgentService;
-import com.spring.ai.common.repository.service.SyAgentSessionService;
-import com.spring.ai.common.repository.service.SyAgentTaskService;
-import com.spring.ai.common.repository.service.SyAgentVersionService;
+import com.spring.ai.common.repository.service.AgentService;
+import com.spring.ai.common.repository.service.AgentSessionService;
+import com.spring.ai.common.repository.service.AgentTaskService;
+import com.spring.ai.common.repository.service.AgentVersionService;
+import com.spring.ai.common.repository.service.SyTenantService;
 import com.spring.ai.common.repository.service.SyUserService;
 import jakarta.annotation.Resource;
 import java.util.Collections;
@@ -43,25 +46,23 @@ public class SimpleAgentSupportManager {
     private SyUserService syUserService;
 
     @Resource
-    private SyAgentService syAgentService;
+    private SyTenantService syTenantService;
 
     @Resource
-    private SyAgentVersionService syAgentVersionService;
+    private AgentService agentService;
 
     @Resource
-    private SyAgentSessionService syAgentSessionService;
+    private AgentVersionService agentVersionService;
 
     @Resource
-    private SyAgentTaskService syAgentTaskService;
+    private AgentSessionService agentSessionService;
+
+    @Resource
+    private AgentTaskService agentTaskService;
 
     @Resource
     private ObjectMapper objectMapper;
 
-    /**
-     * 获取当前登录用户 ID。
-     *
-     * @return 当前用户 ID
-     */
     public Long getCurrentUserId() {
         Long userId = userProvider.getCurrentUserId();
         if (userId == null) {
@@ -70,29 +71,10 @@ public class SimpleAgentSupportManager {
         return userId;
     }
 
-    /**
-     * 获取当前登录用户名。
-     *
-     * @return 当前用户名
-     */
     public String getCurrentUserName() {
         return userProvider.getCurrentUserName();
     }
 
-    /**
-     * 获取当前用户所属租户 ID。
-     *
-     * <p>这里必须返回租户而不是用户：
-     * 租户负责“数据归属边界”，用户负责“登录身份与操作人”。
-     * 当前项目虽然还没有独立租户中心，但 Agent、Session、Task 等表已经按租户建模，
-     * 因此这里仍然保留租户解析逻辑。
-     *
-     * <p>如果用户尚未被分配 tenantId，则按当前阶段的默认策略自动初始化：
-     * 使用用户主键生成一个默认租户编号，先保证整条租户隔离链路闭环。
-     * 这只是默认租户初始化策略，不代表租户和用户是同一概念。</p>
-     *
-     * @return 当前租户 ID
-     */
     public Long getCurrentTenantId() {
         SyUser user = syUserService.getDetailById(getCurrentUserId());
         if (user == null) {
@@ -101,14 +83,8 @@ public class SimpleAgentSupportManager {
         return resolveTenantId(user);
     }
 
-    /**
-     * 按编码获取 Agent，并校验归属权限。
-     *
-     * @param agentCode Agent 编码
-     * @return Agent 实体
-     */
-    public SyAgent requireAgent(String agentCode) {
-        SyAgent agent = syAgentService.getByAgentCode(agentCode, getCurrentTenantId());
+    public Agent requireAgent(String agentCode) {
+        Agent agent = agentService.getByAgentCode(agentCode, getCurrentTenantId());
         if (agent == null) {
             throw new BusinessException(ErrorCodeEnum.NOT_FOUND, HttpStatus.NOT_FOUND, "agent not found: " + agentCode);
         }
@@ -116,15 +92,8 @@ public class SimpleAgentSupportManager {
         return agent;
     }
 
-    /**
-     * 按版本号获取 Agent 版本。
-     *
-     * @param agentId Agent 主档 ID
-     * @param versionNo 版本号
-     * @return 版本实体
-     */
-    public SyAgentVersion requireAgentVersion(Long agentId, Integer versionNo) {
-        SyAgentVersion version = syAgentVersionService.getByAgentIdAndVersionNo(agentId, getCurrentTenantId(), versionNo);
+    public AgentVersion requireAgentVersion(Long agentId, Integer versionNo) {
+        AgentVersion version = agentVersionService.getByAgentIdAndVersionNo(agentId, getCurrentTenantId(), versionNo);
         if (version == null) {
             throw new BusinessException(ErrorCodeEnum.NOT_FOUND, HttpStatus.NOT_FOUND,
                     "agent version not found: " + versionNo);
@@ -132,14 +101,8 @@ public class SimpleAgentSupportManager {
         return version;
     }
 
-    /**
-     * 按主键获取 Agent 版本。
-     *
-     * @param versionId 版本主键
-     * @return 版本实体
-     */
-    public SyAgentVersion requireAgentVersionById(Long versionId) {
-        SyAgentVersion version = syAgentVersionService.getById(versionId);
+    public AgentVersion requireAgentVersionById(Long versionId) {
+        AgentVersion version = agentVersionService.getById(versionId);
         if (version == null || !sameTenant(version.getTenantId(), getCurrentTenantId())) {
             throw new BusinessException(ErrorCodeEnum.NOT_FOUND, HttpStatus.NOT_FOUND,
                     "agent version not found: " + versionId);
@@ -147,14 +110,8 @@ public class SimpleAgentSupportManager {
         return version;
     }
 
-    /**
-     * 按编码获取会话，并校验归属权限。
-     *
-     * @param sessionCode 会话编码
-     * @return 会话实体
-     */
-    public SyAgentSession requireSession(String sessionCode) {
-        SyAgentSession session = syAgentSessionService.getBySessionCode(sessionCode, getCurrentTenantId());
+    public AgentSession requireSession(String sessionCode) {
+        AgentSession session = agentSessionService.getBySessionCode(sessionCode, getCurrentTenantId());
         if (session == null) {
             throw new BusinessException(ErrorCodeEnum.NOT_FOUND, HttpStatus.NOT_FOUND,
                     "session not found: " + sessionCode);
@@ -163,14 +120,8 @@ public class SimpleAgentSupportManager {
         return session;
     }
 
-    /**
-     * 按编码获取任务，并校验归属权限。
-     *
-     * @param taskCode 任务编码
-     * @return 任务实体
-     */
-    public SyAgentTask requireTask(String taskCode) {
-        SyAgentTask task = syAgentTaskService.getByTaskCode(taskCode, getCurrentTenantId());
+    public AgentTask requireTask(String taskCode) {
+        AgentTask task = agentTaskService.getByTaskCode(taskCode, getCurrentTenantId());
         if (task == null) {
             throw new BusinessException(ErrorCodeEnum.NOT_FOUND, HttpStatus.NOT_FOUND,
                     "task not found: " + taskCode);
@@ -179,11 +130,6 @@ public class SimpleAgentSupportManager {
         return task;
     }
 
-    /**
-     * 校验当前用户是否具备资源访问权限。
-     *
-     * @param ownerUserId 资源拥有者 ID
-     */
     public void validateOwner(Long ownerUserId) {
         if (ownerUserId == null || !ownerUserId.equals(getCurrentUserId())) {
             throw new BusinessException(ErrorCodeEnum.FORBIDDEN, HttpStatus.FORBIDDEN,
@@ -191,12 +137,6 @@ public class SimpleAgentSupportManager {
         }
     }
 
-    /**
-     * 对象转 JSON。
-     *
-     * @param value 待序列化对象
-     * @return JSON 字符串
-     */
     public String toJson(Object value) {
         try {
             return objectMapper.writeValueAsString(value);
@@ -206,12 +146,6 @@ public class SimpleAgentSupportManager {
         }
     }
 
-    /**
-     * 解析版本快照配置。
-     *
-     * @param json 配置 JSON
-     * @return 配置对象
-     */
     public SimpleAgentVersionConfigDTO parseConfig(String json) {
         if (!StringUtils.hasText(json)) {
             return new SimpleAgentVersionConfigDTO();
@@ -224,12 +158,6 @@ public class SimpleAgentSupportManager {
         }
     }
 
-    /**
-     * 解析能力项列表 JSON。
-     *
-     * @param json 能力项 JSON
-     * @return 能力项列表
-     */
     public List<String> parseCapabilities(String json) {
         if (!StringUtils.hasText(json)) {
             return Collections.emptyList();
@@ -243,27 +171,45 @@ public class SimpleAgentSupportManager {
     }
 
     /**
-     * 解析用户的租户编号。
+     * 解析当前用户租户。
      *
-     * <p>用户 ID 可以作为默认租户编号的生成来源，但不能替代租户这个字段本身。
-     * 原因是：
-     * 1. 一个租户后续可以有多个用户；
-     * 2. 资源共享、租户管理员、跨用户可见范围都依赖租户维度；
-     * 3. ownerUserId 解决“谁创建/谁操作”，tenantId 解决“数据属于哪个组织边界”。
-     *
-     * <p>当前没有租户主表时，先将“用户主键”作为默认租户编号写入用户记录，
-     * 让数据库层面继续保留 tenantId 这个独立语义。</p>
+     * <p>若历史用户尚未分配真实租户，会自动补建默认租户记录，
+     * 再将用户绑定到该默认租户。</p>
      *
      * @param user 用户实体
      * @return 租户 ID
      */
     private Long resolveTenantId(SyUser user) {
         if (user.getTenantId() != null) {
-            return user.getTenantId();
+            SyTenant existingTenant = syTenantService.getDetailById(user.getTenantId());
+            if (existingTenant != null) {
+                return existingTenant.getId();
+            }
         }
-        user.setTenantId(user.getId());
+
+        SyTenant defaultTenant = syTenantService.getDefaultTenantByOwnerUserId(user.getId());
+        if (defaultTenant == null) {
+            defaultTenant = new SyTenant();
+            defaultTenant.setTenantCode("DEFAULT_" + user.getId());
+            defaultTenant.setTenantName(buildDefaultTenantName(user));
+            defaultTenant.setStatus(UserStatusEnum.ENABLE.getCode());
+            defaultTenant.setIsDefault(1);
+            defaultTenant.setOwnerUserId(user.getId());
+            defaultTenant.setOwnerUserName(user.getUsername());
+            defaultTenant.setContactName(user.getNickname());
+            defaultTenant.setContactPhone(user.getPhone());
+            defaultTenant.setDescription("系统自动初始化的默认租户");
+            syTenantService.save(defaultTenant);
+        }
+
+        user.setTenantId(defaultTenant.getId());
         syUserService.updateById(user);
         return user.getTenantId();
+    }
+
+    private String buildDefaultTenantName(SyUser user) {
+        String baseName = StringUtils.hasText(user.getNickname()) ? user.getNickname().trim() : user.getUsername();
+        return baseName + "默认租户";
     }
 
     private boolean sameTenant(Long resourceTenantId, Long currentTenantId) {

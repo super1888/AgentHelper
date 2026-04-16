@@ -13,8 +13,8 @@ import lombok.EqualsAndHashCode;
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
-@TableName("sy_agent_session_event")
-public class SyAgentSessionEvent extends BaseEntity {
+@TableName("agent_session_event")
+public class AgentSessionEvent extends BaseEntity {
 
     /**
      * 关联会话主键。

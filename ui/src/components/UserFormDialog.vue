@@ -2,6 +2,7 @@
 import { computed, reactive, watch } from 'vue'
 import { CheckCircle2, CircleOff, Mail, Phone, ShieldCheck, UserRound } from 'lucide-vue-next'
 import AppDialog from '@/components/AppDialog.vue'
+import type { TenantOption } from '@/types/tenant'
 import type { CreateUserPayload, UpdateUserPayload, UserProfile } from '@/types/user'
 import {
   normalizeOptionalText,
@@ -13,7 +14,6 @@ import {
 } from '@/utils/validation'
 
 type DialogMode = 'create' | 'edit'
-
 interface UserDialogFormState extends UserCreateFormState {
   username: string
 }
@@ -24,6 +24,7 @@ const props = defineProps<{
   modelValue: boolean
   mode: DialogMode
   user: UserProfile | null
+  tenantOptions: TenantOption[]
   submitting: boolean
 }>()
 
@@ -38,8 +39,8 @@ const errors = reactive<Partial<Record<UserDialogField, string>>>({})
 const dialogTitle = computed(() => (props.mode === 'create' ? '新增用户' : '编辑用户'))
 const dialogDescription = computed(() =>
   props.mode === 'create'
-    ? '录入账号基础信息与状态，提交后直接写入用户模块。'
-    : '更新昵称、联系方式、租户与状态，用户名保持只读。',
+    ? '录入账号基础信息、状态和所属租户，提交后直接写入用户中心。'
+    : '维护显示名称、联系方式、租户与状态，用户名保持只读。',
 )
 
 function createEmptyForm(): UserDialogFormState {
@@ -81,7 +82,6 @@ function syncFormWithProps() {
 
 function validateForm() {
   clearErrors()
-
   const nextErrors =
     props.mode === 'create'
       ? validateCreateUserForm(form)
@@ -89,10 +89,6 @@ function validateForm() {
 
   Object.assign(errors, nextErrors)
   return Object.keys(nextErrors).length === 0
-}
-
-function closeDialog() {
-  emit('update:modelValue', false)
 }
 
 function handleSubmit() {
@@ -111,7 +107,6 @@ function handleSubmit() {
       status: form.status,
       tenantId: parseTenantIdInput(form.tenantId),
     }
-
     emit('submit', { mode: 'create', payload })
     return
   }
@@ -123,7 +118,6 @@ function handleSubmit() {
     status: form.status,
     tenantId: parseTenantIdInput(form.tenantId),
   }
-
   emit('submit', { mode: 'edit', payload })
 }
 
@@ -172,12 +166,11 @@ watch(
               type="text"
               autocomplete="username"
               placeholder="请输入登录用户名"
-              :aria-invalid="Boolean(errors.username)"
               :disabled="submitting"
               @input="delete errors.username"
             />
           </div>
-          <span v-if="errors.username" class="field__error" role="alert">{{ errors.username }}</span>
+          <span v-if="errors.username" class="field__error">{{ errors.username }}</span>
         </label>
 
         <label class="field">
@@ -192,12 +185,11 @@ watch(
               type="text"
               autocomplete="nickname"
               placeholder="用于展示，可留空"
-              :aria-invalid="Boolean(errors.nickname)"
               :disabled="submitting"
               @input="delete errors.nickname"
             />
           </div>
-          <span v-if="errors.nickname" class="field__error" role="alert">{{ errors.nickname }}</span>
+          <span v-if="errors.nickname" class="field__error">{{ errors.nickname }}</span>
         </label>
 
         <label class="field">
@@ -212,12 +204,11 @@ watch(
               type="tel"
               autocomplete="tel"
               placeholder="11 位大陆手机号"
-              :aria-invalid="Boolean(errors.phone)"
               :disabled="submitting"
               @input="delete errors.phone"
             />
           </div>
-          <span v-if="errors.phone" class="field__error" role="alert">{{ errors.phone }}</span>
+          <span v-if="errors.phone" class="field__error">{{ errors.phone }}</span>
         </label>
 
         <label class="field">
@@ -232,12 +223,11 @@ watch(
               type="email"
               autocomplete="email"
               placeholder="name@example.com"
-              :aria-invalid="Boolean(errors.email)"
               :disabled="submitting"
               @input="delete errors.email"
             />
           </div>
-          <span v-if="errors.email" class="field__error" role="alert">{{ errors.email }}</span>
+          <span v-if="errors.email" class="field__error">{{ errors.email }}</span>
         </label>
 
         <label v-if="mode === 'create'" class="field">
@@ -249,12 +239,11 @@ watch(
               type="password"
               autocomplete="new-password"
               placeholder="至少 8 位"
-              :aria-invalid="Boolean(errors.password)"
               :disabled="submitting"
               @input="delete errors.password"
             />
           </div>
-          <span v-if="errors.password" class="field__error" role="alert">{{ errors.password }}</span>
+          <span v-if="errors.password" class="field__error">{{ errors.password }}</span>
         </label>
 
         <label v-if="mode === 'create'" class="field">
@@ -266,31 +255,22 @@ watch(
               type="password"
               autocomplete="new-password"
               placeholder="再次输入密码"
-              :aria-invalid="Boolean(errors.confirmPassword)"
               :disabled="submitting"
               @input="delete errors.confirmPassword"
             />
           </div>
-          <span v-if="errors.confirmPassword" class="field__error" role="alert">
-            {{ errors.confirmPassword }}
-          </span>
+          <span v-if="errors.confirmPassword" class="field__error">{{ errors.confirmPassword }}</span>
         </label>
 
         <label class="field">
-          <span class="field__label">租户 ID</span>
-          <div class="input-shell" :class="{ 'input-shell--invalid': Boolean(errors.tenantId) }">
-            <input
-              v-model="form.tenantId"
-              class="app-input"
-              type="text"
-              inputmode="numeric"
-              placeholder="留空表示默认租户"
-              :aria-invalid="Boolean(errors.tenantId)"
-              :disabled="submitting"
-              @input="delete errors.tenantId"
-            />
-          </div>
-          <span v-if="errors.tenantId" class="field__error" role="alert">{{ errors.tenantId }}</span>
+          <span class="field__label">所属租户</span>
+          <select v-model="form.tenantId" class="app-select" :disabled="submitting">
+            <option value="">默认租户（自动初始化）</option>
+            <option v-for="tenant in tenantOptions" :key="tenant.id" :value="tenant.id">
+              {{ tenant.tenantName }} / {{ tenant.tenantCode }}
+            </option>
+          </select>
+          <span v-if="errors.tenantId" class="field__error">{{ errors.tenantId }}</span>
         </label>
       </div>
 
@@ -298,25 +278,13 @@ watch(
         <legend class="field__label">状态</legend>
         <div class="status-toggle">
           <label class="status-toggle__option" :class="{ 'status-toggle__option--active': form.status === 1 }">
-            <input
-              v-model="form.status"
-              type="radio"
-              name="user-status"
-              :value="1"
-              :disabled="submitting"
-            />
+            <input v-model="form.status" type="radio" name="user-status" :value="1" :disabled="submitting" />
             <CheckCircle2 :size="16" aria-hidden="true" />
             <span>启用</span>
           </label>
 
           <label class="status-toggle__option" :class="{ 'status-toggle__option--active': form.status === 0 }">
-            <input
-              v-model="form.status"
-              type="radio"
-              name="user-status"
-              :value="0"
-              :disabled="submitting"
-            />
+            <input v-model="form.status" type="radio" name="user-status" :value="0" :disabled="submitting" />
             <CircleOff :size="16" aria-hidden="true" />
             <span>禁用</span>
           </label>
@@ -325,22 +293,10 @@ watch(
     </form>
 
     <template #footer>
-      <button
-        type="button"
-        class="app-button app-button--secondary"
-        :disabled="submitting"
-        @click="closeDialog"
-      >
+      <button type="button" class="app-button app-button--secondary" :disabled="submitting" @click="emit('update:modelValue', false)">
         取消
       </button>
-
-      <button
-        type="button"
-        class="app-button"
-        :disabled="submitting"
-        :aria-busy="submitting"
-        @click="handleSubmit"
-      >
+      <button type="button" class="app-button" :disabled="submitting" :aria-busy="submitting" @click="handleSubmit">
         <span v-if="submitting" class="button-spinner" aria-hidden="true"></span>
         {{ submitting ? '提交中...' : mode === 'create' ? '创建用户' : '保存修改' }}
       </button>
@@ -392,6 +348,35 @@ watch(
   padding: 0;
   border: 0;
   margin: 0;
+}
+
+.app-select {
+  min-height: 56px;
+  padding: 0 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 18px;
+  color: var(--color-ink-strong);
+  background: rgba(255, 255, 255, 0.06);
+  outline: 0;
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.app-select:hover {
+  border-color: rgba(83, 184, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.app-select:focus {
+  border-color: rgba(77, 179, 255, 0.46);
+  box-shadow: var(--shadow-focus);
+}
+
+.app-select option {
+  color: #f0f5ff;
+  background: #0a1524;
 }
 
 .status-toggle {

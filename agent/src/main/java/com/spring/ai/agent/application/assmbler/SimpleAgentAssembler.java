@@ -12,11 +12,11 @@ import com.spring.ai.agent.domain.response.SimpleAgentSummaryResponse;
 import com.spring.ai.agent.domain.response.SimpleAgentVersionResponse;
 import com.spring.ai.agent.domain.response.SimpleAgentWsEvent;
 import com.spring.ai.common.constants.SimpleAgentConstants;
-import com.spring.ai.common.repository.enitiy.SyAgent;
-import com.spring.ai.common.repository.enitiy.SyAgentSession;
-import com.spring.ai.common.repository.enitiy.SyAgentSessionEvent;
-import com.spring.ai.common.repository.enitiy.SyAgentTask;
-import com.spring.ai.common.repository.enitiy.SyAgentVersion;
+import com.spring.ai.common.repository.enitiy.Agent;
+import com.spring.ai.common.repository.enitiy.AgentSession;
+import com.spring.ai.common.repository.enitiy.AgentSessionEvent;
+import com.spring.ai.common.repository.enitiy.AgentTask;
+import com.spring.ai.common.repository.enitiy.AgentVersion;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
@@ -35,14 +35,14 @@ public final class SimpleAgentAssembler {
     private SimpleAgentAssembler() {
     }
 
-    public static SyAgent toCreateAgent(
+    public static Agent toCreateAgent(
             SimpleAgentCreateRequest request,
             String agentType,
             Long tenantId,
             Long currentUserId,
             String currentUserName
     ) {
-        SyAgent agent = new SyAgent();
+        Agent agent = new Agent();
         agent.setAgentCode(UUID.randomUUID().toString());
         agent.setAgentName(trim(request.getAgentName()));
         agent.setDescription(trimToNull(request.getDescription()));
@@ -55,7 +55,7 @@ public final class SimpleAgentAssembler {
         return agent;
     }
 
-    public static void mergeAgentForUpdate(SyAgent agent, SimpleAgentUpdateRequest request) {
+    public static void mergeAgentForUpdate(Agent agent, SimpleAgentUpdateRequest request) {
         agent.setAgentName(trim(request.getAgentName()));
         agent.setDescription(trimToNull(request.getDescription()));
     }
@@ -74,14 +74,14 @@ public final class SimpleAgentAssembler {
                 .build();
     }
 
-    public static SyAgentVersion toCreateVersion(
-            SyAgent agent,
+    public static AgentVersion toCreateVersion(
+            Agent agent,
             Integer nextVersionNo,
             SimpleAgentVersionConfigDTO config,
             String selectedCapabilitiesJson,
             String configSnapshotJson
     ) {
-        SyAgentVersion version = new SyAgentVersion();
+        AgentVersion version = new AgentVersion();
         version.setAgentId(agent.getId());
         version.setTenantId(agent.getTenantId());
         version.setVersionNo(nextVersionNo);
@@ -94,8 +94,8 @@ public final class SimpleAgentAssembler {
         return version;
     }
 
-    public static SyAgentSession toCreateSession(SyAgent agent, SyAgentVersion version) {
-        SyAgentSession session = new SyAgentSession();
+    public static AgentSession toCreateSession(Agent agent, AgentVersion version) {
+        AgentSession session = new AgentSession();
         session.setSessionCode(UUID.randomUUID().toString());
         session.setAgentId(agent.getId());
         session.setAgentCode(agent.getAgentCode());
@@ -111,13 +111,13 @@ public final class SimpleAgentAssembler {
         return session;
     }
 
-    public static SyAgentTask toCreateTask(
-            SyAgentSession session,
+    public static AgentTask toCreateTask(
+            AgentSession session,
             String requestMessage,
             Long sourceTaskId,
             Integer retryCount
     ) {
-        SyAgentTask task = new SyAgentTask();
+        AgentTask task = new AgentTask();
         task.setTaskCode(UUID.randomUUID().toString());
         task.setSourceTaskId(sourceTaskId);
         task.setSessionId(session.getId());
@@ -132,15 +132,15 @@ public final class SimpleAgentAssembler {
         return task;
     }
 
-    public static SyAgentSessionEvent toCreateSessionEvent(
-            SyAgentSession session,
+    public static AgentSessionEvent toCreateSessionEvent(
+            AgentSession session,
             Long taskId,
             String eventType,
             String eventBody,
             Integer replayable,
             Long eventSequence
     ) {
-        SyAgentSessionEvent event = new SyAgentSessionEvent();
+        AgentSessionEvent event = new AgentSessionEvent();
         event.setSessionId(session.getId());
         event.setSessionCode(session.getSessionCode());
         event.setAgentId(session.getAgentId());
@@ -155,8 +155,8 @@ public final class SimpleAgentAssembler {
     }
 
     public static SimpleAgentCreateResponse toCreateResponse(
-            SyAgent agent,
-            SyAgentVersion version,
+            Agent agent,
+            AgentVersion version,
             List<String> selectedCapabilities
     ) {
         return SimpleAgentCreateResponse.builder()
@@ -173,7 +173,7 @@ public final class SimpleAgentAssembler {
     }
 
     public static SimpleAgentDetailResponse toDetailResponse(
-            SyAgent agent,
+            Agent agent,
             List<SimpleAgentVersionResponse> versions
     ) {
         return SimpleAgentDetailResponse.builder()
@@ -190,7 +190,7 @@ public final class SimpleAgentAssembler {
                 .build();
     }
 
-    public static SimpleAgentSummaryResponse toSummaryResponse(SyAgent agent) {
+    public static SimpleAgentSummaryResponse toSummaryResponse(Agent agent) {
         return SimpleAgentSummaryResponse.builder()
                 .agentId(agent.getAgentCode())
                 .agentName(agent.getAgentName())
@@ -204,7 +204,7 @@ public final class SimpleAgentAssembler {
     }
 
     public static SimpleAgentVersionResponse toVersionResponse(
-            SyAgentVersion version,
+            AgentVersion version,
             List<String> selectedCapabilities
     ) {
         return SimpleAgentVersionResponse.builder()
@@ -219,7 +219,7 @@ public final class SimpleAgentAssembler {
                 .build();
     }
 
-    public static SimpleAgentSessionResponse toSessionResponse(SyAgentSession session) {
+    public static SimpleAgentSessionResponse toSessionResponse(AgentSession session) {
         return SimpleAgentSessionResponse.builder()
                 .sessionId(session.getSessionCode())
                 .agentId(session.getAgentCode())
@@ -235,7 +235,7 @@ public final class SimpleAgentAssembler {
     }
 
     public static SimpleAgentReconnectResponse toReconnectResponse(
-            SyAgentSession session,
+            AgentSession session,
             List<SimpleAgentWsEvent> missedEvents
     ) {
         return SimpleAgentReconnectResponse.builder()
@@ -245,8 +245,8 @@ public final class SimpleAgentAssembler {
     }
 
     public static SimpleAgentRecoverResponse toRecoverResponse(
-            SyAgentSession session,
-            SyAgentTask task,
+            AgentSession session,
+            AgentTask task,
             String message
     ) {
         return SimpleAgentRecoverResponse.builder()
@@ -258,7 +258,7 @@ public final class SimpleAgentAssembler {
     }
 
     public static SimpleAgentWsEvent toWsEvent(
-            SyAgentSession session,
+            AgentSession session,
             String taskCode,
             Long agentVersionId,
             Integer agentVersionNo,

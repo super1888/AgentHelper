@@ -7,8 +7,8 @@ import com.spring.ai.agent.factory.AgentFactory;
 import com.spring.ai.agent.store.SimpleAgentRegistry;
 import com.spring.ai.agent.store.SimpleAgentRegistry.StoredSimpleAgent;
 import com.spring.ai.common.enums.AgentTypeEnum;
-import com.spring.ai.common.repository.enitiy.SyAgent;
-import com.spring.ai.common.repository.enitiy.SyAgentVersion;
+import com.spring.ai.common.repository.enitiy.Agent;
+import com.spring.ai.common.repository.enitiy.AgentVersion;
 import com.spring.ai.core.facotry.GetChatModel;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Component;
@@ -35,7 +35,7 @@ public class SimpleAgentRuntimeManager {
     @Resource
     private GetChatModel getChatModel;
 
-    public ReactAgent getOrCreate(SyAgent agent, SyAgentVersion version) {
+    public ReactAgent getOrCreate(Agent agent, AgentVersion version) {
         StoredSimpleAgent storedSimpleAgent = simpleAgentRegistry.get(version.getId());
         if (storedSimpleAgent != null) {
             return storedSimpleAgent.getReactAgent();

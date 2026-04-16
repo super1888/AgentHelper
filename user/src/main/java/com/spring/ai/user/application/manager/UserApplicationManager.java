@@ -5,7 +5,9 @@ import com.github.pagehelper.PageInfo;
 import com.spring.ai.common.enums.ErrorCodeEnum;
 import com.spring.ai.common.enums.user.UserStatusEnum;
 import com.spring.ai.common.exception.BusinessException;
+import com.spring.ai.common.repository.enitiy.SyTenant;
 import com.spring.ai.common.repository.enitiy.SyUser;
+import com.spring.ai.common.repository.service.SyTenantService;
 import com.spring.ai.common.repository.service.SyUserService;
 import com.spring.ai.user.application.assmbler.UserAssembler;
 import com.spring.ai.user.domain.request.UserCreateRequest;
@@ -16,6 +18,9 @@ import com.spring.ai.user.domain.vo.UserProfileVO;
 import com.spring.ai.user.domain.vo.UserStatisticsVO;
 import jakarta.annotation.Resource;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.springframework.beans.BeanUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -31,6 +36,12 @@ public class UserApplicationManager {
 
     @Resource
     private SyUserService syUserService;
+
+    @Resource
+    private SyTenantService syTenantService;
+
+    @Resource
+    private TenantApplicationManager tenantApplicationManager;
 
     @Resource
     private PasswordEncoder passwordEncoder;
@@ -64,10 +75,13 @@ public class UserApplicationManager {
         UserStatusEnum.fromVal(request.getStatus());
         validatePassword(request.getPassword(), request.getConfirmPassword());
         validateUnique(null, request.getUsername(), request.getPhone(), request.getEmail());
+        validateTenant(request.getTenantId());
 
         SyUser user = UserAssembler.toCreateEntity(request, passwordEncoder.encode(request.getPassword()));
         syUserService.save(user);
-        initializeDefaultTenant(user);
+        if (user.getTenantId() == null) {
+            tenantApplicationManager.initializeDefaultTenant(user);
+        }
     }
 
     /**
@@ -96,10 +110,15 @@ public class UserApplicationManager {
     @Transactional(rollbackFor = Exception.class)
     public void updateUser(Long userId, UserUpdateRequest request) {
         UserStatusEnum.fromVal(request.getStatus());
+        validateTenant(request.getTenantId());
+
         SyUser user = requireUser(userId);
         validateUnique(userId, user.getUsername(), request.getPhone(), request.getEmail());
         UserAssembler.mergeForUpdate(user, request);
         syUserService.updateById(user);
+        if (user.getTenantId() == null) {
+            tenantApplicationManager.initializeDefaultTenant(user);
+        }
     }
 
     /**
@@ -109,7 +128,8 @@ public class UserApplicationManager {
      * @return 用户信息
      */
     public UserProfileVO getUserDetail(Long userId) {
-        return UserAssembler.toUserProfileVO(requireUser(userId));
+        SyUser user = requireUser(userId);
+        return UserAssembler.toUserProfileVO(user, resolveTenantName(user.getTenantId()));
     }
 
     /**
@@ -118,7 +138,8 @@ public class UserApplicationManager {
      * @return 用户列表
      */
     public List<UserProfileVO> listAllUsers() {
-        return UserAssembler.toUserProfileVOList(syUserService.listAllUsers());
+        List<SyUser> users = syUserService.listAllUsers();
+        return UserAssembler.toUserProfileVOList(users, buildTenantNameMap(users));
     }
 
     /**
@@ -140,7 +161,7 @@ public class UserApplicationManager {
         PageInfo<SyUser> sourcePageInfo = new PageInfo<>(syUsers);
         PageInfo<UserProfileVO> targetPageInfo = new PageInfo<>();
         BeanUtils.copyProperties(sourcePageInfo, targetPageInfo, "list");
-        targetPageInfo.setList(UserAssembler.toUserProfileVOList(sourcePageInfo.getList()));
+        targetPageInfo.setList(UserAssembler.toUserProfileVOList(sourcePageInfo.getList(), buildTenantNameMap(sourcePageInfo.getList())));
         return targetPageInfo;
     }
 
@@ -206,6 +227,36 @@ public class UserApplicationManager {
         }
     }
 
+    private void validateTenant(Long tenantId) {
+        if (tenantId == null) {
+            return;
+        }
+        if (syTenantService.getDetailById(tenantId) == null) {
+            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "租户不存在");
+        }
+    }
+
+    private Map<Long, String> buildTenantNameMap(List<SyUser> users) {
+        List<Long> tenantIds = users.stream()
+                .map(SyUser::getTenantId)
+                .filter(id -> id != null)
+                .distinct()
+                .toList();
+        if (tenantIds.isEmpty()) {
+            return Map.of();
+        }
+        return syTenantService.listByIds(tenantIds).stream()
+                .collect(Collectors.toMap(SyTenant::getId, SyTenant::getTenantName, (left, right) -> left));
+    }
+
+    private String resolveTenantName(Long tenantId) {
+        if (tenantId == null) {
+            return null;
+        }
+        SyTenant tenant = syTenantService.getDetailById(tenantId);
+        return tenant == null ? null : tenant.getTenantName();
+    }
+
     private boolean sameUser(Long currentUserId, Long targetUserId) {
         return currentUserId != null && currentUserId.equals(targetUserId);
     }
@@ -216,31 +267,6 @@ public class UserApplicationManager {
         }
         UserStatusEnum.fromVal(status);
         return status;
-    }
-
-    /**
-     * 初始化默认租户。
-     *
-     * <p>租户和用户不是同一个概念：
-     * 租户代表数据归属边界，未来一个租户下可以有多个用户；
-     * 用户代表登录身份、操作者和资源拥有者。
-     *
-     * <p>当前项目还没有独立的租户管理入口，因此在没有显式传入 tenantId 时，
-     * 先为该用户初始化一个默认租户编号。
-     * 当前阶段直接使用用户主键作为默认租户编号，只是“租户初始化策略”，
-     * 不是把租户和用户建模成同一概念。
-     *
-     * <p>这样后续接入真正的企业/组织租户体系时，只需要替换这里的租户生成逻辑，
-     * Agent、Session、Task 这些按租户隔离的查询都不需要推倒重来。</p>
-     *
-     * @param user 用户实体
-     */
-    private void initializeDefaultTenant(SyUser user) {
-        if (user == null || user.getTenantId() != null) {
-            return;
-        }
-        user.setTenantId(user.getId());
-        syUserService.updateById(user);
     }
 
     private String normalize(String value) {

@@ -14,8 +14,8 @@ import lombok.EqualsAndHashCode;
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
-@TableName("sy_agent_session")
-public class SyAgentSession extends BaseEntity {
+@TableName("agent_session")
+public class AgentSession extends BaseEntity {
 
     /**
      * 会话业务编码。

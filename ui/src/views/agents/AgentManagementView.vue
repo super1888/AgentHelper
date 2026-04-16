@@ -487,30 +487,32 @@ onMounted(() => {
 
             <div class="detail-session panel-card">
               <div class="detail-session__head">
-                <div>
+                <div class="detail-session__intro">
                   <strong>运行入口</strong>
                   <p>
                     默认使用已发布版本创建会话；如果未发布，则回退到当前最新版本。
                   </p>
                 </div>
-                <button
-                  type="button"
-                  class="app-button app-button--secondary"
-                  :disabled="actionPending !== null"
-                  @click="handleCreateSession()"
-                >
-                  <RadioTower :size="16" aria-hidden="true" />
-                  {{ actionPending === 'session' ? '创建中...' : '创建默认会话' }}
-                </button>
-                <button
-                  type="button"
-                  class="app-button"
-                  :disabled="actionPending !== null"
-                  @click="handleOpenChat()"
-                >
-                  <Waypoints :size="16" aria-hidden="true" />
-                  {{ actionPending === 'session' ? '准备中...' : '进入聊天' }}
-                </button>
+                <div class="detail-session__actions">
+                  <button
+                    type="button"
+                    class="app-button app-button--secondary detail-session__button"
+                    :disabled="actionPending !== null"
+                    @click="handleCreateSession()"
+                  >
+                    <RadioTower :size="16" aria-hidden="true" />
+                    {{ actionPending === 'session' ? '创建中...' : '创建默认会话' }}
+                  </button>
+                  <button
+                    type="button"
+                    class="app-button detail-session__button"
+                    :disabled="actionPending !== null"
+                    @click="handleOpenChat()"
+                  >
+                    <Waypoints :size="16" aria-hidden="true" />
+                    {{ actionPending === 'session' ? '准备中...' : '进入聊天' }}
+                  </button>
+                </div>
               </div>
 
               <div v-if="createdSession" class="session-result">
@@ -781,7 +783,6 @@ onMounted(() => {
 .agent-card__top,
 .version-card__head,
 .detail-head,
-.detail-session__head,
 .version-card__foot {
   display: flex;
   align-items: flex-start;
@@ -904,6 +905,39 @@ onMounted(() => {
   background: rgba(255, 255, 255, 0.04);
 }
 
+.detail-session__head {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(240px, 0.9fr);
+  gap: 18px;
+  align-items: stretch;
+}
+
+.detail-session__intro {
+  min-width: 0;
+}
+
+.detail-session__intro p {
+  margin-top: 8px;
+  color: var(--color-ink-soft);
+  line-height: 1.7;
+}
+
+.detail-session__actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  align-self: stretch;
+}
+
+.detail-session__button {
+  justify-content: center;
+  min-height: 56px;
+  padding: 14px 18px;
+  text-align: center;
+  white-space: normal;
+  line-height: 1.4;
+}
+
 .version-card__head p {
   margin-top: 6px;
   color: var(--color-ink-muted);
@@ -949,13 +983,22 @@ onMounted(() => {
 
   .agent-workspace__hero,
   .detail-head,
-  .detail-actions,
-  .detail-session__head {
+  .detail-actions {
     flex-direction: column;
     align-items: stretch;
   }
 
   .detail-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .detail-session__head {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .detail-session__actions {
     grid-template-columns: 1fr;
   }
 }

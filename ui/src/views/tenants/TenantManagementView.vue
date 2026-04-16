@@ -1,33 +1,31 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import {
+  BadgeCheck,
+  Building2,
   ChevronLeft,
   ChevronRight,
-  CircleUserRound,
-  Mail,
-  Phone,
+  ContactRound,
+  Hash,
   Plus,
   RefreshCw,
   Search,
   Trash2,
-  UserRound,
   UserRoundPen,
   Users,
 } from 'lucide-vue-next'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import MainShell from '@/components/MainShell.vue'
 import StatusBadge from '@/components/StatusBadge.vue'
-import UserFormDialog from '@/components/UserFormDialog.vue'
-import { fetchTenantOptions } from '@/api/tenant'
-import { createUser, fetchUserStats, queryUsers, removeUser, updateUser } from '@/api/user'
-import type { TenantOption } from '@/types/tenant'
+import TenantFormDialog from '@/components/TenantFormDialog.vue'
+import { createTenant, fetchTenantStats, queryTenants, removeTenant, updateTenant } from '@/api/tenant'
 import type {
-  CreateUserPayload,
-  UpdateUserPayload,
-  UserPageResult,
-  UserProfile,
-  UserStatistics,
-} from '@/types/user'
+  CreateTenantPayload,
+  TenantPageResult,
+  TenantProfile,
+  TenantStatistics,
+  UpdateTenantPayload,
+} from '@/types/tenant'
 import { getErrorMessage } from '@/utils/errors'
 
 type FilterStatus = 'all' | 'enabled' | 'disabled'
@@ -41,24 +39,21 @@ interface FeedbackState {
 
 const loading = ref(false)
 const statsLoading = ref(false)
-const tenantOptionsLoading = ref(false)
 const submitting = ref(false)
 const deletePending = ref(false)
 const dialogOpen = ref(false)
 const dialogMode = ref<DialogMode>('create')
-const selectedUser = ref<UserProfile | null>(null)
-const deleteTarget = ref<UserProfile | null>(null)
+const selectedTenant = ref<TenantProfile | null>(null)
+const deleteTarget = ref<TenantProfile | null>(null)
 const feedback = ref<FeedbackState | null>(null)
 
 const filters = reactive({
-  username: '',
-  nickname: '',
-  phone: '',
-  email: '',
+  tenantCode: '',
+  tenantName: '',
   status: 'all' as FilterStatus,
 })
 
-const pageState = ref<UserPageResult>({
+const pageState = ref<TenantPageResult>({
   list: [],
   total: 0,
   pageNum: 1,
@@ -66,21 +61,22 @@ const pageState = ref<UserPageResult>({
   pages: 0,
 })
 
-const statistics = ref<UserStatistics>({
+const statistics = ref<TenantStatistics>({
   totalCount: 0,
+  enabledCount: 0,
+  disabledCount: 0,
 })
-const tenantOptions = ref<TenantOption[]>([])
 
-const totalUsersLabel = computed(() => {
+const totalTenantsLabel = computed(() => {
   if (statsLoading.value) {
     return '统计中...'
   }
-  return `总用户 ${statistics.value.totalCount}`
+  return `总租户 ${statistics.value.totalCount}`
 })
 
 const resultsSummary = computed(() => {
   if (loading.value) {
-    return '正在加载用户数据...'
+    return '正在加载租户数据...'
   }
 
   const pages = Math.max(pageState.value.pages, 1)
@@ -88,7 +84,7 @@ const resultsSummary = computed(() => {
 })
 
 const deleteDescription = computed(() =>
-  deleteTarget.value ? `确认删除用户 ${deleteTarget.value.username} 吗？该操作不可撤销。` : '',
+  deleteTarget.value ? `确认删除租户 ${deleteTarget.value.tenantName} 吗？该操作不可撤销。` : '',
 )
 
 const canGoPrev = computed(() => pageState.value.pageNum > 1)
@@ -113,10 +109,8 @@ function buildQuery(pageNum = 1) {
   return {
     pageNum,
     pageSize: 20,
-    username: normalizeText(filters.username),
-    nickname: normalizeText(filters.nickname),
-    phone: normalizeText(filters.phone),
-    email: normalizeText(filters.email),
+    tenantCode: normalizeText(filters.tenantCode),
+    tenantName: normalizeText(filters.tenantName),
     status: normalizeStatus(),
   }
 }
@@ -130,34 +124,40 @@ function clearFeedback() {
 }
 
 function resetFilters() {
-  filters.username = ''
-  filters.nickname = ''
-  filters.phone = ''
-  filters.email = ''
+  filters.tenantCode = ''
+  filters.tenantName = ''
   filters.status = 'all'
   clearFeedback()
-  void loadUsers(1)
+  void loadTenants(1)
 }
 
-function formatContact(user: UserProfile) {
-  const contactItems = [user.phone, user.email].filter(Boolean)
+function formatContact(tenant: TenantProfile) {
+  const contactItems = [tenant.contactName, tenant.contactPhone].filter(Boolean)
   return contactItems.length > 0 ? contactItems.join(' / ') : '未填写'
 }
 
-function formatTenant(tenantId: string | null) {
-  return tenantId === null ? '默认租户' : `租户 ${tenantId}`
+function formatOwner(tenant: TenantProfile) {
+  if (!tenant.ownerUserName && !tenant.ownerUserId) {
+    return '未绑定'
+  }
+
+  if (tenant.ownerUserName && tenant.ownerUserId) {
+    return `${tenant.ownerUserName} / ID ${tenant.ownerUserId}`
+  }
+
+  return tenant.ownerUserName || `ID ${tenant.ownerUserId}`
 }
 
-async function loadUsers(pageNum = 1, successMessage?: string) {
+async function loadTenants(pageNum = 1, successMessage?: string) {
   loading.value = true
 
   try {
-    pageState.value = await queryUsers(buildQuery(pageNum))
+    pageState.value = await queryTenants(buildQuery(pageNum))
     if (successMessage) {
       showFeedback('success', successMessage)
     }
   } catch (error) {
-    showFeedback('error', getErrorMessage(error, '用户列表加载失败。'))
+    showFeedback('error', getErrorMessage(error, '租户列表加载失败。'))
   } finally {
     loading.value = false
   }
@@ -167,32 +167,20 @@ async function loadStatistics() {
   statsLoading.value = true
 
   try {
-    statistics.value = await fetchUserStats()
+    statistics.value = await fetchTenantStats()
   } catch (error) {
-    showFeedback('error', getErrorMessage(error, '总用户统计加载失败。'))
+    showFeedback('error', getErrorMessage(error, '租户统计加载失败。'))
   } finally {
     statsLoading.value = false
   }
 }
 
-async function loadTenantOptions() {
-  tenantOptionsLoading.value = true
-
-  try {
-    tenantOptions.value = await fetchTenantOptions()
-  } catch (error) {
-    showFeedback('error', getErrorMessage(error, '租户选项加载失败。'))
-  } finally {
-    tenantOptionsLoading.value = false
-  }
-}
-
 async function executeSearch() {
-  await loadUsers(1)
+  await loadTenants(1)
 }
 
 async function refreshCurrentPage() {
-  await Promise.all([loadUsers(pageState.value.pageNum), loadStatistics(), loadTenantOptions()])
+  await Promise.all([loadTenants(pageState.value.pageNum), loadStatistics()])
 }
 
 async function goToPage(pageNum: number) {
@@ -200,56 +188,50 @@ async function goToPage(pageNum: number) {
     return
   }
 
-  await loadUsers(pageNum)
+  await loadTenants(pageNum)
 }
 
 function openCreateDialog() {
   clearFeedback()
   dialogMode.value = 'create'
-  selectedUser.value = null
-  if (tenantOptions.value.length === 0 && !tenantOptionsLoading.value) {
-    void loadTenantOptions()
-  }
+  selectedTenant.value = null
   dialogOpen.value = true
 }
 
-function openEditDialog(user: UserProfile) {
+function openEditDialog(tenant: TenantProfile) {
   clearFeedback()
   dialogMode.value = 'edit'
-  selectedUser.value = user
-  if (tenantOptions.value.length === 0 && !tenantOptionsLoading.value) {
-    void loadTenantOptions()
-  }
+  selectedTenant.value = tenant
   dialogOpen.value = true
 }
 
-async function handleDialogSubmit(event: { mode: DialogMode; payload: CreateUserPayload | UpdateUserPayload }) {
+async function handleDialogSubmit(event: { mode: DialogMode; payload: CreateTenantPayload | UpdateTenantPayload }) {
   submitting.value = true
 
   try {
     if (event.mode === 'create') {
-      await createUser(event.payload as CreateUserPayload)
+      await createTenant(event.payload as CreateTenantPayload)
       dialogOpen.value = false
-      await Promise.all([loadUsers(1, '用户已创建。'), loadStatistics()])
+      await Promise.all([loadTenants(1, '租户已创建。'), loadStatistics()])
       return
     }
 
-    if (!selectedUser.value) {
-      throw new Error('缺少待编辑的用户信息。')
+    if (!selectedTenant.value) {
+      throw new Error('缺少待编辑的租户信息。')
     }
 
-    await updateUser(selectedUser.value.id, event.payload as UpdateUserPayload)
+    await updateTenant(selectedTenant.value.id, event.payload as UpdateTenantPayload)
     dialogOpen.value = false
-    await loadUsers(pageState.value.pageNum, '用户信息已更新。')
+    await Promise.all([loadTenants(pageState.value.pageNum, '租户信息已更新。'), loadStatistics()])
   } catch (error) {
-    showFeedback('error', getErrorMessage(error, '保存用户失败。'))
+    showFeedback('error', getErrorMessage(error, '保存租户失败。'))
   } finally {
     submitting.value = false
   }
 }
 
-function requestDelete(user: UserProfile) {
-  deleteTarget.value = user
+function requestDelete(tenant: TenantProfile) {
+  deleteTarget.value = tenant
 }
 
 function closeDeleteDialog() {
@@ -270,24 +252,25 @@ async function confirmDelete() {
   deletePending.value = true
 
   try {
-    await removeUser(deleteTarget.value.id)
-    const deletedUsername = deleteTarget.value.username
+    // 删除后如果当前页只剩最后一条，自动回退到上一页，避免落在空页上。
+    await removeTenant(deleteTarget.value.id)
+    const deletedName = deleteTarget.value.tenantName
     const nextPage =
       pageState.value.list.length === 1 && pageState.value.pageNum > 1
         ? pageState.value.pageNum - 1
         : pageState.value.pageNum
 
     deleteTarget.value = null
-    await Promise.all([loadUsers(nextPage, `用户 ${deletedUsername} 已删除。`), loadStatistics()])
+    await Promise.all([loadTenants(nextPage, `租户 ${deletedName} 已删除。`), loadStatistics()])
   } catch (error) {
-    showFeedback('error', getErrorMessage(error, '删除用户失败。'))
+    showFeedback('error', getErrorMessage(error, '删除租户失败。'))
   } finally {
     deletePending.value = false
   }
 }
 
 onMounted(() => {
-  void Promise.all([loadUsers(), loadStatistics(), loadTenantOptions()])
+  void Promise.all([loadTenants(), loadStatistics()])
 })
 </script>
 
@@ -308,15 +291,15 @@ onMounted(() => {
     <section class="workspace panel-card">
       <header class="workspace__hero">
         <div class="workspace__headline">
-          <p class="section-kicker">User Center</p>
+          <p class="section-kicker">Tenant Center</p>
           <div class="workspace__title-row">
-            <h2>用户管理</h2>
+            <h2>租户管理</h2>
             <span class="workspace__count-badge">
-              <Users :size="15" aria-hidden="true" />
-              {{ totalUsersLabel }}
+              <Building2 :size="15" aria-hidden="true" />
+              {{ totalTenantsLabel }}
             </span>
           </div>
-          <p class="workspace__subtitle">统一管理账号、状态与租户信息，支持分页与条件检索。</p>
+          <p class="workspace__subtitle">统一管理租户编码、成员归属、联系人和启用状态，保持与用户中心一致的操作节奏。</p>
         </div>
 
         <div class="workspace__actions">
@@ -332,80 +315,66 @@ onMounted(() => {
 
           <button type="button" class="app-button" @click="openCreateDialog">
             <Plus :size="16" aria-hidden="true" />
-            新增用户
+            新增租户
           </button>
         </div>
       </header>
+
+      <section class="stats-grid">
+        <article class="stat-card panel-card">
+          <span class="stat-card__label">启用租户</span>
+          <strong>{{ statsLoading ? '--' : statistics.enabledCount }}</strong>
+          <p>当前可分配给用户的租户数量。</p>
+        </article>
+        <article class="stat-card panel-card">
+          <span class="stat-card__label">禁用租户</span>
+          <strong>{{ statsLoading ? '--' : statistics.disabledCount }}</strong>
+          <p>已停用但仍保留档案的租户数量。</p>
+        </article>
+        <article class="stat-card panel-card">
+          <span class="stat-card__label">全部租户</span>
+          <strong>{{ statsLoading ? '--' : statistics.totalCount }}</strong>
+          <p>包含默认租户与普通业务租户。</p>
+        </article>
+      </section>
 
       <section class="workspace__filters panel-card">
         <div class="workspace__filters-head">
           <div>
             <strong>条件筛选</strong>
-            <p>按字段组合查询当前页数据，总用户数始终展示系统总量。</p>
+            <p>支持按租户编码、租户名称和状态组合查询，统计卡片始终展示全局总量。</p>
           </div>
           <span class="workspace__summary">{{ resultsSummary }}</span>
         </div>
 
-        <div class="workspace__filters-grid">
+        <div class="workspace__filters-grid workspace__filters-grid--tenant">
           <label class="field">
-            <span class="field__label">用户名</span>
+            <span class="field__label">租户编码</span>
             <div class="input-shell">
               <span class="input-shell__icon" aria-hidden="true">
-                <UserRound :size="16" />
+                <Hash :size="16" />
               </span>
               <input
-                v-model="filters.username"
+                v-model="filters.tenantCode"
                 class="app-input"
                 type="text"
-                placeholder="按用户名查询"
+                placeholder="按租户编码查询"
                 @keyup.enter="executeSearch"
               />
             </div>
           </label>
 
           <label class="field">
-            <span class="field__label">昵称</span>
+            <span class="field__label">租户名称</span>
             <div class="input-shell">
               <span class="input-shell__icon" aria-hidden="true">
                 <Search :size="16" />
               </span>
               <input
-                v-model="filters.nickname"
+                v-model="filters.tenantName"
                 class="app-input"
                 type="text"
-                placeholder="按昵称查询"
-                @keyup.enter="executeSearch"
-              />
-            </div>
-          </label>
-
-          <label class="field">
-            <span class="field__label">手机号</span>
-            <div class="input-shell">
-              <span class="input-shell__icon" aria-hidden="true">
-                <Phone :size="16" />
-              </span>
-              <input
-                v-model="filters.phone"
-                class="app-input"
-                type="text"
-                placeholder="按手机号查询"
-                @keyup.enter="executeSearch"
-              />
-            </div>
-          </label>
-
-          <label class="field">
-            <span class="field__label">邮箱</span>
-            <div class="input-shell">
-              <span class="input-shell__icon" aria-hidden="true">
-                <Mail :size="16" />
-              </span>
-              <input
-                v-model="filters.email"
-                class="app-input"
-                type="text"
-                placeholder="按邮箱查询"
+                placeholder="按租户名称查询"
                 @keyup.enter="executeSearch"
               />
             </div>
@@ -433,50 +402,67 @@ onMounted(() => {
 
       <section class="workspace__table panel-card">
         <div class="workspace__table-head">
-          <strong>用户列表</strong>
+          <strong>租户列表</strong>
           <span>默认按修改时间倒序展示</span>
         </div>
 
         <div class="table-wrap">
-          <table class="user-table" :aria-busy="loading">
+          <table class="tenant-table" :aria-busy="loading">
             <thead>
               <tr>
-                <th scope="col">用户</th>
-                <th scope="col">状态</th>
-                <th scope="col">联系方式</th>
                 <th scope="col">租户</th>
+                <th scope="col">状态</th>
+                <th scope="col">联系人</th>
+                <th scope="col">归属与成员</th>
                 <th scope="col">操作</th>
               </tr>
             </thead>
             <tbody v-if="loading">
               <tr>
-                <td colspan="5" class="table-wrap__loading">正在加载用户列表...</td>
+                <td colspan="5" class="table-wrap__loading">正在加载租户列表...</td>
               </tr>
             </tbody>
             <tbody v-else-if="pageState.list.length > 0">
-              <tr v-for="user in pageState.list" :key="user.id">
-                <td data-label="用户">
-                  <div class="user-cell">
-                    <div class="user-cell__avatar" aria-hidden="true">
-                      <CircleUserRound :size="18" />
+              <tr v-for="tenant in pageState.list" :key="tenant.id">
+                <td data-label="租户">
+                  <div class="tenant-cell">
+                    <div class="tenant-cell__avatar" aria-hidden="true">
+                      <Building2 :size="18" />
                     </div>
-                    <div class="user-cell__copy">
-                      <strong>{{ user.nickname || user.username }}</strong>
-                      <p>{{ user.username }} / ID {{ user.id }}</p>
+                    <div class="tenant-cell__copy">
+                      <div class="tenant-cell__title">
+                        <strong>{{ tenant.tenantName }}</strong>
+                        <span v-if="tenant.isDefault === 1" class="tenant-cell__flag">
+                          <BadgeCheck :size="14" aria-hidden="true" />
+                          默认租户
+                        </span>
+                      </div>
+                      <p>{{ tenant.tenantCode }} / ID {{ tenant.id }}</p>
                     </div>
                   </div>
                 </td>
                 <td data-label="状态">
-                  <StatusBadge :status="user.status" />
+                  <StatusBadge :status="tenant.status" />
                 </td>
-                <td data-label="联系方式">{{ formatContact(user) }}</td>
-                <td data-label="租户">{{ user.tenantName || formatTenant(user.tenantId) }}</td>
+                <td data-label="联系人">{{ formatContact(tenant) }}</td>
+                <td data-label="归属与成员">
+                  <div class="tenant-metadata">
+                    <span>
+                      <Users :size="14" aria-hidden="true" />
+                      {{ tenant.memberCount }} 人
+                    </span>
+                    <span>
+                      <ContactRound :size="14" aria-hidden="true" />
+                      {{ formatOwner(tenant) }}
+                    </span>
+                  </div>
+                </td>
                 <td data-label="操作">
                   <div class="table-actions">
                     <button
                       type="button"
                       class="app-button app-button--ghost"
-                      @click="openEditDialog(user)"
+                      @click="openEditDialog(tenant)"
                     >
                       <UserRoundPen :size="15" aria-hidden="true" />
                       编辑
@@ -484,7 +470,8 @@ onMounted(() => {
                     <button
                       type="button"
                       class="app-button app-button--ghost app-button--danger-ghost"
-                      @click="requestDelete(user)"
+                      :disabled="tenant.isDefault === 1"
+                      @click="requestDelete(tenant)"
                     >
                       <Trash2 :size="15" aria-hidden="true" />
                       删除
@@ -497,7 +484,7 @@ onMounted(() => {
               <tr>
                 <td colspan="5">
                   <div class="empty-state">
-                    <strong>没有匹配的用户</strong>
+                    <strong>没有匹配的租户</strong>
                     <p>调整筛选条件后重新查询。</p>
                   </div>
                 </td>
@@ -537,18 +524,17 @@ onMounted(() => {
       </section>
     </section>
 
-    <UserFormDialog
+    <TenantFormDialog
       v-model="dialogOpen"
       :mode="dialogMode"
-      :user="selectedUser"
-      :tenant-options="tenantOptions"
+      :tenant="selectedTenant"
       :submitting="submitting"
       @submit="handleDialogSubmit"
     />
 
     <ConfirmDialog
       :model-value="deleteTarget !== null"
-      title="删除用户"
+      title="删除租户"
       :description="deleteDescription"
       confirm-text="确认删除"
       :loading="deletePending"
@@ -621,6 +607,45 @@ onMounted(() => {
   gap: 12px;
 }
 
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.stat-card {
+  padding: 22px;
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at top right, rgba(83, 184, 255, 0.08), transparent 30%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.018)),
+    rgba(4, 10, 20, 0.54);
+}
+
+.stat-card__label {
+  color: var(--color-ink-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.stat-card strong {
+  display: block;
+  margin-top: 10px;
+  color: var(--color-ink-strong);
+  font-size: clamp(1.8rem, 2vw, 2.2rem);
+  line-height: 1;
+}
+
+.stat-card p {
+  margin-top: 10px;
+  color: var(--color-ink-soft);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
 .workspace__filters,
 .workspace__table {
   padding: 22px;
@@ -662,9 +687,12 @@ onMounted(() => {
 
 .workspace__filters-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 16px;
   margin-top: 20px;
+}
+
+.workspace__filters-grid--tenant {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .workspace__filters-actions {
@@ -718,19 +746,19 @@ onMounted(() => {
   background: rgba(5, 10, 18, 0.68);
 }
 
-.user-table {
+.tenant-table {
   width: 100%;
   border-collapse: collapse;
 }
 
-.user-table th,
-.user-table td {
+.tenant-table th,
+.tenant-table td {
   padding: 18px 16px;
   text-align: left;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-.user-table th {
+.tenant-table th {
   color: var(--color-ink-muted);
   font-size: 0.76rem;
   font-weight: 700;
@@ -739,25 +767,25 @@ onMounted(() => {
   background: rgba(255, 255, 255, 0.02);
 }
 
-.user-table td {
+.tenant-table td {
   color: var(--color-ink-soft);
 }
 
-.user-table tbody tr {
+.tenant-table tbody tr {
   transition: background-color 180ms ease;
 }
 
-.user-table tbody tr:hover {
+.tenant-table tbody tr:hover {
   background: rgba(83, 184, 255, 0.05);
 }
 
-.user-cell {
+.tenant-cell {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-.user-cell__avatar {
+.tenant-cell__avatar {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -770,15 +798,47 @@ onMounted(() => {
     rgba(255, 255, 255, 0.04);
 }
 
-.user-cell__copy strong {
-  display: block;
+.tenant-cell__copy strong {
   color: var(--color-ink-strong);
 }
 
-.user-cell__copy p {
+.tenant-cell__title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tenant-cell__copy p {
   margin-top: 4px;
   color: var(--color-ink-muted);
   font-size: 0.84rem;
+}
+
+.tenant-cell__flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 0 10px;
+  color: #d8f7ff;
+  border: 1px solid rgba(116, 210, 255, 0.18);
+  border-radius: 999px;
+  background: rgba(83, 184, 255, 0.12);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.tenant-metadata {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tenant-metadata span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .table-actions {
@@ -836,8 +896,8 @@ onMounted(() => {
 }
 
 @media (max-width: 1280px) {
-  .workspace__filters-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+  .stats-grid {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -860,42 +920,36 @@ onMounted(() => {
   .workspace__summary {
     text-align: left;
   }
+
+  .workspace__filters-grid--tenant {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 720px) {
-  .workspace__filters-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .pagination-bar__info {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 6px;
-  }
-
-  .user-table thead {
+  .tenant-table thead {
     display: none;
   }
 
-  .user-table,
-  .user-table tbody,
-  .user-table tr,
-  .user-table td {
+  .tenant-table,
+  .tenant-table tbody,
+  .tenant-table tr,
+  .tenant-table td {
     display: block;
     width: 100%;
   }
 
-  .user-table tr {
+  .tenant-table tr {
     padding: 10px 0;
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   }
 
-  .user-table td {
+  .tenant-table td {
     border: 0;
     padding: 10px 14px;
   }
 
-  .user-table td::before {
+  .tenant-table td::before {
     content: attr(data-label);
     display: block;
     margin-bottom: 6px;
@@ -903,6 +957,12 @@ onMounted(() => {
     font-size: 0.75rem;
     letter-spacing: 0.12em;
     text-transform: uppercase;
+  }
+
+  .pagination-bar__info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
   }
 }
 </style>

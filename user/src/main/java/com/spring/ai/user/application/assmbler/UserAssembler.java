@@ -9,6 +9,7 @@ import com.spring.ai.user.domain.vo.UserProfileVO;
 import com.spring.ai.user.domain.vo.UserTokenVO;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import org.springframework.util.StringUtils;
 
@@ -24,9 +25,10 @@ public final class UserAssembler {
      * 将用户实体转换为用户展示对象。
      *
      * @param user 用户实体
+     * @param tenantName 租户名称
      * @return 用户展示对象
      */
-    public static UserProfileVO toUserProfileVO(SyUser user) {
+    public static UserProfileVO toUserProfileVO(SyUser user, String tenantName) {
         if (user == null) {
             return null;
         }
@@ -38,6 +40,7 @@ public final class UserAssembler {
         profileVO.setEmail(user.getEmail());
         profileVO.setStatus(user.getStatus());
         profileVO.setTenantId(user.getTenantId());
+        profileVO.setTenantName(tenantName);
         return profileVO;
     }
 
@@ -45,21 +48,22 @@ public final class UserAssembler {
      * 将用户实体列表转换为用户展示对象列表。
      *
      * @param users 用户实体列表
+     * @param tenantNameMap 租户名称映射
      * @return 用户展示对象列表
      */
-    public static List<UserProfileVO> toUserProfileVOList(List<SyUser> users) {
+    public static List<UserProfileVO> toUserProfileVOList(List<SyUser> users, Map<Long, String> tenantNameMap) {
         if (users == null || users.isEmpty()) {
             return Collections.emptyList();
         }
         return users.stream()
-                .map(UserAssembler::toUserProfileVO)
+                .map(user -> toUserProfileVO(user, resolveTenantName(tenantNameMap, user.getTenantId())))
                 .collect(Collectors.toList());
     }
 
     /**
      * 将新增请求转换为用户实体。
      *
-     * @param request      新增用户请求
+     * @param request 新增用户请求
      * @param passwordHash 加密后的密码
      * @return 用户实体
      */
@@ -78,7 +82,7 @@ public final class UserAssembler {
     /**
      * 将编辑请求内容合并到原用户实体。
      *
-     * @param user    原用户实体
+     * @param user 原用户实体
      * @param request 编辑请求
      */
     public static void mergeForUpdate(SyUser user, UserUpdateRequest request) {
@@ -109,6 +113,13 @@ public final class UserAssembler {
         tokenVO.setExpiresIn(StpUtil.getTokenTimeout());
         tokenVO.setLoginId(userId);
         return tokenVO;
+    }
+
+    private static String resolveTenantName(Map<Long, String> tenantNameMap, Long tenantId) {
+        if (tenantId == null || tenantNameMap == null) {
+            return null;
+        }
+        return tenantNameMap.get(tenantId);
     }
 
     private static String resolveNickname(String nickname, String username) {

@@ -13,8 +13,8 @@ import lombok.EqualsAndHashCode;
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
-@TableName("sy_agent_version")
-public class SyAgentVersion extends BaseEntity {
+@TableName("agent_version")
+public class AgentVersion extends BaseEntity {
 
     /**
      * 关联的 Agent 主档 ID。

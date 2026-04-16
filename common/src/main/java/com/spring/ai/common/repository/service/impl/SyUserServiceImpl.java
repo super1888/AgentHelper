@@ -67,6 +67,14 @@ public class SyUserServiceImpl extends ServiceImpl<SyUserMapper, SyUser> impleme
         return list(buildLambdaQuery(username, nickname, phone, email, status));
     }
 
+    @Override
+    public long countByTenantId(Long tenantId) {
+        if (tenantId == null) {
+            return 0L;
+        }
+        return count(Wrappers.lambdaQuery(SyUser.class).eq(SyUser::getTenantId, tenantId));
+    }
+
     /**
      * 统计系统总用户数，不接收筛选条件
      */

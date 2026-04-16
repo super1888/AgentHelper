@@ -10,6 +10,7 @@ export interface UserProfile {
   email: string | null
   status: UserStatus
   tenantId: string | null
+  tenantName: string | null
 }
 
 export interface UserToken {
