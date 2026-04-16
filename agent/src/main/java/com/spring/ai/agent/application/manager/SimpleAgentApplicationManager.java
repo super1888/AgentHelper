@@ -147,6 +147,42 @@ public class SimpleAgentApplicationManager {
         agentService.updateById(agent);
     }
 
+    /**
+     * 删除已禁用的 Agent，并级联清理其版本、会话、任务与事件数据。
+     *
+     * @param agentCode Agent 编码
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteAgent(String agentCode) {
+        Agent agent = simpleAgentSupportManager.requireAgent(agentCode);
+        validateAgentCanDelete(agent);
+
+        // 先删事件和任务，再删会话与版本，最后删除 Agent 主档，避免留下悬挂数据。
+        List<Long> sessionIds = agentSessionService.list(Wrappers.lambdaQuery(AgentSession.class)
+                        .eq(AgentSession::getAgentId, agent.getId())
+                        .eq(AgentSession::getTenantId, agent.getTenantId()))
+                .stream()
+                .map(AgentSession::getId)
+                .toList();
+
+        if (!sessionIds.isEmpty()) {
+            agentSessionEventService.remove(Wrappers.lambdaQuery(AgentSessionEvent.class)
+                    .in(AgentSessionEvent::getSessionId, sessionIds)
+                    .eq(AgentSessionEvent::getTenantId, agent.getTenantId()));
+            agentTaskService.remove(Wrappers.lambdaQuery(AgentTask.class)
+                    .in(AgentTask::getSessionId, sessionIds)
+                    .eq(AgentTask::getTenantId, agent.getTenantId()));
+            agentSessionService.remove(Wrappers.lambdaQuery(AgentSession.class)
+                    .in(AgentSession::getId, sessionIds)
+                    .eq(AgentSession::getTenantId, agent.getTenantId()));
+        }
+
+        agentVersionService.remove(Wrappers.lambdaQuery(AgentVersion.class)
+                .eq(AgentVersion::getAgentId, agent.getId())
+                .eq(AgentVersion::getTenantId, agent.getTenantId()));
+        agentService.removeById(agent.getId());
+    }
+
     public SimpleAgentDetailResponse getAgentDetail(String agentCode) {
         Agent agent = simpleAgentSupportManager.requireAgent(agentCode);
         List<SimpleAgentVersionResponse> versions = agentVersionService.listByAgentId(agent.getId(), agent.getTenantId())
@@ -162,6 +198,7 @@ public class SimpleAgentApplicationManager {
     @Transactional(rollbackFor = Exception.class)
     public SimpleAgentSessionResponse createSession(String agentCode, SimpleAgentSessionCreateRequest request) {
         Agent agent = simpleAgentSupportManager.requireAgent(agentCode);
+        validateAgentCanCreateSession(agent, request);
         AgentVersion version = resolveSessionVersion(agent, request);
         AgentSession session = SimpleAgentAssembler.toCreateSession(agent, version);
         agentSessionService.save(session);
@@ -257,6 +294,36 @@ public class SimpleAgentApplicationManager {
             }
         }
         throw new BusinessException(ErrorCodeEnum.NOT_FOUND, HttpStatus.NOT_FOUND, "agent version not found");
+    }
+
+    /**
+     * 校验 Agent 是否允许创建会话。
+     *
+     * <p>禁用态禁止所有会话入口；默认会话只能绑定已发布版本，避免草稿态误入默认链路。</p>
+     */
+    private void validateAgentCanCreateSession(Agent agent, SimpleAgentSessionCreateRequest request) {
+        if (SimpleAgentConstants.AGENT_STATUS_DISABLED.equals(agent.getAgentStatus())) {
+            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST,
+                    "disabled agent cannot create session");
+        }
+
+        Integer versionNo = request == null ? null : request.getVersionNo();
+        if (versionNo == null && agent.getPublishedVersionId() == null) {
+            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST,
+                    "default session requires a published agent version");
+        }
+    }
+
+    /**
+     * 校验 Agent 是否允许删除。
+     *
+     * <p>仅允许删除已禁用 Agent，避免误删仍处于草稿或已发布状态的运行配置。</p>
+     */
+    private void validateAgentCanDelete(Agent agent) {
+        if (!SimpleAgentConstants.AGENT_STATUS_DISABLED.equals(agent.getAgentStatus())) {
+            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST,
+                    "only disabled agent can be deleted");
+        }
     }
 
     private SimpleAgentWsEvent buildReplayEvent(AgentSession session, AgentSessionEvent event) {

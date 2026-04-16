@@ -13,10 +13,19 @@ import {
   Rocket,
   ShieldBan,
   Sparkles,
+  Trash2,
   Waypoints,
 } from 'lucide-vue-next'
 import MainShell from '@/components/MainShell.vue'
-import { createAgent, createAgentSession, disableAgent, fetchAgentDetail, publishAgent, queryAgents } from '@/api/agent'
+import {
+  createAgent,
+  createAgentSession,
+  disableAgent,
+  fetchAgentDetail,
+  publishAgent,
+  queryAgents,
+  removeAgent,
+} from '@/api/agent'
 import type { AgentCreatePayload, AgentDetail, AgentSessionResult, AgentSummary, AgentVersion } from '@/types/agent'
 import { getErrorMessage } from '@/utils/errors'
 
@@ -30,7 +39,7 @@ interface FeedbackState {
 const loading = ref(false)
 const detailLoading = ref(false)
 const submitting = ref(false)
-const actionPending = ref<'publish' | 'disable' | 'session' | null>(null)
+const actionPending = ref<'publish' | 'disable' | 'session' | 'delete' | null>(null)
 const feedback = ref<FeedbackState | null>(null)
 const agents = ref<AgentSummary[]>([])
 const selectedAgentId = ref<string>('')
@@ -51,8 +60,43 @@ const publishedCountLabel = computed(() =>
 )
 const latestVersion = computed<AgentVersion | null>(() => selectedAgentDetail.value?.versions?.[0] ?? null)
 const capabilityPreview = computed(() => parseCapabilities(form.selectedCapabilitiesText))
+const isSelectedAgentDisabled = computed(() =>
+  selectedAgentDetail.value?.agentStatus === 'DISABLED',
+)
+const isSelectedAgentPublished = computed(() =>
+  selectedAgentDetail.value?.agentStatus === 'PUBLISHED',
+)
+const canPublishLatest = computed(() =>
+  Boolean(selectedAgentDetail.value && latestVersion.value && !isSelectedAgentDisabled.value && actionPending.value === null),
+)
+const canDisableSelectedAgent = computed(() =>
+  Boolean(selectedAgentDetail.value && !isSelectedAgentDisabled.value && actionPending.value === null),
+)
+const canDeleteSelectedAgent = computed(() =>
+  Boolean(selectedAgentDetail.value && isSelectedAgentDisabled.value && actionPending.value === null),
+)
+const canCreateDefaultSession = computed(() =>
+  Boolean(selectedAgentDetail.value && isSelectedAgentPublished.value && actionPending.value === null),
+)
+const canOpenChat = computed(() =>
+  Boolean(selectedAgentDetail.value && !isSelectedAgentDisabled.value && actionPending.value === null),
+)
+const sessionActionHint = computed(() => {
+  if (!selectedAgentDetail.value) {
+    return '选择一个 Agent 后可查看会话入口。'
+  }
+  if (isSelectedAgentDisabled.value) {
+    return '当前 Agent 已禁用，不能创建默认会话或进入聊天。'
+  }
+  if (!isSelectedAgentPublished.value) {
+    return '当前 Agent 尚未发布，默认会话入口不可用；仍可进入聊天验证指定版本。'
+  }
+  return '默认使用已发布版本创建会话；如果需要验证快照版本，可直接点击下方版本卡片进入聊天。'
+})
 
 watch(selectedAgentId, (agentId) => {
+  // 切换 Agent 后清空上一个 Agent 的会话结果，避免详情区展示陈旧数据。
+  createdSession.value = null
   if (!agentId) {
     selectedAgentDetail.value = null
     return
@@ -233,7 +277,13 @@ async function handleOpenChat(versionNo?: number) {
   actionPending.value = 'session'
 
   try {
-    const session = await createAgentSession(selectedAgentDetail.value.agentId, versionNo ? { versionNo } : {})
+    // 草稿态主入口进入聊天时，显式绑定当前最新版本，避免误走“默认会话”发布态校验。
+    const targetVersionNo =
+      versionNo ?? (!isSelectedAgentPublished.value ? latestVersion.value?.versionNo : undefined)
+    const session = await createAgentSession(
+      selectedAgentDetail.value.agentId,
+      targetVersionNo ? { versionNo: targetVersionNo } : {},
+    )
     createdSession.value = session
     await router.push({
       name: 'agent-chat',
@@ -245,6 +295,26 @@ async function handleOpenChat(versionNo?: number) {
     })
   } catch (error) {
     showFeedback('error', getErrorMessage(error, '创建聊天会话失败。'))
+  } finally {
+    actionPending.value = null
+  }
+}
+
+async function handleDeleteAgent() {
+  if (!selectedAgentDetail.value) {
+    return
+  }
+
+  actionPending.value = 'delete'
+
+  try {
+    const deletingAgentName = selectedAgentDetail.value.agentName
+    await removeAgent(selectedAgentDetail.value.agentId)
+    createdSession.value = null
+    selectedAgentDetail.value = null
+    await loadAgents({ successMessage: `Agent ${deletingAgentName} 已删除。` })
+  } catch (error) {
+    showFeedback('error', getErrorMessage(error, '删除 Agent 失败。'))
   } finally {
     actionPending.value = null
   }
@@ -439,19 +509,11 @@ onMounted(() => {
           <div v-else-if="!selectedAgentDetail" class="catalog-state">选择一个 Agent 查看详情。</div>
           <template v-else>
             <div class="detail-head">
-              <div>
-                <p class="detail-kicker">{{ selectedAgentDetail.agentType }}</p>
-                <h3>{{ selectedAgentDetail.agentName }}</h3>
-                <p class="detail-description">
-                  {{ selectedAgentDetail.description || '当前 Agent 暂未填写描述。' }}
-                </p>
-              </div>
-
-              <div class="detail-actions">
+              <div class="detail-toolbar">
                 <button
                   type="button"
                   class="app-button"
-                  :disabled="actionPending !== null || !latestVersion"
+                  :disabled="!canPublishLatest"
                   @click="handlePublishLatest"
                 >
                   <Rocket :size="16" aria-hidden="true" />
@@ -461,12 +523,30 @@ onMounted(() => {
                 <button
                   type="button"
                   class="app-button app-button--ghost app-button--danger-ghost"
-                  :disabled="actionPending !== null"
+                  :disabled="!canDisableSelectedAgent"
                   @click="handleDisableAgent"
                 >
                   <ShieldBan :size="16" aria-hidden="true" />
                   {{ actionPending === 'disable' ? '处理中...' : '禁用 Agent' }}
                 </button>
+
+                <button
+                  type="button"
+                  class="app-button app-button--ghost detail-actions__delete"
+                  :disabled="!canDeleteSelectedAgent"
+                  @click="handleDeleteAgent"
+                >
+                  <Trash2 :size="16" aria-hidden="true" />
+                  {{ actionPending === 'delete' ? '删除中...' : '删除 Agent' }}
+                </button>
+              </div>
+
+              <div class="detail-summary">
+                <p class="detail-kicker">{{ selectedAgentDetail.agentType }}</p>
+                <h3>{{ selectedAgentDetail.agentName }}</h3>
+                <p class="detail-description">
+                  {{ selectedAgentDetail.description || '当前 Agent 暂未填写描述。' }}
+                </p>
               </div>
             </div>
 
@@ -489,15 +569,13 @@ onMounted(() => {
               <div class="detail-session__head">
                 <div class="detail-session__intro">
                   <strong>运行入口</strong>
-                  <p>
-                    默认使用已发布版本创建会话；如果未发布，则回退到当前最新版本。
-                  </p>
+                  <p>{{ sessionActionHint }}</p>
                 </div>
                 <div class="detail-session__actions">
                   <button
                     type="button"
                     class="app-button app-button--secondary detail-session__button"
-                    :disabled="actionPending !== null"
+                    :disabled="!canCreateDefaultSession"
                     @click="handleCreateSession()"
                   >
                     <RadioTower :size="16" aria-hidden="true" />
@@ -506,7 +584,7 @@ onMounted(() => {
                   <button
                     type="button"
                     class="app-button detail-session__button"
-                    :disabled="actionPending !== null"
+                    :disabled="!canOpenChat"
                     @click="handleOpenChat()"
                   >
                     <Waypoints :size="16" aria-hidden="true" />
@@ -537,6 +615,8 @@ onMounted(() => {
                 :key="version.versionId"
                 type="button"
                 class="version-card"
+                :class="{ 'version-card--disabled': isSelectedAgentDisabled }"
+                :disabled="isSelectedAgentDisabled || actionPending !== null"
                 @click="handleOpenChat(version.versionNo)"
               >
                 <div class="version-card__head">
@@ -782,7 +862,6 @@ onMounted(() => {
 
 .agent-card__top,
 .version-card__head,
-.detail-head,
 .version-card__foot {
   display: flex;
   align-items: flex-start;
@@ -864,10 +943,37 @@ onMounted(() => {
   text-transform: uppercase;
 }
 
-.detail-actions {
+.detail-head {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+.detail-toolbar {
   display: flex;
   flex-wrap: wrap;
+  justify-content: flex-start;
   gap: 10px;
+}
+
+.detail-toolbar .app-button {
+  min-height: 52px;
+}
+
+.detail-summary {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.detail-summary h3 {
+  margin: 0;
+  line-height: 1.2;
+  word-break: break-word;
+}
+
+.detail-actions__delete {
+  color: #ffd8d8;
 }
 
 .detail-strip {
@@ -907,9 +1013,8 @@ onMounted(() => {
 
 .detail-session__head {
   display: grid;
-  grid-template-columns: minmax(0, 1.3fr) minmax(240px, 0.9fr);
-  gap: 18px;
-  align-items: stretch;
+  grid-template-columns: 1fr;
+  gap: 16px;
 }
 
 .detail-session__intro {
@@ -926,16 +1031,32 @@ onMounted(() => {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
-  align-self: stretch;
 }
 
 .detail-session__button {
   justify-content: center;
-  min-height: 56px;
-  padding: 14px 18px;
+  min-height: 52px;
+  padding: 12px 16px;
   text-align: center;
   white-space: normal;
   line-height: 1.4;
+}
+
+.agent-card:disabled,
+.version-card:disabled,
+.detail-session__button:disabled,
+.detail-toolbar button:disabled {
+  cursor: not-allowed;
+  transform: none;
+}
+
+.version-card--disabled {
+  opacity: 0.5;
+}
+
+.version-card:disabled:hover {
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.035);
 }
 
 .version-card__head p {
@@ -981,9 +1102,7 @@ onMounted(() => {
     padding: 22px;
   }
 
-  .agent-workspace__hero,
-  .detail-head,
-  .detail-actions {
+  .agent-workspace__hero {
     flex-direction: column;
     align-items: stretch;
   }
@@ -998,6 +1117,10 @@ onMounted(() => {
 }
 
 @media (max-width: 640px) {
+  .detail-toolbar {
+    flex-direction: column;
+  }
+
   .detail-session__actions {
     grid-template-columns: 1fr;
   }

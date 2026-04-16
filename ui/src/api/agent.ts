@@ -40,6 +40,11 @@ export async function disableAgent(agentId: string) {
   return unwrapResponse<void>(response)
 }
 
+export async function removeAgent(agentId: string) {
+  const response = await apiClient.delete(`/agents/simple/${agentId}`)
+  return unwrapResponse<void>(response)
+}
+
 export async function createAgentSession(agentId: string, payload?: AgentSessionPayload) {
   const response = await apiClient.post(`/agents/simple/${agentId}/sessions`, payload ?? {})
   return unwrapResponse<AgentSessionResult>(response)

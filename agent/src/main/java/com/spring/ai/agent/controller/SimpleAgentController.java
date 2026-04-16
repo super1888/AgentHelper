@@ -13,6 +13,7 @@ import com.spring.ai.agent.domain.response.SimpleAgentSummaryResponse;
 import com.spring.ai.common.web.ApiResponse;
 import jakarta.annotation.Resource;
 import java.util.List;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -93,6 +94,18 @@ public class SimpleAgentController {
     @PostMapping("/{agentId}/disable")
     public ApiResponse<Void> disableAgent(@PathVariable("agentId") String agentId) {
         simpleAgentApplicationManager.disableAgent(agentId);
+        return ApiResponse.success(null);
+    }
+
+    /**
+     * 删除 Agent。
+     *
+     * @param agentId Agent 编码
+     * @return 空响应
+     */
+    @DeleteMapping("/{agentId}")
+    public ApiResponse<Void> deleteAgent(@PathVariable("agentId") String agentId) {
+        simpleAgentApplicationManager.deleteAgent(agentId);
         return ApiResponse.success(null);
     }
 
