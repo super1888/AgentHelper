@@ -1,180 +1,133 @@
-# WebSocket 模块接入说明
-
-## 模块目标
-
-`websocket` 模块用于统一处理服务端到前端的实时消息推送，适合以下场景：
-
-- Agent 流式输出 token
-- 长任务执行过程中的阶段性进度通知
-- 指定业务方法的开始、结束、异常事件自动推送
-- 方法内部按需推送增量结果，而不是一次性返回
-
-## 设计说明
-
-模块提供两类能力：
-
-- `@WebSocketPush`
-  作用：标记哪些业务方法需要自动推送生命周期事件
-- `WebSocketPushService`
-  作用：在方法内部手动推送增量消息，比如流式 token、步骤状态、工具调用结果
-
-默认情况下，模块会把同一次业务调用绑定到一个 `sessionId`，并将消息推送到：
-
-```text
-/topic/session/{sessionId}
-```
-
-## 接入步骤
-
-### 1. 引入模块
-
-启动模块或业务模块依赖：
-
-```xml
-<dependency>
-    <groupId>com.spring.ai</groupId>
-    <artifactId>websocket</artifactId>
-    <version>1.0-SNAPSHOT</version>
-</dependency>
-```
-
-### 2. 配置 WebSocket 参数
-
-可在 `application.yml` 中加入：
-
-```yaml
-app:
-  websocket:
-    enabled: true
-    endpoint: /ws
-    broker-destination-prefix: /topic
-    app-destination-prefix: /app
-    session-destination-prefix: /topic/session
-    allowed-origin-patterns: "*"
-```
-
-说明：
-
-- `endpoint`：前端建立 WebSocket/SockJS 连接的入口
-- `session-destination-prefix`：会话消息默认主题前缀
-- `enabled`：是否启用模块推送能力
-
-### 3. 在业务方法上打注解
-
-```java
-@WebSocketPush(sessionId = "#request.sessionId")
-public ChatResult chat(ChatRequest request) {
-    return doChat(request);
-}
-```
-
-上面这个写法会自动推送：
-
-- `METHOD_START`
-- `METHOD_RESULT`
-- `METHOD_ERROR`
-
-如果你想自定义目标地址，也可以这样写：
-
-```java
-@WebSocketPush(
-        destination = "'/topic/custom/' + #request.sessionId",
-        sessionId = "#request.sessionId"
-)
-public ChatResult chat(ChatRequest request) {
-    return doChat(request);
-}
-```
-
-## 手动推送增量消息
-
-如果一个方法内部要持续输出过程消息，可以注入 `WebSocketPushService`：
-
-```java
-@Service
-public class AgentChatService {
-
-    private final WebSocketPushService webSocketPushService;
-
-    public AgentChatService(WebSocketPushService webSocketPushService) {
-        this.webSocketPushService = webSocketPushService;
-    }
-
-    @WebSocketPush(sessionId = "#sessionId", sendResult = false)
-    public String streamReply(String sessionId, String userInput) {
-        webSocketPushService.sendToSession(sessionId, "STREAM_START", "开始生成");
-        webSocketPushService.sendToSession(sessionId, "STREAM_TOKEN", "你好");
-        webSocketPushService.sendToSession(sessionId, "STREAM_TOKEN", "，");
-        webSocketPushService.sendToSession(sessionId, "STREAM_TOKEN", "这是增量内容");
-        webSocketPushService.sendToSession(sessionId, "STREAM_FINISH", "生成完成");
-        return "done";
-    }
-}
-```
-
-适用建议：
-
-- 想要自动推送方法开始/结束/异常：用 `@WebSocketPush`
-- 想要推送流式 token 或步骤状态：用 `WebSocketPushService`
-- 两者通常一起用
-
-## 前端接入示例
-
-前端先建立连接，再按 `sessionId` 订阅主题。
-
-### 连接地址
-
-```text
-/ws
-```
-
-### 订阅地址
-
-```text
-/topic/session/{sessionId}
-```
-
-### 消息格式
-
-服务端统一发送的数据结构为：
-
-```json
-{
-  "event": "STREAM_TOKEN",
-  "sessionId": "chat-001",
-  "destination": "/topic/session/chat-001",
-  "data": "你好",
-  "timestamp": 1770000000000
-}
-```
-
-## 推荐接入模式
-
-### 场景 1：普通业务方法自动推送
-
-适合接口执行时间较长，但不需要真正流式分片的场景。
-
-做法：
-
-- 给方法加 `@WebSocketPush`
-- 前端监听 `METHOD_START`、`METHOD_RESULT`、`METHOD_ERROR`
-
-### 场景 2：Agent 流式输出
-
-适合模型 token、思考内容、工具调用过程同步到前端。
-
-做法：
-
-- 外层方法加 `@WebSocketPush(sessionId = "...", sendResult = false)`
-- 在 `ReactAgent.stream(...)` 的订阅过程中调用 `webSocketPushService.sendToSession(...)`
-- 自定义事件名，例如：
-  - `STREAM_TOKEN`
-  - `STREAM_REASONING`
-  - `TOOL_FINISHED`
-  - `STREAM_FINISH`
-
-## 备注
-
-- 当前模块已从 `quickStart` 中剥离，为独立模块
-- 当前环境未完成编译校验，因为本机默认 `java` 版本仍是 1.8，而项目要求 Java 21
-- 如果后续你要把现有某个 Agent 会话接口接进来，建议直接把 `ReactAgent.stream(...)` 的事件映射到本模块的 `sendToSession(...)`
+一、基础 Skills 元数据管理
+技能基础信息维护
+技能 ID、名称、描述、标签（分类）
+技能类型：工具调用 / 知识库 / 工作流 / 插件 / API 调用
+启用 / 禁用状态
+排序权重（决定匹配优先级）
+创建人、创建时间、更新时间
+技能版本管理
+版本号（v1.0.0）
+版本描述
+上线 / 回滚机制
+历史版本可查看、可对比
+技能分类与标签体系
+多级分类（如：生活服务、政务办事、交通出行、医疗健康）
+自定义标签，用于意图匹配、检索
+支持批量打标签
+二、技能配置与执行逻辑管理
+触发条件配置（意图匹配规则）
+关键词触发
+正则表达式匹配
+相似问法 / 相似意图配置
+意图置信度阈值配置
+上下文依赖触发（需前序技能）
+输入参数定义（Slot 管理）
+参数名称、类型（文本 / 数字 / 日期 / 枚举）
+是否必填
+默认值
+参数校验规则（长度、格式、范围）
+缺省询问话术（用户未提供时怎么问）
+输出与回复模板配置
+成功回复模板
+失败回复模板
+无数据 / 异常模板
+富文本 / 卡片 / 多轮对话模板
+执行动作配置（技能真正做什么）
+调用外部 API
+执行数据库查询
+调用插件 / 工具
+执行本地脚本 / 函数
+工作流节点跳转
+支持 HTTP/GRPC 调用配置
+三、技能调度与路由引擎（核心）
+技能匹配与路由
+用户意图识别 → 匹配最合适技能
+多技能冲突时按优先级 / 置信度选择
+支持手动指定绑定意图
+支持模糊匹配 + 精确匹配双重策略
+技能依赖与前置条件
+技能执行前置校验（用户身份、权限、登录状态）
+技能之间依赖（A 执行完才能执行 B）
+互斥技能配置（不能同时触发）
+上下文管理
+技能执行时可读写上下文变量
+多轮对话状态保持
+上下文过期策略
+槽位（slot）填充状态管理
+四、权限与安全控制
+技能访问权限
+按角色授权（管理员 / 坐席 / 普通市民）
+按用户组授权
+按部门 / 区域授权
+白名单 / 黑名单用户
+参数安全与风控
+敏感词过滤
+参数脱敏
+调用频率限制（限流）
+高危操作二次确认
+五、调试、测试与监控
+技能在线调试
+输入测试语句 → 查看命中哪个技能
+模拟参数输入 → 查看执行结果
+查看完整执行链路（意图识别→参数填充→执行→返回）
+日志实时输出
+技能测试用例管理
+批量测试问句
+预期结果配置
+自动回归测试
+通过率统计
+运行日志与审计
+谁在什么时间调用了什么技能
+入参、出参、耗时、是否成功
+异常日志捕获
+日志检索、导出
+技能效果统计
+调用次数
+成功率
+失败原因分布
+用户满意度 / 差评统计
+意图命中率
+六、版本、发布与上下线
+技能发布流程
+草稿 → 测试 → 预发 → 上线
+审批流程（可选）
+灰度发布（部分用户可用）
+上下线与热更新
+无需重启 Agent 即可生效
+一键下线问题技能
+批量上线 / 下线
+七、导入导出与批量管理
+技能导入导出
+JSON/YAML 格式导出
+批量导入
+技能复制（快速创建相似技能）
+批量操作
+批量启用 / 禁用
+批量修改标签
+批量分类移动
+技能回收站 / 逻辑删除
+八、高级扩展能力（主流 Agent 必备）
+技能插件化 / 市场化
+第三方技能上传、审核
+技能商店
+订阅 / 启用第三方技能
+技能组合与工作流
+多技能串联
+条件分支（if/else）
+循环执行
+子技能调用
+多语言与多渠道适配
+技能按渠道配置（APP / 小程序 / 语音网关）
+多语言回复模板
+渠道专属样式（卡片、语音、文本）
+极简总结（给产品 / 开发直接用）
+一个市民主流 Agent 的 Skills 管理系统，必须覆盖：
+增删改查 + 版本
+意图 / 关键词 / 参数配置
+API / 函数执行配置
+路由调度 + 上下文
+权限 + 风控
+调试 + 测试 + 日志统计
+发布上线 + 热更新
+批量管理 + 导入导出
+工作流组合 + 多渠道适配

@@ -50,6 +50,14 @@ const router = createRouter({
       },
     },
     {
+      path: '/skills',
+      name: 'skills',
+      component: () => import('@/views/skills/SkillManagementView.vue'),
+      meta: {
+        requiresAuth: true,
+      },
+    },
+    {
       path: '/vectors',
       name: 'vectors',
       component: () => import('@/views/vectors/VectorManagementView.vue'),

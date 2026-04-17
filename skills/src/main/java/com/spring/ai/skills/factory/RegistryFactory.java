@@ -1,11 +1,6 @@
 package com.spring.ai.skills.factory;
 
-import com.alibaba.cloud.ai.graph.advisors.SkillPromptAugmentAdvisor;
-import com.alibaba.cloud.ai.graph.skills.registry.SkillRegistry;
 import com.spring.ai.common.enums.SkillFactoryTypeEnum;
-import com.spring.ai.skills.domain.dto.ClasspathSkillRegistryDTO;
-import com.spring.ai.skills.domain.dto.FileSystemSkillRegistryDTO;
-import com.spring.ai.skills.domain.dto.SkillPromptAugmentAdvisorDTO;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.jetbrains.annotations.NotNull;
@@ -31,18 +26,6 @@ public class RegistryFactory implements InitializingBean, ApplicationContextAwar
             throw new IllegalArgumentException("不支持的技能工厂类型：" + type);
         }
         return (T) creator.create(dto);
-    }
-
-    public SkillRegistry creatClasspathSkillRegistry(ClasspathSkillRegistryDTO dto) {
-        return createSkillComponent(SkillFactoryTypeEnum.CLASSPATH_SKILL_REGISTRY, dto);
-    }
-
-    public SkillRegistry creatFileSystemSkillRegistry(FileSystemSkillRegistryDTO dto) {
-        return createSkillComponent(SkillFactoryTypeEnum.FILE_SYSTEM_SKILL_REGISTRY, dto);
-    }
-
-    public SkillPromptAugmentAdvisor creatSkillPromptAugmentAdvisor(SkillPromptAugmentAdvisorDTO dto) {
-        return createSkillComponent(SkillFactoryTypeEnum.SKILL_PROMPT_AUGMENT_ADVISOR, dto);
     }
 
     @Override

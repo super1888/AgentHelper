@@ -7,6 +7,8 @@ DROP TABLE IF EXISTS `sy_user`;
 DROP TABLE IF EXISTS `sy_tenant`;
 DROP TABLE IF EXISTS `vector_store_file`;
 DROP TABLE IF EXISTS `prompt_template`;
+DROP TABLE IF EXISTS `skill_version_record`;
+DROP TABLE IF EXISTS `skill_record`;
 
 CREATE TABLE `sy_tenant`
 (
@@ -280,3 +282,67 @@ CREATE TABLE `vector_store_file`
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci COMMENT ='向量文件台账表';
+
+
+
+CREATE TABLE `skill_record`
+(
+    `id`                   BIGINT       NOT NULL COMMENT '主键ID',
+    `skill_code`           VARCHAR(64)  NOT NULL COMMENT 'Skill 编码',
+    `skill_name`           VARCHAR(128) NOT NULL COMMENT 'Skill 名称',
+    `description`          VARCHAR(500)          DEFAULT NULL COMMENT 'Skill 描述',
+    `skill_category`       VARCHAR(64)  NOT NULL COMMENT 'Skill 分类',
+    `skill_status`         VARCHAR(32)  NOT NULL DEFAULT 'ENABLED' COMMENT 'Skill 状态 ENABLED/DISABLED',
+    `publish_status`       VARCHAR(32)  NOT NULL DEFAULT 'DRAFT' COMMENT '发布状态 DRAFT/PUBLISHED',
+    `version_mode`         VARCHAR(32)  NOT NULL DEFAULT 'MANUAL' COMMENT '版本模式 MANUAL/AUTO',
+    `current_version_no`   INT          NOT NULL DEFAULT 1 COMMENT '当前版本号',
+    `latest_version_no`    INT          NOT NULL DEFAULT 1 COMMENT '最新版本号',
+    `published_version_no` INT                   DEFAULT NULL COMMENT '已发布版本号',
+    `hot_update_enabled`   TINYINT      NOT NULL DEFAULT 0 COMMENT '是否开启热更新 1-是 0-否',
+    `tenant_id`            BIGINT       NOT NULL COMMENT '租户ID',
+    `owner_user_id`        BIGINT       NOT NULL COMMENT '负责人用户ID',
+    `owner_user_name`      VARCHAR(64)           DEFAULT NULL COMMENT '负责人用户名',
+    `ext`                  LONGTEXT              DEFAULT NULL COMMENT '完整配置快照 JSON',
+    `remark`               VARCHAR(255)          DEFAULT NULL COMMENT '备注',
+    `create_id`            BIGINT                DEFAULT NULL COMMENT '创建人ID',
+    `create_name`          VARCHAR(64)           DEFAULT NULL COMMENT '创建人名称',
+    `create_time`          DATETIME              DEFAULT NULL COMMENT '创建时间',
+    `update_id`            BIGINT                DEFAULT NULL COMMENT '更新人ID',
+    `update_name`          VARCHAR(64)           DEFAULT NULL COMMENT '更新人名称',
+    `update_time`          DATETIME              DEFAULT NULL COMMENT '更新时间',
+    `version`              INT          NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_skill_record_code` (`tenant_id`, `skill_code`),
+    KEY `idx_skill_record_status` (`tenant_id`, `skill_status`),
+    KEY `idx_skill_record_publish` (`tenant_id`, `publish_status`)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_0900_ai_ci COMMENT ='Skill 主表';
+
+CREATE TABLE `skill_version_record`
+(
+    `id`             BIGINT       NOT NULL COMMENT '主键ID',
+    `skill_id`       BIGINT       NOT NULL COMMENT 'Skill ID',
+    `skill_code`     VARCHAR(64)  NOT NULL COMMENT 'Skill 编码快照',
+    `skill_name`     VARCHAR(128) NOT NULL COMMENT 'Skill 名称快照',
+    `tenant_id`      BIGINT       NOT NULL COMMENT '租户ID',
+    `version_no`     INT          NOT NULL COMMENT '版本号',
+    `version_status` VARCHAR(32)  NOT NULL COMMENT '版本状态 CURRENT/HISTORY',
+    `publish_status` VARCHAR(32)  NOT NULL COMMENT '发布状态 DRAFT/PUBLISHED',
+    `snapshot_json`  LONGTEXT              DEFAULT NULL COMMENT '版本快照 JSON',
+    `ext`            TEXT                  DEFAULT NULL COMMENT '扩展字段',
+    `remark`         VARCHAR(255)          DEFAULT NULL COMMENT '备注',
+    `create_id`      BIGINT                DEFAULT NULL COMMENT '创建人ID',
+    `create_name`    VARCHAR(64)           DEFAULT NULL COMMENT '创建人名称',
+    `create_time`    DATETIME              DEFAULT NULL COMMENT '创建时间',
+    `update_id`      BIGINT                DEFAULT NULL COMMENT '更新人ID',
+    `update_name`    VARCHAR(64)           DEFAULT NULL COMMENT '更新人名称',
+    `update_time`    DATETIME              DEFAULT NULL COMMENT '更新时间',
+    `version`        INT          NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_skill_version_record` (`skill_id`, `version_no`),
+    KEY `idx_skill_version_tenant` (`tenant_id`, `skill_id`),
+    KEY `idx_skill_version_publish` (`tenant_id`, `publish_status`)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_0900_ai_ci COMMENT ='Skill 版本表';

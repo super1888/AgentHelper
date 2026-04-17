@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
-import { Bot, Building2, Database, FileCode2, LogOut, ShieldCheck, Users } from 'lucide-vue-next'
+import { Bot, Building2, Database, FileCode2, LogOut, ShieldCheck, Sparkles, Users } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
@@ -25,6 +25,13 @@ const navItems = [
     description: '系统提示词资产管理',
     icon: FileCode2,
     isActive: () => route.name === 'prompts',
+  },
+  {
+    to: '/skills',
+    label: 'Skill 管理',
+    description: '技能配置与发布治理',
+    icon: Sparkles,
+    isActive: () => route.name === 'skills',
   },
   {
     to: '/vectors',
