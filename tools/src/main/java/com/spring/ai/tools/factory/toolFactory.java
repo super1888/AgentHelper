@@ -25,7 +25,7 @@ public class ToolFactory implements InitializingBean, ApplicationContextAware {
     public <T> T createToolComponent(ToolFactoryTypeEnum type, Object dto) {
         ToolCreator creator = creatorMap.get(type);
         if (creator == null) {
-            throw new IllegalArgumentException("不支持的 Tool 工厂类型: " + type);
+            throw new IllegalArgumentException("不支持的工具工厂类型：" + type);
         }
         return (T) creator.create(dto);
     }

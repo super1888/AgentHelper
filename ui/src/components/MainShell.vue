@@ -11,6 +11,46 @@ const logoutPending = ref(false)
 
 const currentLabel = computed(() => authStore.displayName)
 
+const navItems = [
+  {
+    to: '/agents',
+    label: '智能体管理',
+    description: '角色、会话与运行策略',
+    icon: Bot,
+    isActive: () => String(route.path).startsWith('/agents'),
+  },
+  {
+    to: '/prompts',
+    label: '提示词模板',
+    description: '系统提示词资产管理',
+    icon: FileCode2,
+    isActive: () => route.name === 'prompts',
+  },
+  {
+    to: '/vectors',
+    label: '向量管理',
+    description: '知识入库与语义检索',
+    icon: Database,
+    isActive: () => route.name === 'vectors',
+  },
+  {
+    to: '/tenants',
+    label: '租户管理',
+    description: '组织边界与租户治理',
+    icon: Building2,
+    isActive: () => route.name === 'tenants',
+  },
+  {
+    to: '/users',
+    label: '用户管理',
+    description: '账号、状态与归属关系',
+    icon: Users,
+    isActive: () => route.name === 'users',
+  },
+] as const
+
+const activeNav = computed(() => navItems.find((item) => item.isActive()) ?? navItems[0])
+
 async function handleLogout() {
   logoutPending.value = true
   try {
@@ -24,28 +64,52 @@ async function handleLogout() {
 
 <template>
   <div class="shell">
-    <header class="shell__header panel-card">
-      <div class="shell__brand">
-        <div class="shell__logo" aria-hidden="true">
-          <ShieldCheck :size="22" />
-        </div>
+    <aside class="shell__sidebar">
+      <div class="shell__sidebar-inner panel-card">
+        <section class="shell__brand">
+          <div class="shell__brand-mark" aria-hidden="true">
+            <ShieldCheck :size="20" />
+          </div>
+          <div class="shell__brand-copy">
+            <p class="section-kicker">Agent Helper</p>
+            <h1>Agent Helper 控制台</h1>
+            <p>统一管理智能体、提示词模板、向量知识库、租户与用户能力。</p>
+          </div>
+        </section>
 
-        <div class="shell__copy">
-          <p class="section-kicker">Agent Helper</p>
-          <h1>Agent Helper 控制台</h1>
-          <p class="shell__description">统一承载 Agent、提示词模板、向量知识库、租户和用户管理能力。</p>
-        </div>
-      </div>
+        <nav class="shell__nav" aria-label="主导航">
+          <RouterLink
+            v-for="item in navItems"
+            :key="item.to"
+            :to="item.to"
+            class="shell__nav-link"
+            :class="{ 'shell__nav-link--active': item.isActive() }"
+          >
+            <div class="shell__nav-icon" aria-hidden="true">
+              <component :is="item.icon" :size="16" />
+            </div>
+            <div class="shell__nav-copy">
+              <strong>{{ item.label }}</strong>
+              <span>{{ item.description }}</span>
+            </div>
+          </RouterLink>
+        </nav>
 
-      <div class="shell__actions">
-        <div class="shell__identity">
-          <span class="shell__identity-label">当前登录</span>
-          <strong>{{ currentLabel }}</strong>
-        </div>
+        <section class="shell__sidebar-meta">
+          <div class="shell__meta-block">
+            <span>当前模块</span>
+            <strong>{{ activeNav.label }}</strong>
+          </div>
+          <div class="shell__meta-divider"></div>
+          <div class="shell__meta-block">
+            <span>当前登录</span>
+            <strong>{{ currentLabel }}</strong>
+          </div>
+        </section>
 
         <button
           type="button"
-          class="app-button app-button--secondary"
+          class="app-button app-button--secondary shell__logout"
           :disabled="logoutPending"
           :aria-busy="logoutPending"
           @click="handleLogout"
@@ -55,189 +119,326 @@ async function handleLogout() {
           {{ logoutPending ? '退出中...' : '退出登录' }}
         </button>
       </div>
-    </header>
+    </aside>
 
-    <nav class="shell__nav" aria-label="主导航">
-      <RouterLink to="/agents" class="shell__nav-link" :class="{ 'shell__nav-link--active': String(route.path).startsWith('/agents') }">
-        <Bot :size="15" aria-hidden="true" />
-        Agent 管理
-      </RouterLink>
+    <div class="shell__main">
+      <header class="shell__topbar panel-card">
+        <div class="shell__topbar-copy">
+          <p class="section-kicker">Workspace Focus</p>
+          <h2>{{ activeNav.label }}</h2>
+          <p>{{ activeNav.description }}</p>
+        </div>
+        <div class="shell__topbar-tag">
+          <span></span>
+          <strong>稳定、克制、可运营</strong>
+        </div>
+      </header>
 
-      <RouterLink to="/prompts" class="shell__nav-link" :class="{ 'shell__nav-link--active': route.name === 'prompts' }">
-        <FileCode2 :size="15" aria-hidden="true" />
-        提示词模板
-      </RouterLink>
-
-      <RouterLink to="/vectors" class="shell__nav-link" :class="{ 'shell__nav-link--active': route.name === 'vectors' }">
-        <Database :size="15" aria-hidden="true" />
-        向量管理
-      </RouterLink>
-
-      <RouterLink to="/tenants" class="shell__nav-link" :class="{ 'shell__nav-link--active': route.name === 'tenants' }">
-        <Building2 :size="15" aria-hidden="true" />
-        租户管理
-      </RouterLink>
-
-      <RouterLink to="/users" class="shell__nav-link" :class="{ 'shell__nav-link--active': route.name === 'users' }">
-        <Users :size="15" aria-hidden="true" />
-        用户管理
-      </RouterLink>
-    </nav>
-
-    <main class="shell__content">
-      <slot></slot>
-    </main>
+      <main class="shell__content">
+        <slot></slot>
+      </main>
+    </div>
   </div>
 </template>
 
 <style scoped>
 .shell {
-  width: min(1280px, calc(100% - 32px));
+  display: grid;
+  grid-template-columns: 272px minmax(0, 1fr);
+  gap: 28px;
+  width: min(1360px, calc(100% - 40px));
   margin: 0 auto;
-  padding: 28px 0 40px;
+  padding: 24px 0 40px;
 }
 
-.shell__header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 24px;
-  padding: 28px;
-  animation: rise-in 520ms ease both;
+.shell__sidebar {
+  min-width: 0;
+}
+
+.shell__sidebar-inner {
+  position: sticky;
+  top: 20px;
+  display: grid;
+  gap: 16px;
+  max-height: calc(100vh - 40px);
+  max-height: calc(100dvh - 40px);
+  padding: 18px;
+  overflow: auto;
 }
 
 .shell__brand {
-  display: flex;
-  gap: 18px;
-  min-width: 0;
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
 }
 
-.shell__copy {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
+.shell__brand-mark {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  color: #f5fcff;
+  border-radius: 15px;
+  background: linear-gradient(135deg, rgba(146, 235, 255, 0.95), rgba(77, 179, 255, 0.88));
+  box-shadow:
+    0 14px 28px rgba(63, 169, 255, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.shell__brand-copy {
+  display: grid;
   gap: 8px;
 }
 
-.shell__logo {
-  display: grid;
-  flex: 0 0 auto;
-  place-items: center;
-  width: 52px;
-  height: 52px;
-  color: #ffffff;
-  border-radius: 18px;
-  background: linear-gradient(135deg, var(--color-accent), var(--color-accent-strong));
-  box-shadow: 0 18px 36px rgba(83, 184, 255, 0.22);
-}
-
-.shell__brand h1 {
+.shell__brand-copy h1 {
   margin: 0;
   color: var(--color-ink-strong);
-  font-size: clamp(1.8rem, 2.2vw, 2.4rem);
-  line-height: 1.08;
-  letter-spacing: -0.02em;
-  text-wrap: balance;
+  font-size: 1.72rem;
+  line-height: 1.04;
+  letter-spacing: -0.04em;
 }
 
-.shell__description {
-  max-width: 28rem;
+.shell__brand-copy p:last-child {
   margin: 0;
   color: var(--color-ink-soft);
-  line-height: 1.5;
-  text-wrap: balance;
+  font-size: 0.9rem;
+  line-height: 1.6;
 }
 
-.shell__actions {
-  display: flex;
+.shell__nav {
+  display: grid;
+  gap: 10px;
+}
+
+.shell__nav-link {
+  position: relative;
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 12px;
   align-items: center;
-  gap: 16px;
+  min-height: 62px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 18px;
+  color: var(--color-ink-soft);
+  background: rgba(255, 255, 255, 0.03);
+  transition:
+    transform 220ms ease,
+    border-color 220ms ease,
+    background-color 220ms ease,
+    box-shadow 220ms ease,
+    color 220ms ease;
 }
 
-.shell__identity {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
+.shell__nav-link::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 1px solid transparent;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 220ms ease, border-color 220ms ease;
+}
+
+.shell__nav-link:hover {
+  transform: translateX(2px);
+  color: var(--color-ink-strong);
+  border-color: rgba(111, 208, 255, 0.14);
+  background: rgba(77, 178, 255, 0.055);
+}
+
+.shell__nav-link--active {
+  color: var(--color-ink-strong);
+  background:
+    linear-gradient(135deg, rgba(103, 194, 255, 0.12), rgba(103, 194, 255, 0.03)),
+    rgba(255, 255, 255, 0.045);
+  border-color: rgba(116, 213, 255, 0.14);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 12px 28px rgba(18, 74, 118, 0.08);
+  animation: nav-breathe 4.2s ease-in-out infinite;
+}
+
+.shell__nav-link--active::before {
+  opacity: 1;
+  border-color: rgba(142, 228, 255, 0.24);
+}
+
+.shell__nav-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.shell__nav-link--active .shell__nav-icon {
+  background: rgba(100, 198, 255, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(142, 228, 255, 0.16);
+}
+
+.shell__nav-copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.shell__nav-copy strong {
+  font-size: 0.93rem;
+  line-height: 1.2;
+}
+
+.shell__nav-copy span {
+  color: inherit;
+  opacity: 0.74;
+  font-size: 0.76rem;
+  line-height: 1.42;
+}
+
+.shell__sidebar-meta {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border-radius: var(--radius-soft);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.shell__meta-block {
+  display: grid;
   gap: 4px;
-  min-width: 132px;
 }
 
-.shell__identity-label {
+.shell__meta-block span {
   color: var(--color-ink-muted);
-  font-size: 0.78rem;
-  font-weight: 700;
+  font-size: 0.72rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
-.shell__identity strong {
+.shell__meta-block strong {
   color: var(--color-ink-strong);
-  font-size: 1rem;
-  line-height: 1.4;
+  font-size: 0.92rem;
 }
 
-.shell__nav {
+.shell__meta-divider {
+  height: 1px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0));
+}
+
+.shell__logout {
+  width: 100%;
+}
+
+.shell__main {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+
+.shell__topbar {
   display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin: 18px 0 24px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
 }
 
-.shell__nav-link {
+.shell__topbar-copy {
+  display: grid;
+  gap: 8px;
+}
+
+.shell__topbar-copy h2 {
+  margin: 0;
+  color: var(--color-ink-strong);
+  font-size: 1.58rem;
+  line-height: 1.06;
+  letter-spacing: -0.03em;
+}
+
+.shell__topbar-copy p:last-child {
+  max-width: 30rem;
+  margin: 0;
+  color: var(--color-ink-soft);
+  font-size: 0.9rem;
+  line-height: 1.58;
+}
+
+.shell__topbar-tag {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 42px;
-  padding: 0 18px;
+  gap: 10px;
+  flex-shrink: 0;
+  color: var(--color-ink-muted);
+}
+
+.shell__topbar-tag span {
+  width: 42px;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(137, 228, 255, 0.08), rgba(137, 228, 255, 0.55));
+}
+
+.shell__topbar-tag strong {
   color: var(--color-ink-soft);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.04);
-  transition:
-    color 180ms ease,
-    background-color 180ms ease,
-    border-color 180ms ease,
-    transform 180ms ease;
-}
-
-.shell__nav-link:hover {
-  color: var(--color-ink-strong);
-  border-color: rgba(83, 184, 255, 0.22);
-  background: rgba(83, 184, 255, 0.08);
-}
-
-.shell__nav-link--active {
-  color: #04111d;
-  border-color: transparent;
-  background: linear-gradient(135deg, rgba(143, 231, 255, 0.92), rgba(83, 184, 255, 0.92));
-  box-shadow: 0 12px 28px rgba(83, 184, 255, 0.18);
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .shell__content {
   display: flex;
   flex-direction: column;
   gap: 24px;
+  min-width: 0;
 }
 
-@media (max-width: 860px) {
+@keyframes nav-breathe {
+  0%,
+  100% {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      0 12px 28px rgba(18, 74, 118, 0.08);
+  }
+
+  50% {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.1),
+      0 14px 30px rgba(41, 118, 178, 0.1);
+  }
+}
+
+@media (max-width: 1180px) {
+  .shell {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .shell__sidebar-inner {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+}
+
+@media (max-width: 720px) {
   .shell {
     width: min(100%, calc(100% - 20px));
     padding-top: 16px;
   }
 
-  .shell__header {
-    flex-direction: column;
-    padding: 22px;
+  .shell__sidebar-inner,
+  .shell__topbar {
+    padding: 16px;
   }
 
-  .shell__actions {
-    width: 100%;
-    justify-content: space-between;
-  }
-
-  .shell__identity {
+  .shell__topbar {
     align-items: flex-start;
+    flex-direction: column;
   }
 }
 </style>
