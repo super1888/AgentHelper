@@ -25,10 +25,10 @@ public class SnowflakeIdGenerator {
 
     public SnowflakeIdGenerator(long workerId, long datacenterId) {
         if (workerId < 0 || workerId > MAX_WORKER_ID) {
-            throw new IllegalArgumentException("workerId must be between 0 and " + MAX_WORKER_ID);
+            throw new IllegalArgumentException("工作节点编号必须在 0 到 " + MAX_WORKER_ID + " 之间");
         }
         if (datacenterId < 0 || datacenterId > MAX_DATACENTER_ID) {
-            throw new IllegalArgumentException("datacenterId must be between 0 and " + MAX_DATACENTER_ID);
+            throw new IllegalArgumentException("数据中心编号必须在 0 到 " + MAX_DATACENTER_ID + " 之间");
         }
         this.workerId = workerId;
         this.datacenterId = datacenterId;
@@ -37,7 +37,7 @@ public class SnowflakeIdGenerator {
     public synchronized long nextId() {
         long currentTimestamp = currentTimestamp();
         if (currentTimestamp < lastTimestamp) {
-            throw new IllegalStateException("Clock moved backwards. Refusing to generate id.");
+            throw new IllegalStateException("系统时钟发生回拨，拒绝生成编号");
         }
 
         if (currentTimestamp == lastTimestamp) {

@@ -21,7 +21,7 @@ public class SkillsAgentHookCreator extends AbstractHookCreator {
     public Object create(Object dto) {
         SkillsAgentHookDTO hookDTO = (SkillsAgentHookDTO) dto;
         if (hookDTO == null) {
-            throw new IllegalArgumentException("SkillsAgentHookDTO 不能为空");
+            throw new IllegalArgumentException("技能智能体钩子配置不能为空");
         }
 
         SkillsAgentHook.Builder builder = SkillsAgentHook.builder();

@@ -35,7 +35,7 @@ public class AgentFactory implements InitializingBean, ApplicationContextAware {
     public Object createAgent(AgentTypeEnum type, Object dto) {
         AgentCreator creator = creatorMap.get(type);
         if (creator == null) {
-            throw new BusinessException(ErrorCodeEnum.AGENT_CONFIG_ERROR, "不支持的 Agent 类型: " + type);
+            throw new BusinessException(ErrorCodeEnum.AGENT_CONFIG_ERROR, "不支持的智能体类型：" + type);
         }
         return creator.createAgent(dto);
     }

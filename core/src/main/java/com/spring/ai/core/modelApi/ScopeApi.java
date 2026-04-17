@@ -60,7 +60,7 @@ public class ScopeApi {
     private String resolveApiKey(String requestApiKey, String configuredApiKey, String provider) {
         String resolved = StringUtils.isBlank(requestApiKey) ? configuredApiKey : requestApiKey;
         if (StringUtils.isBlank(resolved)) {
-            throw new IllegalArgumentException("Missing api key for provider: " + provider);
+            throw new IllegalArgumentException("未配置模型提供商访问密钥：" + provider);
         }
         return resolved;
     }

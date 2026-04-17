@@ -35,7 +35,7 @@ public class HookFactory implements InitializingBean, ApplicationContextAware {
     public <T> T createHook(HookTypeEnum type, Object dto) {
         HookCreator creator = creatorMap.get(type);
         if (creator == null) {
-            throw new IllegalArgumentException("不支持的 Hook 类型: " + type);
+            throw new IllegalArgumentException("不支持的钩子类型：" + type);
         }
         return (T) creator.create(dto);
     }

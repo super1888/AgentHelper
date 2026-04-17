@@ -25,7 +25,7 @@ public class WebSocketPushService {
             return;
         }
         if (!StringUtils.hasText(destination)) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "websocket destination must not be blank");
+            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "实时推送地址不能为空");
         }
         // 复用切面绑定的 sessionId，保证这里的手动推送与方法生命周期事件属于同一个会话。
         doSend(destination, event, data, WebSocketPushContext.getSessionId());
@@ -33,7 +33,7 @@ public class WebSocketPushService {
 
     public void sendToSession(String sessionId, String event, Object data) {
         if (!StringUtils.hasText(sessionId)) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "sessionId must not be blank");
+            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "会话编号不能为空");
         }
         doSend(buildSessionDestination(sessionId), event, data, sessionId);
     }

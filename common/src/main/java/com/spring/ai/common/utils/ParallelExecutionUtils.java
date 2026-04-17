@@ -23,7 +23,7 @@ public final class ParallelExecutionUtils {
             return Collections.emptyList();
         }
         if (batchSize <= 0) {
-            throw new IllegalArgumentException("batchSize must be greater than 0");
+            throw new IllegalArgumentException("批处理大小必须大于 0");
         }
 
         List<List<T>> partitions = new ArrayList<>();
@@ -34,9 +34,9 @@ public final class ParallelExecutionUtils {
     }
 
     public static <T> void parallelConsumeBatches(List<List<T>> batches, Executor executor, Consumer<List<T>> consumer) {
-        Objects.requireNonNull(batches, "batches must not be null");
-        Objects.requireNonNull(executor, "executor must not be null");
-        Objects.requireNonNull(consumer, "consumer must not be null");
+        Objects.requireNonNull(batches, "batches 不能为空");
+        Objects.requireNonNull(executor, "executor 不能为空");
+        Objects.requireNonNull(consumer, "consumer 不能为空");
 
         List<CompletableFuture<Void>> futures = batches.stream()
                 .map(batch -> CompletableFuture.runAsync(() -> consumer.accept(batch), executor))

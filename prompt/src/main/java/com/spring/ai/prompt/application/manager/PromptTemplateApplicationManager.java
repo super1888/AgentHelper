@@ -60,7 +60,7 @@ public class PromptTemplateApplicationManager {
         Long tenantId = promptTemplateSupportManager.getCurrentTenantId();
         if (promptTemplateRecordService.getByTemplateCode(tenantId, request.getTemplateCode()) != null) {
             throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST,
-                    "templateCode already exists");
+                    "模板编码已存在");
         }
 
         String sourceType = promptTemplateResolver.normalizeSourceType(request.getSourceType());
@@ -118,19 +118,19 @@ public class PromptTemplateApplicationManager {
 
     private void validateCreateRequest(PromptTemplateCreateRequest request) {
         if (request == null) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "request must not be null");
+            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "请求参数不能为空");
         }
         if (!StringUtils.hasText(request.getTemplateCode())) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "templateCode must not be blank");
+            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "模板编码不能为空");
         }
         if (!StringUtils.hasText(request.getTemplateName())) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "templateName must not be blank");
+            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "模板名称不能为空");
         }
     }
 
     private void validateUpdateRequest(PromptTemplateUpdateRequest request) {
         if (request == null || !StringUtils.hasText(request.getTemplateName())) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "templateName must not be blank");
+            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "模板名称不能为空");
         }
     }
 
@@ -153,7 +153,7 @@ public class PromptTemplateApplicationManager {
         if (!PromptTemplateConstants.TEMPLATE_STATUS_ENABLED.equals(normalizedTemplateStatus)
                 && !PromptTemplateConstants.TEMPLATE_STATUS_DISABLED.equals(normalizedTemplateStatus)) {
             throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST,
-                    "unsupported templateStatus: " + templateStatus);
+                    "不支持的模板状态：" + templateStatus);
         }
         return normalizedTemplateStatus;
     }
@@ -175,7 +175,7 @@ public class PromptTemplateApplicationManager {
         }
         if (variableDefinitions == null || variableDefinitions.isEmpty()) {
             throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST,
-                    "variableDefinitions must be provided for template variables");
+                    "模板变量已声明占位符时，必须同步提供变量定义");
         }
         Map<String, PromptTemplateVariableDTO> variableMap = variableDefinitions.stream()
                 .peek(this::validateVariableDefinition)
@@ -184,13 +184,13 @@ public class PromptTemplateApplicationManager {
                         item -> item,
                         (left, right) -> {
                             throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST,
-                                    "duplicate variable definition: " + left.getVariableName());
+                                    "变量定义重复：" + left.getVariableName());
                         }
                 ));
         Set<String> placeholderNames = placeholderMap.keySet();
         if (!variableMap.keySet().equals(placeholderNames)) {
             throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST,
-                    "variableDefinitions must exactly match template placeholders");
+                    "变量定义必须与模板占位符完全一致");
         }
         return variableMap.values().stream()
                 .map(item -> PromptTemplateVariableDTO.builder()
@@ -214,11 +214,11 @@ public class PromptTemplateApplicationManager {
     private void validateVariableDefinition(PromptTemplateVariableDTO variableDefinition) {
         if (variableDefinition == null || !StringUtils.hasText(variableDefinition.getVariableName())) {
             throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST,
-                    "variableName must not be blank");
+                    "变量名不能为空");
         }
         if (!variableDefinition.getVariableName().trim().matches("[a-zA-Z][a-zA-Z0-9_]*")) {
             throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST,
-                    "invalid variableName: " + variableDefinition.getVariableName());
+                    "变量名格式不合法：" + variableDefinition.getVariableName());
         }
     }
 

@@ -22,7 +22,7 @@ public class ContextEditingInterceptorCreator implements InterceptorCreator {
     public Object create(Object dto) {
         ContextEditingInterceptorDTO interceptorDTO = (ContextEditingInterceptorDTO) dto;
         if (interceptorDTO == null) {
-            throw new IllegalArgumentException("ContextEditingInterceptorDTO 不能为空");
+            throw new IllegalArgumentException("上下文编辑拦截器配置不能为空");
         }
 
         ContextEditingInterceptor.Builder builder = new ContextEditingInterceptor.Builder();

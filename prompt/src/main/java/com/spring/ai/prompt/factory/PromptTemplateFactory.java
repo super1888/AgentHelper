@@ -25,7 +25,7 @@ public class PromptTemplateFactory implements InitializingBean, ApplicationConte
     public <T> T createPromptTemplate(PromptTemplateTypeEnum type, Object dto) {
         PromptTemplateCreator creator = creatorMap.get(type);
         if (creator == null) {
-            throw new IllegalArgumentException("不支持的 Prompt 模板类型: " + type);
+            throw new IllegalArgumentException("不支持的提示词模板类型：" + type);
         }
         return (T) creator.create(dto);
     }

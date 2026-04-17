@@ -85,7 +85,7 @@ public class TenantApplicationManager {
             throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "当前租户下仍存在用户，不能删除");
         }
         if (agentService.countByTenantId(tenantId) > 0) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "当前租户下仍存在 Agent，不能删除");
+            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "当前租户下仍存在智能体，不能删除");
         }
         syTenantService.removeById(tenantId);
     }
@@ -205,13 +205,13 @@ public class TenantApplicationManager {
 
     private void validateTenantRequest(String tenantCode, String tenantName, Integer status) {
         if (!StringUtils.hasText(tenantCode)) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "tenantCode must not be blank");
+            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "租户编码不能为空");
         }
         if (!StringUtils.hasText(tenantName)) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "tenantName must not be blank");
+            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "租户名称不能为空");
         }
         if (status == null) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "status must not be null");
+            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "租户状态不能为空");
         }
         UserStatusEnum.fromVal(status);
     }

@@ -22,7 +22,7 @@ public class FileSystemSkillRegistryCreator implements SkillCreator {
     public Object create(Object dto) {
         FileSystemSkillRegistryDTO registryDTO = (FileSystemSkillRegistryDTO) dto;
         if (registryDTO == null) {
-            throw new IllegalArgumentException("FileSystemSkillRegistryDTO 不能为空");
+            throw new IllegalArgumentException("文件系统技能注册表配置不能为空");
         }
 
         FileSystemSkillRegistry.Builder builder = new FileSystemSkillRegistry.Builder();

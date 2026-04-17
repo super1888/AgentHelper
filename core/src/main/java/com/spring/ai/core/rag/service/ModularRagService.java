@@ -163,17 +163,17 @@ public class ModularRagService {
     private ChatClient.Builder requireChatClientBuilder() {
         ChatClient.Builder builder = chatClientBuilderProvider.getIfAvailable();
         if (builder == null) {
-            throw new IllegalStateException("当前容器中没有 ChatClient.Builder Bean，请确认 Spring AI 自动配置是否生效");
+            throw new IllegalStateException("当前容器中缺少聊天客户端构建器，请确认框架自动配置是否生效");
         }
         return builder;
     }
 
     private ModularRagRequest normalizeRequest(ModularRagRequest request) {
         if (request == null) {
-            throw new IllegalArgumentException("ModularRagRequest 不能为空");
+            throw new IllegalArgumentException("检索增强请求不能为空");
         }
         if (!StringUtils.hasText(request.getUserQuery())) {
-            throw new IllegalArgumentException("userQuery 不能为空");
+            throw new IllegalArgumentException("用户提问不能为空");
         }
 
         return ModularRagRequest.builder()

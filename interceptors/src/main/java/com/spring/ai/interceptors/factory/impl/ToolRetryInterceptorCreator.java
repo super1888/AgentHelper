@@ -21,7 +21,7 @@ public class ToolRetryInterceptorCreator implements InterceptorCreator {
     public Object create(Object dto) {
         ToolRetryInterceptorDTO interceptorDTO = (ToolRetryInterceptorDTO) dto;
         if (interceptorDTO == null) {
-            throw new IllegalArgumentException("ToolRetryInterceptorDTO 不能为空");
+            throw new IllegalArgumentException("工具重试拦截器配置不能为空");
         }
         return ToolRetryInterceptor.builder()
                 .maxRetries(interceptorDTO.getMaxRetries())

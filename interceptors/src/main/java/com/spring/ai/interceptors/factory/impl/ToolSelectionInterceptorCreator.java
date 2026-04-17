@@ -22,7 +22,7 @@ public class ToolSelectionInterceptorCreator implements InterceptorCreator {
     public Object create(Object dto) {
         ToolSelectionInterceptorDTO interceptorDTO = (ToolSelectionInterceptorDTO) dto;
         if (interceptorDTO == null) {
-            throw new IllegalArgumentException("ToolSelectionInterceptorDTO 不能为空");
+            throw new IllegalArgumentException("工具选择拦截器配置不能为空");
         }
         ToolSelectionInterceptor.Builder builder = new ToolSelectionInterceptor.Builder();
         builder.selectionModel(interceptorDTO.getSelectionModel());

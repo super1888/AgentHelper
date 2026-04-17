@@ -99,7 +99,7 @@ public class VectorStoreServiceImpl implements VectorStoreService {
         MultipartDocumentReader reader = readerRegistry.getReader(extension);
         List<Document> sourceDocuments = reader.read(file);
         if (sourceDocuments.isEmpty()) {
-            throw VectorStoreException.badRequest("Document parsing returned no content");
+            throw VectorStoreException.badRequest("文档解析后未获取到有效内容");
         }
 
         List<Document> normalizedDocuments = sourceDocuments.stream()
@@ -107,12 +107,12 @@ public class VectorStoreServiceImpl implements VectorStoreService {
                 .filter(this::hasTextContent)
                 .toList();
         if (normalizedDocuments.isEmpty()) {
-            throw VectorStoreException.badRequest("Document content is blank after normalization");
+            throw VectorStoreException.badRequest("文档标准化后内容为空");
         }
 
         List<Document> chunkDocuments = tokenTextSplitter.apply(normalizedDocuments);
         if (chunkDocuments.isEmpty()) {
-            throw VectorStoreException.badRequest("Document splitting returned no chunks");
+            throw VectorStoreException.badRequest("文档切分后未生成任何分片");
         }
 
         persistDocuments(chunkDocuments);
@@ -127,7 +127,7 @@ public class VectorStoreServiceImpl implements VectorStoreService {
                 .chunkCount(chunkDocuments.size())
                 .fileSize(file.getSize())
                 .uploadedAt(uploadedAt)
-                .message("Document parsed, chunked and stored successfully")
+                .message("文档解析、切分并入库成功")
                 .build();
     }
 
@@ -146,7 +146,7 @@ public class VectorStoreServiceImpl implements VectorStoreService {
     @Override
     public VectorStoreDocumentListResponse listDocuments(String fileName) {
         capabilityChecker.ensureReady();
-        String normalizedFileName = normalizeRequiredText(fileName, "File name must not be blank");
+        String normalizedFileName = normalizeRequiredText(fileName, "文件名不能为空");
 
         try {
             JedisPooled jedis = resolveJedisClient();
@@ -172,7 +172,7 @@ public class VectorStoreServiceImpl implements VectorStoreService {
     public VectorStoreSearchResponse search(String query, String fileName, Integer topK, Double similarityThreshold) {
         capabilityChecker.ensureReady();
 
-        String normalizedQuery = normalizeRequiredText(query, "Query must not be blank");
+        String normalizedQuery = normalizeRequiredText(query, "检索内容不能为空");
         String normalizedFileName = normalizeOptionalText(fileName);
         int validatedTopK = validateTopK(topK);
         Double validatedThreshold = validateSimilarityThreshold(similarityThreshold);
@@ -236,7 +236,7 @@ public class VectorStoreServiceImpl implements VectorStoreService {
             log.info("Deleted all vectors for module={}", MODULE_NAME);
             return VectorStoreDeleteResponse.builder()
                     .action("deleteAll")
-                    .message("Deleted vectors written by the current module")
+                    .message("清空当前模块向量数据成功！")
                     .build();
         } catch (RuntimeException exception) {
             throw translateVectorStoreException("deleteAll", exception);
@@ -260,7 +260,7 @@ public class VectorStoreServiceImpl implements VectorStoreService {
             return VectorStoreDeleteResponse.builder()
                     .action("deleteByFileName")
                     .fileName(normalizedFileName)
-                    .message("Deleted vectors for the specified file")
+                    .message("已删除指定文件的向量数据")
                     .build();
         } catch (RuntimeException exception) {
             throw translateVectorStoreException("deleteByFileName", exception);
@@ -308,7 +308,7 @@ public class VectorStoreServiceImpl implements VectorStoreService {
     private int validateWriteBatchSize() {
         int batchSize = vectorStoreProperties.getWriteBatchSize();
         if (batchSize <= 0) {
-            throw VectorStoreException.badRequest("writeBatchSize must be greater than 0");
+            throw VectorStoreException.badRequest("writeBatchSize 必须大于 0");
         }
         return batchSize;
     }
@@ -329,18 +329,18 @@ public class VectorStoreServiceImpl implements VectorStoreService {
 
     private void validateFile(MultipartFile file) {
         if (file == null || file.isEmpty()) {
-            throw VectorStoreException.badRequest("Uploaded file must not be empty");
+            throw VectorStoreException.badRequest("上传文件不能为空");
         }
     }
 
     private String requireFileName(MultipartFile file) {
-        return normalizeRequiredText(file.getOriginalFilename(), "Unable to resolve uploaded file name");
+        return normalizeRequiredText(file.getOriginalFilename(), "无法获取上传文件名");
     }
 
     private String resolveExtension(String fileName) {
         String extension = StringUtils.getFilenameExtension(fileName);
         if (!StringUtils.hasText(extension)) {
-            throw VectorStoreException.badRequest("Unable to resolve file extension");
+            throw VectorStoreException.badRequest("无法解析文件扩展名");
         }
         return extension.toLowerCase(Locale.ROOT);
     }
@@ -389,7 +389,7 @@ public class VectorStoreServiceImpl implements VectorStoreService {
     private int validateTopK(Integer topK) {
         int resolvedTopK = topK == null ? vectorStoreProperties.getDefaultTopK() : topK;
         if (resolvedTopK <= 0) {
-            throw VectorStoreException.badRequest("topK must be greater than 0");
+            throw VectorStoreException.badRequest("TopK 必须大于 0");
         }
         return resolvedTopK;
     }
@@ -399,7 +399,7 @@ public class VectorStoreServiceImpl implements VectorStoreService {
             return null;
         }
         if (similarityThreshold < 0 || similarityThreshold > 1) {
-            throw VectorStoreException.badRequest("similarityThreshold must be between 0 and 1");
+            throw VectorStoreException.badRequest("相似度阈值必须在 0 到 1 之间");
         }
         return similarityThreshold;
     }
@@ -425,7 +425,7 @@ public class VectorStoreServiceImpl implements VectorStoreService {
                 .map(JedisPooled.class::cast)
                 .orElseThrow(() -> new VectorStoreException(
                         HttpStatus.SERVICE_UNAVAILABLE,
-                        "Current vector store does not expose a Jedis client"));
+                        "当前向量存储未提供 Jedis 客户端"));
     }
 
     private List<String> scanVectorKeys(JedisPooled jedis) {
@@ -474,7 +474,7 @@ public class VectorStoreServiceImpl implements VectorStoreService {
         record.setChunkCount(chunkCount);
         record.setUploadedAt(uploadedAt);
         record.setStoreStatus(STORE_STATUS_ACTIVE);
-        record.setLastOperationMessage("Uploaded and indexed successfully");
+        record.setLastOperationMessage("文件上传并建立索引成功");
         vectorStoreFileRecordService.saveOrUpdate(record);
     }
 
@@ -484,7 +484,7 @@ public class VectorStoreServiceImpl implements VectorStoreService {
             return;
         }
         record.setStoreStatus(STORE_STATUS_DELETED);
-        record.setLastOperationMessage("Vectors deleted by file name");
+        record.setLastOperationMessage("已按文件名删除向量数据");
         vectorStoreFileRecordService.updateById(record);
     }
 
@@ -495,7 +495,7 @@ public class VectorStoreServiceImpl implements VectorStoreService {
         }
         records.forEach(record -> {
             record.setStoreStatus(STORE_STATUS_DELETED);
-            record.setLastOperationMessage("Vectors deleted in batch");
+            record.setLastOperationMessage("已批量删除向量数据");
         });
         vectorStoreFileRecordService.updateBatchById(records);
     }
@@ -567,8 +567,7 @@ public class VectorStoreServiceImpl implements VectorStoreService {
         if (isTokenLimitException(rootCause)) {
             return new VectorStoreException(
                     HttpStatus.BAD_REQUEST,
-                    "Embedding input is too large during " + action
-                            + ". Reduce chunk size or upload a smaller document.",
+                    "执行" + action + "时嵌入输入内容过大，请减小分片大小或上传更小的文档。",
                     exception);
         }
         if (message != null && (message.contains("HTTP 429")
@@ -576,25 +575,22 @@ public class VectorStoreServiceImpl implements VectorStoreService {
                 || message.contains("Throttling.AllocationQuota"))) {
             return new VectorStoreException(
                     HttpStatus.TOO_MANY_REQUESTS,
-                    "Embedding model quota exceeded during " + action
-                            + ". Reduce upload concurrency or chunk count, or increase DashScope quota.",
+                    "执行" + action + "时嵌入模型额度已超限，请降低上传并发或分片数量，或提升 DashScope 配额。",
                     exception);
         }
         if (message != null && (message.contains("JSON.SET") || message.contains("FT.SEARCH") || message.contains("FT.CREATE"))) {
             return new VectorStoreException(
                     HttpStatus.SERVICE_UNAVAILABLE,
-                    "Redis vector store command is unavailable during " + action
-                            + ". Please use Redis Stack or install RedisJSON and RediSearch modules.",
+                    "执行" + action + "时 Redis 向量库命令不可用，请使用 Redis Stack 或安装 RedisJSON 与 RediSearch 模块。",
                     exception);
         }
         if (message != null && (message.contains("no such index") || message.contains("Unknown Index name"))) {
             return new VectorStoreException(
                     HttpStatus.SERVICE_UNAVAILABLE,
-                    "Redis vector index is missing during " + action
-                            + ". Enable spring.ai.vectorstore.redis.initialize-schema=true and restart the application.",
+                    "执行" + action + "时未找到 Redis 向量索引，请开启 spring.ai.vectorstore.redis.initialize-schema=true 后重启应用。",
                     exception);
         }
-        return VectorStoreException.internalError("Vector store operation failed during " + action, exception);
+        return VectorStoreException.internalError("执行" + action + "时向量库操作失败", exception);
     }
 
     private boolean isTokenLimitException(Throwable throwable) {

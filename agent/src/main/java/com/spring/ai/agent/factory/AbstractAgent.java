@@ -17,12 +17,12 @@ public abstract class AbstractAgent implements AgentCreator {
 
     @Override
     public AgentTypeEnum getAgentType() {
-        throw new UnsupportedOperationException("子类必须实现 getAgentType()");
+        throw new UnsupportedOperationException("子类必须实现获取智能体类型的方法");
     }
 
     @Override
     public Object createAgent(Object dto) {
         log.warn("Agent 创建器尚未实现，creator={}", this.getClass().getName());
-        throw new BusinessException(ErrorCodeEnum.AGENT_CONFIG_ERROR, "当前 Agent 创建器尚未实现");
+        throw new BusinessException(ErrorCodeEnum.AGENT_CONFIG_ERROR, "当前智能体创建器尚未实现");
     }
 }

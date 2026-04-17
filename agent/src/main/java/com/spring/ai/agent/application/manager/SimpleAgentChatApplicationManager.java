@@ -107,7 +107,7 @@ public class SimpleAgentChatApplicationManager {
         );
         simpleAgentChatPersistenceManager.publishEvent(session, recoverTask, "TASK_RECOVER", failedTask.getTaskCode(), 1);
         CompletableFuture.runAsync(() -> executeTask(session.getSessionCode(), recoverTask.getTaskCode()), executor);
-        return SimpleAgentAssembler.toRecoverResponse(session, recoverTask, "recover task accepted");
+        return SimpleAgentAssembler.toRecoverResponse(session, recoverTask, "任务恢复请求已受理");
     }
 
     private void executeTask(String sessionCode, String taskCode) {
@@ -118,13 +118,13 @@ public class SimpleAgentChatApplicationManager {
                 .eq(AgentTask::getTaskCode, taskCode)
                 .last("limit 1"));
         if (session == null || task == null) {
-            throw new BusinessException(ErrorCodeEnum.NOT_FOUND, HttpStatus.NOT_FOUND, "session or task not found");
+            throw new BusinessException(ErrorCodeEnum.NOT_FOUND, HttpStatus.NOT_FOUND, "未找到会话或任务");
         }
 
         Agent agent = agentService.getById(session.getAgentId());
         AgentVersion version = agentVersionService.getById(session.getAgentVersionId());
         if (agent == null || version == null) {
-            simpleAgentChatPersistenceManager.handleTaskError(session, task, "agent or version not found");
+            simpleAgentChatPersistenceManager.handleTaskError(session, task, "未找到智能体或版本信息");
             return;
         }
 
@@ -193,23 +193,23 @@ public class SimpleAgentChatApplicationManager {
 
     private void validateChatRequest(SimpleAgentChatRequest request) {
         if (request == null) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "chat request must not be null");
+            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "聊天请求不能为空");
         }
         if (!StringUtils.hasText(request.getSessionId())) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "sessionId must not be blank");
+            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "会话编号不能为空");
         }
         if (!StringUtils.hasText(request.getMessage())) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "message must not be blank");
+            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "消息内容不能为空");
         }
     }
 
     private void validateSessionForChat(AgentSession session, String agentCode) {
         if (SimpleAgentConstants.SESSION_STATUS_CLOSED.equals(session.getSessionStatus())) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "session has been closed");
+            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "当前会话已关闭");
         }
         if (StringUtils.hasText(agentCode) && !agentCode.equals(session.getAgentCode())) {
             throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST,
-                    "session does not match current agent");
+                    "当前会话与指定智能体不匹配");
         }
     }
 
@@ -218,18 +218,18 @@ public class SimpleAgentChatApplicationManager {
             AgentTask task = simpleAgentSupportManager.requireTask(request.getTaskId());
             if (!task.getSessionId().equals(session.getId())) {
                 throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST,
-                        "task does not belong to current session");
+                        "任务不属于当前会话");
             }
             if (!SimpleAgentConstants.TASK_STATUS_FAILED.equals(task.getTaskStatus())) {
                 throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST,
-                        "only failed task can be recovered");
+                        "仅允许恢复失败状态的任务");
             }
             return task;
         }
 
         AgentTask failedTask = agentTaskService.getLatestFailedTask(session.getId(), session.getTenantId());
         if (failedTask == null) {
-            throw new BusinessException(ErrorCodeEnum.NOT_FOUND, HttpStatus.NOT_FOUND, "failed task not found");
+            throw new BusinessException(ErrorCodeEnum.NOT_FOUND, HttpStatus.NOT_FOUND, "未找到失败任务");
         }
         return failedTask;
     }
@@ -274,7 +274,7 @@ public class SimpleAgentChatApplicationManager {
 
     private String resolveErrorMessage(Throwable throwable) {
         if (throwable == null) {
-            return "unknown error";
+            return "未知异常";
         }
         if (StringUtils.hasText(throwable.getMessage())) {
             return throwable.getMessage();

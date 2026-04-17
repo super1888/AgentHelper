@@ -22,7 +22,7 @@ public class SystemPromptTemplateCreator implements PromptTemplateCreator {
     public Object create(Object dto) {
         SystemPromptTemplateDTO templateDTO = (SystemPromptTemplateDTO) dto;
         if (templateDTO == null) {
-            throw new IllegalArgumentException("SystemPromptTemplateDTO 不能为空");
+            throw new IllegalArgumentException("系统提示词模板配置不能为空");
         }
 
         SystemPromptTemplate.Builder builder = new SystemPromptTemplate.Builder();

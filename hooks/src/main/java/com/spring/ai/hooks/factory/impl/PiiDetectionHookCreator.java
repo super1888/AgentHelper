@@ -21,7 +21,7 @@ public class PiiDetectionHookCreator extends AbstractHookCreator {
     public Object create(Object dto) {
         PIIDetectionHookDTO hookDTO = (PIIDetectionHookDTO) dto;
         if (hookDTO == null) {
-            throw new IllegalArgumentException("PIIDetectionHookDTO 不能为空");
+            throw new IllegalArgumentException("隐私信息检测钩子配置不能为空");
         }
 
         PIIDetectionHook.Builder piiBuilder = PIIDetectionHook.builder();

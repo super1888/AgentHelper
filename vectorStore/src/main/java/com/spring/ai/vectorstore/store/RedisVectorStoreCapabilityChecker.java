@@ -40,7 +40,7 @@ public class RedisVectorStoreCapabilityChecker {
             if (!Boolean.TRUE.equals(jsonReady) || !Boolean.TRUE.equals(searchReady)) {
                 throw new VectorStoreException(
                         HttpStatus.SERVICE_UNAVAILABLE,
-                        "Current Redis instance does not support Redis Stack commands. Please use Redis Stack or install RedisJSON and RediSearch modules.");
+                        "当前 Redis 实例不支持 Redis Stack 命令，请使用 Redis Stack 或安装 RedisJSON 与 RediSearch 模块。");
             }
             capabilityReady.compareAndSet(false, true);
         }
@@ -51,7 +51,7 @@ public class RedisVectorStoreCapabilityChecker {
             log.error("Failed to verify Redis vector store capabilities", exception);
             throw new VectorStoreException(
                     HttpStatus.SERVICE_UNAVAILABLE,
-                    "Failed to verify Redis vector store capabilities. Please check Redis connectivity and module installation.",
+                    "校验 Redis 向量库能力失败，请检查 Redis 连接状态及模块安装情况。",
                     exception);
         }
     }

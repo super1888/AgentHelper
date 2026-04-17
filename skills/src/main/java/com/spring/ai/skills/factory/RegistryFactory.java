@@ -28,7 +28,7 @@ public class RegistryFactory implements InitializingBean, ApplicationContextAwar
     public <T> T createSkillComponent(SkillFactoryTypeEnum type, Object dto) {
         SkillCreator creator = creatorMap.get(type);
         if (creator == null) {
-            throw new IllegalArgumentException("不支持的 Skills 工厂类型: " + type);
+            throw new IllegalArgumentException("不支持的技能工厂类型：" + type);
         }
         return (T) creator.create(dto);
     }

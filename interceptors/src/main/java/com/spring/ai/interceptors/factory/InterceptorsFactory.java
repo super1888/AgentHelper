@@ -33,7 +33,7 @@ public class InterceptorsFactory implements InitializingBean, ApplicationContext
     public <T> T createInterceptor(InterceptorTypeEnum type, Object dto) {
         InterceptorCreator creator = creatorMap.get(type);
         if (creator == null) {
-            throw new IllegalArgumentException("不支持的 Interceptor 类型: " + type);
+            throw new IllegalArgumentException("不支持的拦截器类型：" + type);
         }
         return (T) creator.create(dto);
     }

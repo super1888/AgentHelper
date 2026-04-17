@@ -41,7 +41,7 @@ public class CreatParallelAgent extends AbstractAgent implements AgentCreator {
 
         // DTO 不能为空
         if (dto == null) {
-            throw new IllegalArgumentException("ParallelAgentDTO 不能为空");
+            throw new IllegalArgumentException("并行智能体配置不能为空");
         }
 
         ParallelAgent.ParallelAgentBuilder builder = ParallelAgent.builder();

@@ -41,7 +41,7 @@ public class CreatSupervisorAgent extends AbstractAgent implements AgentCreator 
 
         // DTO 不能为空
         if (dto == null) {
-            throw new IllegalArgumentException("SupervisorAgentDTO 不能为空");
+            throw new IllegalArgumentException("主管智能体配置不能为空");
         }
 
         SupervisorAgent.SupervisorAgentBuilder builder = SupervisorAgent.builder();

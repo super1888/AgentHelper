@@ -18,49 +18,49 @@ public class ChatOptionsConfig {
         if (dto.getModel() != null) {
             builder.model(dto.getModel());
         } else {
-            throw new IllegalArgumentException("Model cannot be null");
+            throw new IllegalArgumentException("模型不能为空");
         }
 
         if (dto.getFrequencyPenalty() != null) {
             builder.frequencyPenalty(dto.getFrequencyPenalty());
         } else {
-            throw new IllegalArgumentException("Frequency Penalty cannot be null");
+            throw new IllegalArgumentException("频率惩罚参数不能为空");
         }
 
         if (dto.getMaxTokens() != null) {
             builder.maxTokens(dto.getMaxTokens());
         } else {
-            throw new IllegalArgumentException("Max Tokens cannot be null");
+            throw new IllegalArgumentException("最大令牌数不能为空");
         }
 
         if (dto.getPresencePenalty() != null) {
             builder.presencePenalty(dto.getPresencePenalty());
         } else {
-            throw new IllegalArgumentException("Presence Penalty cannot be null");
+            throw new IllegalArgumentException("存在惩罚参数不能为空");
         }
 
         if (dto.getStopSequences() != null) {
             builder.stopSequences(dto.getStopSequences());
         } else {
-            throw new IllegalArgumentException("Stop Sequences cannot be null");
+            throw new IllegalArgumentException("停止序列不能为空");
         }
 
         if (dto.getTemperature() != null) {
             builder.temperature(dto.getTemperature());
         } else {
-            throw new IllegalArgumentException("Temperature cannot be null");
+            throw new IllegalArgumentException("温度参数不能为空");
         }
 
         if (dto.getTopK() != null) {
             builder.topK(dto.getTopK());
         } else {
-            throw new IllegalArgumentException("TopK cannot be null");
+            throw new IllegalArgumentException("候选数量不能为空");
         }
 
         if (dto.getTopP() != null) {
             builder.topP(dto.getTopP());
         } else {
-            throw new IllegalArgumentException("TopP cannot be null");
+            throw new IllegalArgumentException("概率阈值不能为空");
         }
 
         return builder.build();

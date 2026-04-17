@@ -325,13 +325,13 @@ public class SimpleAgentApplicationManager {
 
     private void validateCreateRequest(SimpleAgentCreateRequest request) {
         if (request == null || !StringUtils.hasText(request.getAgentName())) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "agentName must not be blank");
+            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "智能体名称不能为空");
         }
     }
 
     private void validateUpdateRequest(SimpleAgentUpdateRequest request) {
         if (request == null || !StringUtils.hasText(request.getAgentName())) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "agentName must not be blank");
+            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "智能体名称不能为空");
         }
     }
 
@@ -341,7 +341,7 @@ public class SimpleAgentApplicationManager {
         }
         if (!SimpleAgentConstants.AGENT_TYPE_REACT.equalsIgnoreCase(agentType.trim())) {
             throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST,
-                    "only REACT agent type is supported now");
+                    "当前仅支持 REACT 类型的 Agent");
         }
         return SimpleAgentConstants.AGENT_TYPE_REACT;
     }
@@ -360,7 +360,7 @@ public class SimpleAgentApplicationManager {
                 return currentVersion;
             }
         }
-        throw new BusinessException(ErrorCodeEnum.NOT_FOUND, HttpStatus.NOT_FOUND, "agent version not found");
+        throw new BusinessException(ErrorCodeEnum.NOT_FOUND, HttpStatus.NOT_FOUND, "未找到智能体版本");
     }
 
     /**
@@ -371,13 +371,13 @@ public class SimpleAgentApplicationManager {
     private void validateAgentCanCreateSession(Agent agent, SimpleAgentSessionCreateRequest request) {
         if (SimpleAgentConstants.AGENT_STATUS_DISABLED.equals(agent.getAgentStatus())) {
             throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST,
-                    "disabled agent cannot create session");
+                    "已禁用的 Agent 不允许创建会话");
         }
 
         Integer versionNo = request == null ? null : request.getVersionNo();
         if (versionNo == null && agent.getPublishedVersionId() == null) {
             throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST,
-                    "default session requires a published agent version");
+                    "默认会话必须使用已发布的 Agent 版本");
         }
     }
 
@@ -389,7 +389,7 @@ public class SimpleAgentApplicationManager {
     private void validateAgentCanDelete(Agent agent) {
         if (!SimpleAgentConstants.AGENT_STATUS_DISABLED.equals(agent.getAgentStatus())) {
             throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST,
-                    "only disabled agent can be deleted");
+                    "仅允许删除已禁用的 Agent");
         }
     }
 

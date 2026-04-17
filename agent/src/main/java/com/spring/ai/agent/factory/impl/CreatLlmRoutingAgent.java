@@ -36,7 +36,7 @@ public class CreatLlmRoutingAgent extends AbstractAgent implements AgentCreator 
 
         // DTO 不能为空
         if (dto == null) {
-            throw new IllegalArgumentException("LlmRoutingAgentDTO 不能为空");
+            throw new IllegalArgumentException("路由智能体配置不能为空");
         }
 
         LlmRoutingAgent.LlmRoutingAgentBuilder builder = LlmRoutingAgent.builder();

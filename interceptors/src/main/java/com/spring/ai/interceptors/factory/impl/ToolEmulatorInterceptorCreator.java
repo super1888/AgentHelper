@@ -21,12 +21,12 @@ public class ToolEmulatorInterceptorCreator implements InterceptorCreator {
     public Object create(Object dto) {
         ToolEmulatorInterceptorDTO interceptorDTO = (ToolEmulatorInterceptorDTO) dto;
         if (interceptorDTO == null) {
-            throw new IllegalArgumentException("ToolEmulatorInterceptorDTO 不能为空");
+            throw new IllegalArgumentException("工具模拟拦截器配置不能为空");
         }
 
         ToolEmulatorInterceptor.Builder builder = new ToolEmulatorInterceptor.Builder();
         if (interceptorDTO.getEmulatorModel() == null) {
-            throw new IllegalStateException("emulatorModel 不能为空");
+            throw new IllegalStateException("模拟模型配置不能为空");
         }
         builder.model(interceptorDTO.getEmulatorModel());
         if (interceptorDTO.getToolsToEmulate() != null && !interceptorDTO.getToolsToEmulate().isEmpty()) {

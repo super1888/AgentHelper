@@ -27,7 +27,7 @@ public class HumanInTheLoopHookCreator extends AbstractHookCreator {
     public Object create(Object dto) {
         HumanInTheLoopHookDTO hookDTO = (HumanInTheLoopHookDTO) dto;
         if (hookDTO == null) {
-            throw new IllegalArgumentException("HumanInTheLoopHookDTO 不能为空");
+            throw new IllegalArgumentException("人工介入钩子配置不能为空");
         }
 
         Boolean enabled = getOrDefault(hookDTO.getEnabled(), Boolean.TRUE);

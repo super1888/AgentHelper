@@ -21,7 +21,7 @@ public class ModelCallLimitHookCreator extends AbstractHookCreator {
     public Object create(Object dto) {
         ModelCallLimitHookDTO hookDTO = (ModelCallLimitHookDTO) dto;
         if (hookDTO == null) {
-            throw new IllegalArgumentException("ModelCallLimitHookDTO 不能为空");
+            throw new IllegalArgumentException("模型调用限制钩子配置不能为空");
         }
 
         ModelCallLimitHook.Builder builder = ModelCallLimitHook.builder();

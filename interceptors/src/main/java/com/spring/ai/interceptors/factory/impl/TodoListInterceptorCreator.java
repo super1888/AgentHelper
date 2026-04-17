@@ -21,7 +21,7 @@ public class TodoListInterceptorCreator implements InterceptorCreator {
     public Object create(Object dto) {
         TodoListInterceptorDTO interceptorDTO = (TodoListInterceptorDTO) dto;
         if (interceptorDTO == null) {
-            throw new IllegalArgumentException("TodoListInterceptorDTO 不能为空");
+            throw new IllegalArgumentException("待办清单拦截器配置不能为空");
         }
         return new TodoListInterceptor.Builder()
                 .systemPrompt(interceptorDTO.getSystemPrompt())

@@ -66,7 +66,7 @@ public class SimpleAgentSupportManager {
     public Long getCurrentUserId() {
         Long userId = userProvider.getCurrentUserId();
         if (userId == null) {
-            throw new BusinessException(ErrorCodeEnum.UNAUTHORIZED, HttpStatus.UNAUTHORIZED, "current user not found");
+            throw new BusinessException(ErrorCodeEnum.UNAUTHORIZED, HttpStatus.UNAUTHORIZED, "未找到当前用户");
         }
         return userId;
     }
@@ -78,7 +78,7 @@ public class SimpleAgentSupportManager {
     public Long getCurrentTenantId() {
         SyUser user = syUserService.getDetailById(getCurrentUserId());
         if (user == null) {
-            throw new BusinessException(ErrorCodeEnum.UNAUTHORIZED, HttpStatus.UNAUTHORIZED, "current user not found");
+            throw new BusinessException(ErrorCodeEnum.UNAUTHORIZED, HttpStatus.UNAUTHORIZED, "未找到当前用户");
         }
         return resolveTenantId(user);
     }
@@ -86,7 +86,7 @@ public class SimpleAgentSupportManager {
     public Agent requireAgent(String agentCode) {
         Agent agent = agentService.getByAgentCode(agentCode, getCurrentTenantId());
         if (agent == null) {
-            throw new BusinessException(ErrorCodeEnum.NOT_FOUND, HttpStatus.NOT_FOUND, "agent not found: " + agentCode);
+            throw new BusinessException(ErrorCodeEnum.NOT_FOUND, HttpStatus.NOT_FOUND, "未找到智能体：" + agentCode);
         }
         validateOwner(agent.getOwnerUserId());
         return agent;
@@ -96,7 +96,7 @@ public class SimpleAgentSupportManager {
         AgentVersion version = agentVersionService.getByAgentIdAndVersionNo(agentId, getCurrentTenantId(), versionNo);
         if (version == null) {
             throw new BusinessException(ErrorCodeEnum.NOT_FOUND, HttpStatus.NOT_FOUND,
-                    "agent version not found: " + versionNo);
+                    "未找到智能体版本：" + versionNo);
         }
         return version;
     }
@@ -105,7 +105,7 @@ public class SimpleAgentSupportManager {
         AgentVersion version = agentVersionService.getById(versionId);
         if (version == null || !sameTenant(version.getTenantId(), getCurrentTenantId())) {
             throw new BusinessException(ErrorCodeEnum.NOT_FOUND, HttpStatus.NOT_FOUND,
-                    "agent version not found: " + versionId);
+                    "未找到智能体版本：" + versionId);
         }
         return version;
     }
@@ -114,7 +114,7 @@ public class SimpleAgentSupportManager {
         AgentSession session = agentSessionService.getBySessionCode(sessionCode, getCurrentTenantId());
         if (session == null) {
             throw new BusinessException(ErrorCodeEnum.NOT_FOUND, HttpStatus.NOT_FOUND,
-                    "session not found: " + sessionCode);
+                    "未找到会话：" + sessionCode);
         }
         validateOwner(session.getOwnerUserId());
         return session;
@@ -124,7 +124,7 @@ public class SimpleAgentSupportManager {
         AgentTask task = agentTaskService.getByTaskCode(taskCode, getCurrentTenantId());
         if (task == null) {
             throw new BusinessException(ErrorCodeEnum.NOT_FOUND, HttpStatus.NOT_FOUND,
-                    "task not found: " + taskCode);
+                    "未找到任务：" + taskCode);
         }
         validateOwner(task.getOwnerUserId());
         return task;
@@ -133,7 +133,7 @@ public class SimpleAgentSupportManager {
     public void validateOwner(Long ownerUserId) {
         if (ownerUserId == null || !ownerUserId.equals(getCurrentUserId())) {
             throw new BusinessException(ErrorCodeEnum.FORBIDDEN, HttpStatus.FORBIDDEN,
-                    "current user has no permission to access this resource");
+                    "当前用户无权访问该资源");
         }
     }
 
@@ -142,7 +142,7 @@ public class SimpleAgentSupportManager {
             return objectMapper.writeValueAsString(value);
         } catch (JsonProcessingException e) {
             throw new BusinessException(ErrorCodeEnum.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR,
-                    "json serialize failed", e);
+                    "JSON 序列化失败", e);
         }
     }
 
@@ -154,7 +154,7 @@ public class SimpleAgentSupportManager {
             return objectMapper.readValue(json, SimpleAgentVersionConfigDTO.class);
         } catch (JsonProcessingException e) {
             throw new BusinessException(ErrorCodeEnum.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR,
-                    "json parse failed", e);
+                    "JSON 解析失败", e);
         }
     }
 
@@ -166,7 +166,7 @@ public class SimpleAgentSupportManager {
             return objectMapper.readValue(json, STRING_LIST_TYPE);
         } catch (JsonProcessingException e) {
             throw new BusinessException(ErrorCodeEnum.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR,
-                    "json parse failed", e);
+                    "JSON 解析失败", e);
         }
     }
 

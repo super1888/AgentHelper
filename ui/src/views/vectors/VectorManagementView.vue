@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import {
   FileSearch,
   FolderOpen,
@@ -41,7 +41,9 @@ const uploadPending = ref(false)
 const deletePending = ref(false)
 const selectedFile = ref<File | null>(null)
 const selectedFileName = ref('')
+const uploadFileInput = ref<HTMLInputElement | null>(null)
 const feedback = ref<FeedbackState | null>(null)
+let feedbackTimer: ReturnType<typeof setTimeout> | null = null
 const files = ref<VectorStoreFileItem[]>([])
 const documents = ref<VectorStoreDocumentItem[]>([])
 const searchResult = ref<VectorStoreSearchResult | null>(null)
@@ -74,10 +76,21 @@ watch(selectedFileName, (fileName) => {
 })
 
 function showFeedback(tone: FeedbackTone, message: string) {
+  if (feedbackTimer) {
+    clearTimeout(feedbackTimer)
+  }
   feedback.value = { tone, message }
+  feedbackTimer = setTimeout(() => {
+    feedback.value = null
+    feedbackTimer = null
+  }, 3200)
 }
 
 function clearFeedback() {
+  if (feedbackTimer) {
+    clearTimeout(feedbackTimer)
+    feedbackTimer = null
+  }
   feedback.value = null
 }
 
@@ -172,6 +185,13 @@ function handleFileChange(event: Event) {
   selectedFile.value = target.files?.[0] ?? null
 }
 
+function clearSelectedUploadFile() {
+  selectedFile.value = null
+  if (uploadFileInput.value) {
+    uploadFileInput.value.value = ''
+  }
+}
+
 async function handleUpload() {
   if (!selectedFile.value) {
     showFeedback('error', '请先选择一个文件。')
@@ -183,11 +203,7 @@ async function handleUpload() {
   try {
     const result = await uploadVectorFile(selectedFile.value)
     selectedFileName.value = result.fileName
-    selectedFile.value = null
-    const fileInput = document.getElementById('vector-file-input') as HTMLInputElement | null
-    if (fileInput) {
-      fileInput.value = ''
-    }
+    clearSelectedUploadFile()
     await refreshAll(`文件 ${result.fileName} 已上传并完成切片入库。`)
   } catch (error) {
     showFeedback('error', getErrorMessage(error, '向量文件上传失败。'))
@@ -254,6 +270,12 @@ async function handleSearch() {
 onMounted(() => {
   void refreshAll()
 })
+
+onBeforeUnmount(() => {
+  if (feedbackTimer) {
+    clearTimeout(feedbackTimer)
+  }
+})
 </script>
 
 <template>
@@ -269,6 +291,23 @@ onMounted(() => {
         关闭
       </button>
     </section>
+
+    <Transition name="toast-fade">
+      <section
+        v-if="feedback"
+        class="feedback-toast"
+        :class="`feedback-toast--${feedback.tone}`"
+        aria-live="polite"
+      >
+        <div class="feedback-toast__body">
+          <strong>{{ feedback.tone === 'success' ? '操作成功' : feedback.tone === 'error' ? '操作失败' : '提示' }}</strong>
+          <span>{{ feedback.message }}</span>
+        </div>
+        <button type="button" class="feedback-toast__close" @click="clearFeedback">
+          关闭
+        </button>
+      </section>
+    </Transition>
 
     <section class="vector-workspace panel-card">
       <header class="vector-workspace__hero">
@@ -335,6 +374,7 @@ onMounted(() => {
               <span class="field__label">选择文件</span>
               <input
                 id="vector-file-input"
+                ref="uploadFileInput"
                 class="upload-box__input"
                 type="file"
                 @change="handleFileChange"
@@ -343,15 +383,27 @@ onMounted(() => {
             <p class="upload-box__tip">
               {{ selectedFile ? `已选择：${selectedFile.name}` : '尚未选择文件' }}
             </p>
-            <button
-              type="button"
-              class="app-button upload-box__button"
-              :disabled="uploadPending"
-              @click="handleUpload"
-            >
-              <Upload :size="16" aria-hidden="true" />
-              {{ uploadPending ? '上传中...' : '上传并切片入库' }}
-            </button>
+            <div class="upload-box__actions">
+              <button
+                v-if="selectedFile"
+                type="button"
+                class="app-button app-button--ghost upload-box__clear"
+                :disabled="uploadPending"
+                @click="clearSelectedUploadFile"
+              >
+                <Trash2 :size="16" aria-hidden="true" />
+                移除已选文件
+              </button>
+              <button
+                type="button"
+                class="app-button upload-box__button"
+                :disabled="uploadPending"
+                @click="handleUpload"
+              >
+                <Upload :size="16" aria-hidden="true" />
+                {{ uploadPending ? '上传中...' : '上传并切片入库' }}
+              </button>
+            </div>
           </div>
         </section>
 
@@ -541,6 +593,78 @@ onMounted(() => {
 </template>
 
 <style scoped>
+.feedback-banner {
+  display: none;
+}
+
+.feedback-toast {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  z-index: 1200;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  width: min(420px, calc(100vw - 32px));
+  padding: 16px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
+  background: rgba(9, 16, 28, 0.94);
+  box-shadow: 0 18px 48px rgba(3, 8, 18, 0.42);
+  backdrop-filter: blur(18px);
+}
+
+.feedback-toast--success {
+  border-color: rgba(86, 214, 164, 0.34);
+}
+
+.feedback-toast--error {
+  border-color: rgba(255, 120, 120, 0.34);
+}
+
+.feedback-toast--info {
+  border-color: rgba(105, 190, 255, 0.34);
+}
+
+.feedback-toast__body {
+  display: grid;
+  gap: 6px;
+  flex: 1;
+}
+
+.feedback-toast__body strong {
+  color: var(--color-ink-strong);
+  font-size: 0.94rem;
+}
+
+.feedback-toast__body span {
+  color: var(--color-ink-soft);
+  line-height: 1.6;
+}
+
+.feedback-toast__close {
+  border: 0;
+  padding: 0;
+  color: var(--color-ink-muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+.feedback-toast__close:hover {
+  color: var(--color-ink-strong);
+}
+
+.toast-fade-enter-active,
+.toast-fade-leave-active {
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.toast-fade-enter-from,
+.toast-fade-leave-to {
+  opacity: 0;
+  transform: translate3d(0, -10px, 0);
+}
+
 .vector-workspace {
   padding: 30px;
 }
@@ -636,6 +760,20 @@ onMounted(() => {
 .upload-box__input {
   width: 100%;
   color: var(--color-ink-soft);
+}
+
+.upload-box__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.upload-box__button {
+  flex: 1 1 240px;
+}
+
+.upload-box__clear {
+  flex: 0 0 auto;
 }
 
 .search-form__row {
@@ -767,6 +905,13 @@ onMounted(() => {
 }
 
 @media (max-width: 720px) {
+  .feedback-toast {
+    top: 16px;
+    right: 16px;
+    left: 16px;
+    width: auto;
+  }
+
   .vector-workspace {
     padding: 22px;
   }
@@ -779,6 +924,15 @@ onMounted(() => {
   .detail-summary,
   .vector-stats {
     grid-template-columns: 1fr;
+  }
+
+  .upload-box__actions {
+    flex-direction: column;
+  }
+
+  .upload-box__button,
+  .upload-box__clear {
+    width: 100%;
   }
 }
 </style>

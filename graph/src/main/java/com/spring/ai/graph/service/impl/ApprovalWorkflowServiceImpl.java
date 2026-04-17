@@ -62,7 +62,7 @@ public class ApprovalWorkflowServiceImpl implements ApprovalWorkflowService {
     @Override
     public ApprovalWorkflowResponse approve(String threadId, ApprovalDecisionRequest request) throws Exception {
         if (request.getApproved() == null) {
-            throw new IllegalArgumentException("approved 不能为空");
+            throw new IllegalArgumentException("审批结果不能为空");
         }
 
         RunnableConfig invokeConfig = buildThreadConfig(threadId);

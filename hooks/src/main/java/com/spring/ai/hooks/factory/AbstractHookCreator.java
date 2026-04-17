@@ -11,11 +11,11 @@ public abstract class AbstractHookCreator implements HookCreator {
 
     @Override
     public HookTypeEnum getHookType() {
-        throw new UnsupportedOperationException("子类必须实现 getHookType()");
+        throw new UnsupportedOperationException("子类必须实现获取钩子类型的方法");
     }
 
     @Override
     public Object create(Object dto) {
-        throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "当前 Hook 创建器尚未实现");
+        throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "当前钩子创建器尚未实现");
     }
 }

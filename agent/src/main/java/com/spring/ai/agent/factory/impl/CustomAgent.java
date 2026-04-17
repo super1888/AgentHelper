@@ -41,10 +41,10 @@ public class CustomAgent extends AbstractAgent implements AgentCreator {
      */
     private ReactAgent buildReactAgent(AgentInfoDTO agentInfoDTO) {
         if (agentInfoDTO == null) {
-            throw new BusinessException(ErrorCodeEnum.AGENT_CONFIG_ERROR, "AgentInfoDTO 不能为空");
+            throw new BusinessException(ErrorCodeEnum.AGENT_CONFIG_ERROR, "智能体信息配置不能为空");
         }
         if (!StringUtils.hasText(agentInfoDTO.getAgentName()) || agentInfoDTO.getModel() == null) {
-            throw new BusinessException(ErrorCodeEnum.AGENT_CONFIG_ERROR, "agentName 和 model 不能为空");
+            throw new BusinessException(ErrorCodeEnum.AGENT_CONFIG_ERROR, "智能体名称和模型配置不能为空");
         }
 
         Builder builder = ReactAgent.builder();

@@ -21,7 +21,7 @@ public class MethodToolCallbackProviderCreator implements ToolCreator {
     public Object create(Object dto) {
         MethodToolCallbackProviderDTO providerDTO = (MethodToolCallbackProviderDTO) dto;
         if (providerDTO == null) {
-            throw new IllegalArgumentException("MethodToolCallbackProviderDTO 不能为空");
+            throw new IllegalArgumentException("方法工具回调提供器配置不能为空");
         }
         return MethodToolCallbackProvider.builder()
                 .toolObjects(providerDTO.getTools())

@@ -22,7 +22,7 @@ public class SkillPromptAugmentAdvisorCreator implements SkillCreator {
     public Object create(Object dto) {
         SkillPromptAugmentAdvisorDTO advisorDTO = (SkillPromptAugmentAdvisorDTO) dto;
         if (advisorDTO == null) {
-            throw new IllegalArgumentException("SkillPromptAugmentAdvisorDTO 不能为空");
+            throw new IllegalArgumentException("技能提示增强顾问配置不能为空");
         }
 
         SkillPromptAugmentAdvisor.Builder builder = new SkillPromptAugmentAdvisor.Builder();

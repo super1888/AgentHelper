@@ -22,7 +22,7 @@ public class ClasspathSkillRegistryCreator implements SkillCreator {
     public Object create(Object dto) {
         ClasspathSkillRegistryDTO registryDTO = (ClasspathSkillRegistryDTO) dto;
         if (registryDTO == null) {
-            throw new IllegalArgumentException("ClasspathSkillRegistryDTO 不能为空");
+            throw new IllegalArgumentException("类路径技能注册表配置不能为空");
         }
         ClasspathSkillRegistry.Builder builder = new ClasspathSkillRegistry.Builder();
         if (StringUtils.hasText(registryDTO.getClasspathPath())) {

@@ -79,7 +79,7 @@ public class PromptTemplateResolver {
 
     public String normalizeSourceType(String sourceType) {
         if (!StringUtils.hasText(sourceType)) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "sourceType must not be blank");
+            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "来源类型不能为空");
         }
         String normalizedSourceType = sourceType.trim().toUpperCase(Locale.ROOT);
         if (!PromptTemplateConstants.SOURCE_TYPE_INLINE.equals(normalizedSourceType)

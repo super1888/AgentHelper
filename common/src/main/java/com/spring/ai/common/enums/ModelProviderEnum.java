@@ -16,7 +16,7 @@ public enum ModelProviderEnum {
 
     public static ModelProviderEnum fromValue(String value) {
         if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException("Model provider must not be blank");
+            throw new IllegalArgumentException("模型提供商不能为空");
         }
         String normalized = value.trim()
                 .replace("-", "_")

@@ -44,7 +44,7 @@ public class PromptTemplateSupportManager {
     public Long getCurrentUserId() {
         Long userId = userProvider.getCurrentUserId();
         if (userId == null) {
-            throw new BusinessException(ErrorCodeEnum.UNAUTHORIZED, HttpStatus.UNAUTHORIZED, "current user not found");
+            throw new BusinessException(ErrorCodeEnum.UNAUTHORIZED, HttpStatus.UNAUTHORIZED, "未找到当前用户");
         }
         return userId;
     }
@@ -56,14 +56,14 @@ public class PromptTemplateSupportManager {
     public Long getCurrentTenantId() {
         SyUser user = syUserService.getDetailById(getCurrentUserId());
         if (user == null) {
-            throw new BusinessException(ErrorCodeEnum.UNAUTHORIZED, HttpStatus.UNAUTHORIZED, "current user not found");
+            throw new BusinessException(ErrorCodeEnum.UNAUTHORIZED, HttpStatus.UNAUTHORIZED, "未找到当前用户");
         }
         if (user.getTenantId() == null) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "current tenant not found");
+            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "未找到当前租户");
         }
         SyTenant tenant = syTenantService.getDetailById(user.getTenantId());
         if (tenant == null) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "current tenant not found");
+            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "未找到当前租户");
         }
         return tenant.getId();
     }
@@ -72,7 +72,7 @@ public class PromptTemplateSupportManager {
         PromptTemplateRecord record = promptTemplateRecordService.getById(promptTemplateId);
         if (record == null || !getCurrentTenantId().equals(record.getTenantId())) {
             throw new BusinessException(ErrorCodeEnum.NOT_FOUND, HttpStatus.NOT_FOUND,
-                    "prompt template not found: " + promptTemplateId);
+                    "未找到提示词模板：" + promptTemplateId);
         }
         return record;
     }
@@ -82,7 +82,7 @@ public class PromptTemplateSupportManager {
             return objectMapper.writeValueAsString(value);
         } catch (JsonProcessingException e) {
             throw new BusinessException(ErrorCodeEnum.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR,
-                    "json serialize failed", e);
+                    "JSON 序列化失败", e);
         }
     }
 
@@ -94,7 +94,7 @@ public class PromptTemplateSupportManager {
             return objectMapper.readValue(json, VARIABLE_LIST_TYPE);
         } catch (JsonProcessingException e) {
             throw new BusinessException(ErrorCodeEnum.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR,
-                    "json parse failed", e);
+                    "JSON 解析失败", e);
         }
     }
 }

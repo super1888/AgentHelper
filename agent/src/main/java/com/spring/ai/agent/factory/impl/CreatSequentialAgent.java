@@ -42,7 +42,7 @@ public class CreatSequentialAgent extends AbstractAgent implements AgentCreator 
 
         // 如果DTO为空，直接返回空参构造的builder（或按你需求处理）
         if (dto == null) {
-            throw new IllegalArgumentException("SequentialAgentDTO 不能为空");
+            throw new IllegalArgumentException("串行智能体配置不能为空");
         }
 
         SequentialAgentBuilder builder = SequentialAgent.builder();

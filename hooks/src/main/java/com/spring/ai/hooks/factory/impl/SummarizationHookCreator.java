@@ -25,7 +25,7 @@ public class SummarizationHookCreator extends AbstractHookCreator {
     public Object create(Object dto) {
         SummarizationHookDTO summarizationHookDTO = (SummarizationHookDTO) dto;
         if (summarizationHookDTO == null) {
-            throw new IllegalArgumentException("SummarizationHookDTO 不能为空");
+            throw new IllegalArgumentException("摘要钩子配置不能为空");
         }
 
         ChatModel model = summarizationHookDTO.getChatModel();
