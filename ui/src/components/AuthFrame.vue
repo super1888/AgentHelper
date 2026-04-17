@@ -39,10 +39,10 @@ defineProps<{
           </div>
           <span class="auth-visual__tag auth-visual__tag--top">统一认证</span>
           <span class="auth-visual__tag auth-visual__tag--left">权限校验</span>
-          <span class="auth-visual__tag auth-visual__tag--right">环境切换</span>
+          <span class="auth-visual__tag auth-visual__tag--right">环境隔离</span>
         </div>
 
-        <div class="auth-story__highlights" aria-label="核心信息">
+        <div class="auth-story__highlights" aria-label="关键信息">
           <article
             v-for="item in highlights"
             :key="item.label"

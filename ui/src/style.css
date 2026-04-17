@@ -236,6 +236,62 @@ p {
   color: rgba(166, 183, 211, 0.56);
 }
 
+.app-textarea {
+  width: 100%;
+  min-height: 132px;
+  padding: 16px 18px 16px 14px;
+  color: var(--color-ink-strong);
+  background: transparent;
+  border: 0;
+  outline: 0;
+  resize: vertical;
+}
+
+.app-select {
+  min-height: 56px;
+  width: 100%;
+  padding: 0 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 18px;
+  color: var(--color-ink-strong);
+  background: rgba(255, 255, 255, 0.06);
+  outline: 0;
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.app-select:hover {
+  border-color: rgba(83, 184, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.app-select:focus {
+  border-color: rgba(77, 179, 255, 0.46);
+  box-shadow: var(--shadow-focus);
+}
+
+.app-select option {
+  color: #f0f5ff;
+  background: #0a1524;
+}
+
+.field--stacked {
+  padding: 0;
+  margin: 0;
+  border: 0;
+}
+
+.input-shell--textarea {
+  align-items: flex-start;
+  min-height: 132px;
+}
+
+.input-shell__icon--textarea {
+  padding-top: 18px;
+}
+
 .app-button {
   position: relative;
   display: inline-flex;

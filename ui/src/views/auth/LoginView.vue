@@ -25,7 +25,9 @@ const submitting = ref(false)
 
 const apiEndpointLabel = computed(() => {
   try {
-    const endpoint = appConfig.apiBaseUrl.startsWith('/') ? appConfig.proxyTarget : appConfig.apiBaseUrl
+    const endpoint = appConfig.apiBaseUrl.startsWith('/')
+      ? appConfig.proxyTarget
+      : appConfig.apiBaseUrl
     return new URL(endpoint, window.location.origin).host
   } catch {
     return appConfig.apiBaseUrl
@@ -38,19 +40,19 @@ const registeredNotice = computed(() =>
 
 const highlights = [
   {
-    label: '模式',
+    label: '环境',
     value: 'Development',
-    detail: '本地联调',
+    detail: '本地联调工作台',
   },
   {
     label: '认证',
     value: 'Sa-Token',
-    detail: '统一登录态',
+    detail: '统一登录态管理',
   },
   {
     label: '入口',
     value: 'User Console',
-    detail: '控制台工作台',
+    detail: '控制台统一入口',
   },
 ]
 
@@ -98,9 +100,9 @@ watchEffect(() => {
   <AuthFrame
     eyebrow="Authentication"
     title="Agent Helper 控制台"
-    description="统一认证入口与工作台访问，保留必要信息，减少无效说明。"
+    description="统一认证入口与工作台访问控制，收敛账号登录、环境接入和权限校验流程。"
     panel-title="欢迎回来"
-    panel-description="登录后进入用户工作台，处理账号、状态与权限相关操作。"
+    panel-description="登录后进入业务控制台，继续处理 Agent、向量库、提示词和租户管理任务。"
     :highlights="highlights"
   >
     <div class="auth-meta">
@@ -192,7 +194,6 @@ watchEffect(() => {
 <style scoped>
 .auth-meta {
   display: flex;
-  justify-content: flex-start;
   flex-wrap: wrap;
   gap: 10px;
   margin-bottom: 18px;

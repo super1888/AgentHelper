@@ -13,7 +13,6 @@ const currentLabel = computed(() => authStore.displayName)
 
 async function handleLogout() {
   logoutPending.value = true
-
   try {
     await authStore.signOut()
     await router.replace({ name: 'login' })
@@ -59,47 +58,27 @@ async function handleLogout() {
     </header>
 
     <nav class="shell__nav" aria-label="主导航">
-      <RouterLink
-        to="/agents"
-        class="shell__nav-link"
-        :class="{ 'shell__nav-link--active': String(route.path).startsWith('/agents') }"
-      >
+      <RouterLink to="/agents" class="shell__nav-link" :class="{ 'shell__nav-link--active': String(route.path).startsWith('/agents') }">
         <Bot :size="15" aria-hidden="true" />
         Agent 管理
       </RouterLink>
 
-      <RouterLink
-        to="/prompts"
-        class="shell__nav-link"
-        :class="{ 'shell__nav-link--active': route.name === 'prompts' }"
-      >
+      <RouterLink to="/prompts" class="shell__nav-link" :class="{ 'shell__nav-link--active': route.name === 'prompts' }">
         <FileCode2 :size="15" aria-hidden="true" />
         提示词模板
       </RouterLink>
 
-      <RouterLink
-        to="/vectors"
-        class="shell__nav-link"
-        :class="{ 'shell__nav-link--active': route.name === 'vectors' }"
-      >
+      <RouterLink to="/vectors" class="shell__nav-link" :class="{ 'shell__nav-link--active': route.name === 'vectors' }">
         <Database :size="15" aria-hidden="true" />
         向量管理
       </RouterLink>
 
-      <RouterLink
-        to="/tenants"
-        class="shell__nav-link"
-        :class="{ 'shell__nav-link--active': route.name === 'tenants' }"
-      >
+      <RouterLink to="/tenants" class="shell__nav-link" :class="{ 'shell__nav-link--active': route.name === 'tenants' }">
         <Building2 :size="15" aria-hidden="true" />
         租户管理
       </RouterLink>
 
-      <RouterLink
-        to="/users"
-        class="shell__nav-link"
-        :class="{ 'shell__nav-link--active': route.name === 'users' }"
-      >
+      <RouterLink to="/users" class="shell__nav-link" :class="{ 'shell__nav-link--active': route.name === 'users' }">
         <Users :size="15" aria-hidden="true" />
         用户管理
       </RouterLink>
@@ -259,13 +238,6 @@ async function handleLogout() {
 
   .shell__identity {
     align-items: flex-start;
-  }
-}
-
-@media (max-width: 640px) {
-  .shell__actions {
-    flex-direction: column;
-    align-items: stretch;
   }
 }
 </style>

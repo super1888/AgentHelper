@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import {
-  Database,
   FileSearch,
   FolderOpen,
   RefreshCw,
@@ -61,8 +60,8 @@ const searchForm = reactive({
   similarityThreshold: 0.4,
 })
 
-const activeFile = computed(() =>
-  files.value.find((item) => item.fileName === selectedFileName.value) ?? null,
+const activeFile = computed(
+  () => files.value.find((item) => item.fileName === selectedFileName.value) ?? null,
 )
 
 const activeFileSizeLabel = computed(() => formatBytes(activeFile.value?.fileSize ?? 0))
@@ -189,7 +188,7 @@ async function handleUpload() {
     if (fileInput) {
       fileInput.value = ''
     }
-    await refreshAll(`文件 ${result.fileName} 已上传并入库。`)
+    await refreshAll(`文件 ${result.fileName} 已上传并完成切片入库。`)
   } catch (error) {
     showFeedback('error', getErrorMessage(error, '向量文件上传失败。'))
   } finally {
@@ -266,7 +265,7 @@ onMounted(() => {
       aria-live="polite"
     >
       <span>{{ feedback.message }}</span>
-      <button type="button" class="app-button app-button--ghost" @click="clearFeedback">
+      <button type="button" class="app-button app-button--secondary" @click="clearFeedback">
         关闭
       </button>
     </section>
@@ -276,7 +275,9 @@ onMounted(() => {
         <div class="vector-workspace__headline">
           <p class="section-kicker">Vector Studio</p>
           <h2>向量管理中心</h2>
-          <p class="vector-workspace__subtitle">统一管理向量文件台账、切片详情、语义检索和批量清理。</p>
+          <p class="vector-workspace__subtitle">
+            统一管理文件入库、切片明细、语义检索与批量清理，支撑知识库向量资产的日常运营。
+          </p>
         </div>
 
         <div class="vector-workspace__actions">
@@ -289,7 +290,12 @@ onMounted(() => {
             <RefreshCw :size="16" aria-hidden="true" />
             刷新
           </button>
-          <button type="button" class="app-button app-button--danger" :disabled="deletePending" @click="handleDeleteAll">
+          <button
+            type="button"
+            class="app-button app-button--danger"
+            :disabled="deletePending"
+            @click="handleDeleteAll"
+          >
             <Trash2 :size="16" aria-hidden="true" />
             {{ deletePending ? '处理中...' : '清空全部向量' }}
           </button>
@@ -302,15 +308,15 @@ onMounted(() => {
           <strong>{{ statsLoading ? '...' : statistics.totalFiles }}</strong>
         </article>
         <article class="vector-stat panel-card">
-          <span>启用中文件</span>
+          <span>可用文件</span>
           <strong>{{ statsLoading ? '...' : statistics.activeFiles }}</strong>
         </article>
         <article class="vector-stat panel-card">
-          <span>总切片数</span>
+          <span>切片总数</span>
           <strong>{{ statsLoading ? '...' : statistics.totalChunks }}</strong>
         </article>
         <article class="vector-stat panel-card">
-          <span>总存储体积</span>
+          <span>存储体积</span>
           <strong>{{ statsLoading ? '...' : formatBytes(statistics.totalFileSize) }}</strong>
         </article>
       </div>
@@ -319,20 +325,30 @@ onMounted(() => {
         <section class="vector-panel panel-card">
           <div class="section-header">
             <div>
-              <strong>上传入库</strong>
-              <p>支持现有后端已接入的文档解析格式。</p>
+              <strong>文件上传入库</strong>
+              <p>支持将业务文档上传到向量库，并自动完成切片与索引构建。</p>
             </div>
           </div>
 
           <div class="upload-box">
             <label class="field">
               <span class="field__label">选择文件</span>
-              <input id="vector-file-input" class="upload-box__input" type="file" @change="handleFileChange" />
+              <input
+                id="vector-file-input"
+                class="upload-box__input"
+                type="file"
+                @change="handleFileChange"
+              />
             </label>
             <p class="upload-box__tip">
-              {{ selectedFile ? `已选择：${selectedFile.name}` : '未选择文件' }}
+              {{ selectedFile ? `已选择：${selectedFile.name}` : '尚未选择文件' }}
             </p>
-            <button type="button" class="app-button upload-box__button" :disabled="uploadPending" @click="handleUpload">
+            <button
+              type="button"
+              class="app-button upload-box__button"
+              :disabled="uploadPending"
+              @click="handleUpload"
+            >
               <Upload :size="16" aria-hidden="true" />
               {{ uploadPending ? '上传中...' : '上传并切片入库' }}
             </button>
@@ -343,7 +359,7 @@ onMounted(() => {
           <div class="section-header">
             <div>
               <strong>语义检索</strong>
-              <p>支持按文件过滤并查看命中切片。</p>
+              <p>支持按文件过滤检索范围，并返回命中的切片内容与相似度分值。</p>
             </div>
           </div>
 
@@ -354,7 +370,12 @@ onMounted(() => {
                 <span class="input-shell__icon" aria-hidden="true">
                   <Search :size="16" />
                 </span>
-                <input v-model="searchForm.query" class="app-input" type="text" placeholder="请输入语义检索词" />
+                <input
+                  v-model="searchForm.query"
+                  class="app-input"
+                  type="text"
+                  placeholder="请输入语义检索词"
+                />
               </div>
             </label>
 
@@ -377,7 +398,13 @@ onMounted(() => {
               <label class="field">
                 <span class="field__label">Top K</span>
                 <div class="input-shell">
-                  <input v-model.number="searchForm.topK" class="app-input" type="number" min="1" max="20" />
+                  <input
+                    v-model.number="searchForm.topK"
+                    class="app-input"
+                    type="number"
+                    min="1"
+                    max="20"
+                  />
                 </div>
               </label>
 
@@ -403,13 +430,13 @@ onMounted(() => {
           </div>
 
           <div v-if="searchResult" class="result-list">
-            <div class="result-list__summary">
-              命中 {{ searchResult.total }} 条结果
-            </div>
+            <div class="result-list__summary">命中 {{ searchResult.total }} 条结果</div>
             <article v-for="item in searchResult.items" :key="item.id" class="result-card">
               <div class="result-card__meta">
                 <span>{{ String(item.metadata?.file_name ?? searchResult.fileName ?? '未标记文件') }}</span>
-                <strong v-if="item.score !== undefined && item.score !== null">{{ item.score.toFixed(4) }}</strong>
+                <strong v-if="item.score !== undefined && item.score !== null">
+                  {{ item.score.toFixed(4) }}
+                </strong>
               </div>
               <p>{{ item.content }}</p>
             </article>
@@ -420,7 +447,7 @@ onMounted(() => {
           <div class="section-header">
             <div>
               <strong>文件台账</strong>
-              <p>数据库台账展示当前向量文件状态。</p>
+              <p>查看当前向量文件状态、切片数量、存储体积和最近处理结果。</p>
             </div>
           </div>
 
@@ -442,7 +469,10 @@ onMounted(() => {
                   <strong>{{ item.fileName }}</strong>
                   <p>{{ formatTime(item.uploadedAt) }}</p>
                 </div>
-                <span class="file-card__status" :class="`file-card__status--${String(item.storeStatus).toLowerCase()}`">
+                <span
+                  class="file-card__status"
+                  :class="`file-card__status--${String(item.storeStatus).toLowerCase()}`"
+                >
                   {{ item.storeStatus || 'UNKNOWN' }}
                 </span>
               </div>
@@ -468,7 +498,7 @@ onMounted(() => {
           <div class="section-header">
             <div>
               <strong>切片详情</strong>
-              <p>查看文件切片文本和元数据，便于排查入库结果。</p>
+              <p>查看文件切片文本和元数据，便于排查入库质量与检索命中效果。</p>
             </div>
           </div>
 
@@ -496,7 +526,7 @@ onMounted(() => {
                 <div class="document-card__head">
                   <div class="document-card__title">
                     <FolderOpen :size="15" aria-hidden="true" />
-                    <strong>{{ item.id || '未记录切片ID' }}</strong>
+                    <strong>{{ item.id || '未记录切片 ID' }}</strong>
                   </div>
                   <span>{{ String(item.metadata?.uploaded_at ?? '-') }}</span>
                 </div>
@@ -596,14 +626,15 @@ onMounted(() => {
   margin-top: 18px;
 }
 
-.upload-box__input {
-  width: 100%;
-  color: var(--color-ink-soft);
-}
-
+.section-header p,
 .upload-box__tip,
 .result-list__summary,
 .empty-state {
+  color: var(--color-ink-soft);
+}
+
+.upload-box__input {
+  width: 100%;
   color: var(--color-ink-soft);
 }
 
@@ -615,7 +646,8 @@ onMounted(() => {
 
 .file-card,
 .document-card,
-.result-card {
+.result-card,
+.detail-metric {
   width: 100%;
   padding: 18px;
   text-align: left;
@@ -707,9 +739,6 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 18px;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.05);
 }
 
 .detail-metric span {
@@ -719,6 +748,12 @@ onMounted(() => {
 
 .detail-metric strong {
   color: var(--color-ink-strong);
+}
+
+.app-button--ghost {
+  color: var(--color-ink-strong);
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 
 @media (max-width: 1100px) {

@@ -257,7 +257,7 @@ watch(
         <div class="panel-head">
           <div>
             <strong>来源策略</strong>
-            <p>模板变量统一使用 `{{variableName}}` 规范。</p>
+            <p>模板变量统一使用 <code>&#123;&#123;variableName&#125;&#125;</code> 规范。</p>
           </div>
         </div>
 
@@ -294,7 +294,7 @@ watch(
             />
           </div>
           <span v-if="errors.templateContent" class="field__error">{{ errors.templateContent }}</span>
-          <span v-else class="field__hint">模板中出现的 `{{variableName}}` 会自动同步到变量元数据区域。</span>
+          <span v-else class="field__hint">模板中出现的 <code>&#123;&#123;variableName&#125;&#125;</code> 会自动同步到变量元数据区域。</span>
         </label>
 
         <label v-else class="field">
@@ -333,7 +333,7 @@ watch(
         </div>
 
         <div v-if="form.variableDefinitions.length === 0" class="empty-state">
-          当前没有变量。内联模板可直接在正文里输入 `{{variableName}}`，文件模板可手动新增变量。
+          当前没有变量。内联模板可直接在正文里输入 <code>&#123;&#123;variableName&#125;&#125;</code>，文件模板可手动新增变量。
         </div>
 
         <div v-else class="variable-grid">

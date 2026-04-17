@@ -23,37 +23,17 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <AppDialog
-    :model-value="modelValue"
-    :title="title"
-    width="compact"
-    @update:model-value="emit('update:modelValue', $event)"
-  >
+  <AppDialog :model-value="modelValue" :title="title" width="compact" @update:model-value="emit('update:modelValue', $event)">
     <div class="confirm-dialog">
       <div class="confirm-dialog__icon" aria-hidden="true">
         <AlertTriangle :size="18" />
       </div>
-
       <p class="confirm-dialog__description">{{ description }}</p>
     </div>
 
     <template #footer>
-      <button
-        type="button"
-        class="app-button app-button--secondary"
-        :disabled="loading"
-        @click="emit('update:modelValue', false)"
-      >
-        取消
-      </button>
-
-      <button
-        type="button"
-        class="app-button app-button--danger"
-        :disabled="loading"
-        :aria-busy="loading"
-        @click="emit('confirm')"
-      >
+      <button type="button" class="app-button app-button--secondary" :disabled="loading" @click="emit('update:modelValue', false)">取消</button>
+      <button type="button" class="app-button app-button--danger" :disabled="loading" :aria-busy="loading" @click="emit('confirm')">
         <span v-if="loading" class="button-spinner" aria-hidden="true"></span>
         {{ loading ? '处理中...' : confirmText }}
       </button>
@@ -62,26 +42,7 @@ const emit = defineEmits<{
 </template>
 
 <style scoped>
-.confirm-dialog {
-  display: flex;
-  gap: 16px;
-  align-items: flex-start;
-}
-
-.confirm-dialog__icon {
-  display: grid;
-  flex-shrink: 0;
-  place-items: center;
-  width: 38px;
-  height: 38px;
-  color: #f7b05b;
-  border-radius: 14px;
-  background: rgba(245, 158, 11, 0.14);
-}
-
-.confirm-dialog__description {
-  margin: 0;
-  color: var(--color-ink-soft);
-  line-height: 1.7;
-}
+.confirm-dialog { display: flex; gap: 16px; align-items: flex-start; }
+.confirm-dialog__icon { display: grid; flex-shrink: 0; place-items: center; width: 38px; height: 38px; color: #f7b05b; border-radius: 14px; background: rgba(245,158,11,.14); }
+.confirm-dialog__description { margin: 0; color: var(--color-ink-soft); line-height: 1.7; }
 </style>

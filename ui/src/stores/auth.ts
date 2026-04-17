@@ -1,7 +1,18 @@
 import { computed, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
-import { fetchCurrentUser, login as loginRequest, logout as logoutRequest, registerAccount } from '@/api/auth'
-import type { LoginPayload, RegisterPayload, UserAuthLoginResult, UserProfile, UserToken } from '@/types/user'
+import {
+  fetchCurrentUser,
+  login as loginRequest,
+  logout as logoutRequest,
+  registerAccount,
+} from '@/api/auth'
+import type {
+  LoginPayload,
+  RegisterPayload,
+  UserAuthLoginResult,
+  UserProfile,
+  UserToken,
+} from '@/types/user'
 import { saveAuthSnapshot, loadAuthSnapshot } from '@/utils/storage'
 
 export const useAuthStore = defineStore('auth', () => {

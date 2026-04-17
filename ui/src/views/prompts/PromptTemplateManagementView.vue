@@ -24,7 +24,11 @@ import {
   removePromptTemplate,
   updatePromptTemplate,
 } from '@/api/prompt'
-import type { PromptTemplateItem, PromptTemplatePayload, PromptTemplateStatistics } from '@/types/prompt'
+import type {
+  PromptTemplateItem,
+  PromptTemplatePayload,
+  PromptTemplateStatistics,
+} from '@/types/prompt'
 import { getErrorMessage } from '@/utils/errors'
 
 type DialogMode = 'create' | 'edit'
@@ -43,7 +47,17 @@ const submitting = ref(false)
 const deletePending = ref(false)
 const dialogOpen = ref(false)
 const previewOpen = ref(false)
-const previewVariablesText = ref('{\n  "userName": "张卓奇",\n  "ticketId": "TK-20260416-01",\n  "knowledge_summary": "已匹配到 3 条知识库答案"\n}')
+const previewVariablesText = ref(
+  JSON.stringify(
+    {
+      userName: '张卓琪',
+      ticketId: 'TK-20260416-01',
+      knowledge_summary: '已命中 3 条知识库结果',
+    },
+    null,
+    2,
+  ),
+)
 const dialogMode = ref<DialogMode>('create')
 const selectedTemplate = ref<PromptTemplateItem | null>(null)
 const previewTemplate = ref<PromptTemplateItem | null>(null)
@@ -57,6 +71,7 @@ const statistics = ref<PromptTemplateStatistics>({
   inlineCount: 0,
   fileCount: 0,
 })
+
 const filters = reactive({
   keyword: '',
   templateStatus: 'ALL' as TemplateStatusFilter,
@@ -92,8 +107,11 @@ const enabledRate = computed(() => {
 })
 
 const deleteDescription = computed(() =>
-  deleteTarget.value ? `确认删除模板「${deleteTarget.value.templateName}」吗？该操作不可撤销。` : '',
+  deleteTarget.value
+    ? `确认删除模板「${deleteTarget.value.templateName}」吗？该操作不可撤销。`
+    : '',
 )
+
 const previewVariableDefinitions = computed(() => {
   const definitions = previewTemplate.value?.variableDefinitions ?? []
   if (definitions.length > 0) {
@@ -106,12 +124,14 @@ const previewVariableDefinitions = computed(() => {
     description: null,
   }))
 })
+
 const previewVariableMap = computed<Record<string, string>>(() => {
   try {
     const parsed = JSON.parse(previewVariablesText.value)
     if (!parsed || Array.isArray(parsed) || typeof parsed !== 'object') {
       return {}
     }
+
     return Object.entries(parsed).reduce<Record<string, string>>((result, [key, value]) => {
       result[key] = value == null ? '' : String(value)
       return result
@@ -120,6 +140,7 @@ const previewVariableMap = computed<Record<string, string>>(() => {
     return {}
   }
 })
+
 const renderedPreviewContent = computed(() => {
   const content = previewTemplate.value?.templateContent ?? ''
   return content.replace(/\{\{\s*([a-zA-Z][a-zA-Z0-9_]*)\s*}}/g, (_, key: string) => {
@@ -128,6 +149,7 @@ const renderedPreviewContent = computed(() => {
       : `{{${key}}}`
   })
 })
+
 const previewJsonValid = computed(() => {
   try {
     JSON.parse(previewVariablesText.value)
@@ -159,7 +181,7 @@ function formatTime(value: number | null) {
 }
 
 function formatStatusLabel(status: PromptTemplateItem['templateStatus']) {
-  return status === 'ENABLED' ? '启用' : '禁用'
+  return status === 'ENABLED' ? '启用' : '停用'
 }
 
 function formatSourceLabel(sourceType: PromptTemplateItem['sourceType']) {
@@ -179,12 +201,12 @@ function extractVariables(content: string) {
 function estimateAssetValue(item: PromptTemplateItem) {
   const size = (item.templateContent || item.sourcePath || '').length
   if (size >= 1200) {
-    return '复杂流程型'
+    return '复杂流程模板'
   }
   if (size >= 300) {
-    return '标准运营型'
+    return '标准运营模板'
   }
-  return '轻量规则型'
+  return '轻量规则模板'
 }
 
 async function loadTemplates(successMessage?: string) {
@@ -242,12 +264,16 @@ function openEditDialog(template: PromptTemplateItem) {
 
 function openPreview(template: PromptTemplateItem) {
   previewTemplate.value = template
+
   const variables = template.variableDefinitions?.length
     ? template.variableDefinitions
     : extractVariables(template.templateContent ?? '').map((item) => ({
       variableName: item,
       defaultValue: null,
+      required: true,
+      description: null,
     }))
+
   if (variables.length > 0) {
     const nextValue = variables.reduce<Record<string, string>>((result, item) => {
       result[item.variableName] = previewVariableMap.value[item.variableName] ?? item.defaultValue ?? ''
@@ -255,6 +281,7 @@ function openPreview(template: PromptTemplateItem) {
     }, {})
     previewVariablesText.value = JSON.stringify(nextValue, null, 2)
   }
+
   previewOpen.value = true
 }
 
@@ -326,7 +353,7 @@ onMounted(() => {
       aria-live="polite"
     >
       <span>{{ feedback.message }}</span>
-      <button type="button" class="app-button app-button--ghost" @click="clearFeedback">
+      <button type="button" class="app-button app-button--secondary" @click="clearFeedback">
         关闭
       </button>
     </section>
@@ -337,12 +364,17 @@ onMounted(() => {
           <p class="section-kicker">Prompt Center</p>
           <h2>提示词模板资产中心</h2>
           <p class="workspace__subtitle">
-            沉淀面向商业化 Agent 的系统提示词资产。模板统一管理后，可以在 Agent 创建和迭代时稳定复用，降低提示词漂移风险。
+            面向商业化 Agent 统一沉淀系统提示词资产，持续管理模板来源、启停状态、变量元数据与渲染预览。
           </p>
         </div>
 
         <div class="workspace__actions">
-          <button type="button" class="app-button app-button--secondary" :disabled="loading || statsLoading" @click="refreshAll()">
+          <button
+            type="button"
+            class="app-button app-button--secondary"
+            :disabled="loading || statsLoading"
+            @click="refreshAll()"
+          >
             <RefreshCw :size="16" aria-hidden="true" />
             刷新
           </button>
@@ -357,17 +389,17 @@ onMounted(() => {
         <article class="stats-card panel-card">
           <span>模板总数</span>
           <strong>{{ statsLoading ? '...' : statistics.totalCount }}</strong>
-          <p>覆盖当前租户的全部提示词资产。</p>
+          <p>覆盖当前环境全部提示词资产。</p>
         </article>
         <article class="stats-card panel-card">
           <span>启用模板</span>
           <strong>{{ statsLoading ? '...' : statistics.enabledCount }}</strong>
-          <p>当前 Agent 创建页默认可见的可用资产。</p>
+          <p>可直接在 Agent 创建页绑定使用。</p>
         </article>
         <article class="stats-card panel-card">
           <span>启用率</span>
           <strong>{{ statsLoading ? '...' : enabledRate }}</strong>
-          <p>衡量模板池可投产比例。</p>
+          <p>衡量资产池可投产比例。</p>
         </article>
         <article class="stats-card panel-card">
           <span>文件模板</span>
@@ -398,7 +430,7 @@ onMounted(() => {
             <select v-model="filters.templateStatus" class="app-select">
               <option value="ALL">全部状态</option>
               <option value="ENABLED">仅启用</option>
-              <option value="DISABLED">仅禁用</option>
+              <option value="DISABLED">仅停用</option>
             </select>
           </label>
 
@@ -420,14 +452,14 @@ onMounted(() => {
             <span>{{ resultsSummary }}</span>
           </div>
           <div class="workspace__legend">
-            <span><ShieldCheck :size="14" aria-hidden="true" />规范资产化</span>
-            <span><FileCode2 :size="14" aria-hidden="true" />支持文件路径</span>
+            <span><ShieldCheck :size="14" aria-hidden="true" />规范化资产</span>
+            <span><FileCode2 :size="14" aria-hidden="true" />支持文件路径模板</span>
           </div>
         </div>
 
         <div v-if="loading" class="empty-state">正在加载模板列表...</div>
         <div v-else-if="filteredTemplates.length === 0" class="empty-state">
-          当前筛选条件下没有模板，调整筛选条件或创建新的提示词模板。
+          当前筛选条件下没有模板，请调整筛选条件或创建新的提示词模板。
         </div>
         <div v-else class="template-list">
           <article v-for="item in filteredTemplates" :key="item.id" class="template-card">
@@ -442,7 +474,7 @@ onMounted(() => {
             </div>
 
             <p class="template-card__description">
-              {{ item.description || '该模板暂未补充说明，建议补齐适用场景和输出边界。' }}
+              {{ item.description || '该模板暂未补充说明，建议补齐适用场景、输出边界与安全约束。' }}
             </p>
 
             <div class="template-card__meta">
@@ -476,7 +508,11 @@ onMounted(() => {
                 <UserRoundPen :size="15" aria-hidden="true" />
                 编辑
               </button>
-              <button type="button" class="app-button app-button--ghost app-button--danger-ghost" @click="requestDelete(item)">
+              <button
+                type="button"
+                class="app-button app-button--ghost app-button--danger-ghost"
+                @click="requestDelete(item)"
+              >
                 <Trash2 :size="15" aria-hidden="true" />
                 删除
               </button>
@@ -497,7 +533,7 @@ onMounted(() => {
     <AppDialog
       :model-value="previewOpen"
       title="提示词模板预览"
-      description="查看模板元信息与实际内容，确认是否适合绑定到 Agent。"
+      description="查看模板元信息、变量定义与渲染效果，确认是否适合绑定到 Agent。"
       width="wide"
       @update:model-value="previewOpen = $event"
     >
@@ -518,13 +554,15 @@ onMounted(() => {
         </div>
 
         <div class="preview-dialog__block">
-          <strong>模板描述</strong>
-          <p>{{ previewTemplate.description || '暂无模板描述。' }}</p>
+          <strong>模板说明</strong>
+          <p>{{ previewTemplate.description || '暂无模板说明。' }}</p>
         </div>
 
         <div v-if="previewTemplate.sourceType === 'INLINE_TEXT'" class="preview-dialog__block">
-          <strong>占位符规范</strong>
-          <p>模板变量统一使用 <code>{{variableName}}</code>，变量名仅支持英文字母开头，后接字母、数字或下划线。</p>
+          <strong>变量占位符规范</strong>
+          <p>
+            模板变量统一使用 <code>&#123;&#123;variableName&#125;&#125;</code>，变量名只能以英文字母开头，后续允许字母、数字和下划线。
+          </p>
           <div v-if="previewVariableDefinitions.length > 0" class="preview-variable-list">
             <article
               v-for="item in previewVariableDefinitions"
@@ -539,15 +577,15 @@ onMounted(() => {
               <small>默认值：{{ item.defaultValue || '-' }}</small>
             </article>
           </div>
-          <p v-else>当前模板未声明动态变量，可以直接作为静态系统提示词使用。</p>
+          <p v-else>当前模板未声明动态变量，可直接作为静态系统提示词使用。</p>
         </div>
 
         <div v-if="previewTemplate.sourceType === 'INLINE_TEXT'" class="preview-dialog__block">
           <strong>渲染预览</strong>
-          <p>输入 JSON 变量值后，可以预览模板渲染结果，便于联调 Agent 上下文注入。</p>
+          <p>输入 JSON 变量值后，可以即时预览模板渲染结果，便于联调 Agent 上下文注入。</p>
           <textarea
             v-model="previewVariablesText"
-            class="preview-json-textarea"
+            class="app-textarea preview-json-textarea"
             rows="8"
             spellcheck="false"
             placeholder='{
@@ -555,7 +593,7 @@ onMounted(() => {
 }'
           />
           <p :class="previewJsonValid ? 'preview-json-state' : 'preview-json-state preview-json-state--error'">
-            {{ previewJsonValid ? 'JSON 格式有效，可用于占位符渲染。' : 'JSON 格式无效，当前仅展示原始占位符。' }}
+            {{ previewJsonValid ? 'JSON 格式有效，可用于变量渲染。' : 'JSON 格式无效，当前仅展示原始占位符。' }}
           </p>
           <pre>{{ renderedPreviewContent }}</pre>
         </div>
@@ -656,21 +694,6 @@ onMounted(() => {
   display: grid;
   grid-template-columns: minmax(0, 1.6fr) repeat(2, minmax(180px, 0.8fr));
   gap: 16px;
-}
-
-.app-select {
-  min-height: 56px;
-  padding: 0 18px;
-  color: var(--color-ink-strong);
-  border: 1px solid var(--color-border);
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.05);
-  outline: none;
-}
-
-.app-select option {
-  color: #f0f5ff;
-  background: #0a1524;
 }
 
 .workspace__table {
@@ -857,15 +880,9 @@ onMounted(() => {
 }
 
 .preview-json-textarea {
-  width: 100%;
   min-height: 180px;
-  padding: 14px 16px;
-  color: var(--color-ink-strong);
-  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 18px;
   background: rgba(4, 10, 20, 0.55);
-  outline: none;
-  resize: vertical;
   font-family: var(--font-mono);
 }
 
