@@ -6,4 +6,8 @@ import lombok.Data;
 public class SkillImportRequest {
 
     private String importPayload;
+
+    private String importFormat;
+
+    private Integer publishAfterImport;
 }

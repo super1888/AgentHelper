@@ -1,12 +1,12 @@
 package com.spring.ai.skills.domain.request;
 
 import com.spring.ai.skills.domain.dto.SkillBatchConfigDTO;
-import com.spring.ai.skills.domain.dto.SkillExecutionConfigDTO;
-import com.spring.ai.skills.domain.dto.SkillIntentConfigDTO;
+import com.spring.ai.skills.domain.dto.SkillCategoryDTO;
+import com.spring.ai.skills.domain.dto.SkillChannelAdaptationDTO;
+import com.spring.ai.skills.domain.dto.SkillMarketplaceConfigDTO;
 import com.spring.ai.skills.domain.dto.SkillObservabilityConfigDTO;
-import com.spring.ai.skills.domain.dto.SkillPermissionConfigDTO;
 import com.spring.ai.skills.domain.dto.SkillReleaseConfigDTO;
-import com.spring.ai.skills.domain.dto.SkillRoutingConfigDTO;
+import com.spring.ai.skills.domain.dto.SkillTagDTO;
 import com.spring.ai.skills.domain.dto.SkillWorkflowConfigDTO;
 import java.util.List;
 import lombok.Data;
@@ -20,21 +20,25 @@ public class SkillSaveRequest {
 
     private String description;
 
+    private String skillType;
+
     private String skillCategory;
 
+    private List<SkillCategoryDTO> categoryChain;
+
+    private List<SkillTagDTO> tags;
+
     private String skillStatus;
+
+    private Integer sortWeight;
+
+    private String versionCode;
+
+    private String versionDescription;
 
     private String versionMode;
 
     private Integer hotUpdateEnabled;
-
-    private List<SkillIntentConfigDTO> intentConfigs;
-
-    private SkillExecutionConfigDTO executionConfig;
-
-    private SkillRoutingConfigDTO routingConfig;
-
-    private SkillPermissionConfigDTO permissionConfig;
 
     private SkillObservabilityConfigDTO observabilityConfig;
 
@@ -43,6 +47,10 @@ public class SkillSaveRequest {
     private SkillBatchConfigDTO batchConfig;
 
     private SkillWorkflowConfigDTO workflowConfig;
+
+    private List<SkillChannelAdaptationDTO> channelAdaptations;
+
+    private SkillMarketplaceConfigDTO marketplaceConfig;
 
     private String remark;
 }

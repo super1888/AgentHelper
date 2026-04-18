@@ -108,6 +108,13 @@
 
         <dependency>
             <groupId>com.spring.ai</groupId>
+            <artifactId>skills</artifactId>
+            <version>1.0-SNAPSHOT</version>
+            <scope>compile</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.spring.ai</groupId>
             <artifactId>a2a</artifactId>
             <version>1.0-SNAPSHOT</version>
             <scope>compile</scope>

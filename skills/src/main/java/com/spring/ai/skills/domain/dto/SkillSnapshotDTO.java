@@ -14,23 +14,27 @@ public class SkillSnapshotDTO {
 
     private String description;
 
+    private String skillType;
+
     private String skillCategory;
+
+    private List<SkillCategoryDTO> categoryChain;
+
+    private List<SkillTagDTO> tags;
 
     private String skillStatus;
 
     private String publishStatus;
 
+    private String versionCode;
+
+    private String versionDescription;
+
     private String versionMode;
 
+    private Integer sortWeight;
+
     private Integer hotUpdateEnabled;
-
-    private List<SkillIntentConfigDTO> intentConfigs;
-
-    private SkillExecutionConfigDTO executionConfig;
-
-    private SkillRoutingConfigDTO routingConfig;
-
-    private SkillPermissionConfigDTO permissionConfig;
 
     private SkillObservabilityConfigDTO observabilityConfig;
 
@@ -39,6 +43,10 @@ public class SkillSnapshotDTO {
     private SkillBatchConfigDTO batchConfig;
 
     private SkillWorkflowConfigDTO workflowConfig;
+
+    private List<SkillChannelAdaptationDTO> channelAdaptations;
+
+    private SkillMarketplaceConfigDTO marketplaceConfig;
 
     private String remark;
 }

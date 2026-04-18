@@ -17,6 +17,17 @@ public class SkillRecordServiceImpl extends ServiceImpl<SkillRecordMapper, Skill
     public List<SkillRecord> listByTenantId(Long tenantId) {
         return list(Wrappers.lambdaQuery(SkillRecord.class)
                 .eq(SkillRecord::getTenantId, tenantId)
+                .and(wrapper -> wrapper.ne(SkillRecord::getDeletedFlag, 1).or().isNull(SkillRecord::getDeletedFlag))
+                .orderByDesc(SkillRecord::getSortWeight)
+                .orderByDesc(SkillRecord::getUpdateTime)
+                .orderByDesc(SkillRecord::getId));
+    }
+
+    @Override
+    public List<SkillRecord> listDeletedByTenantId(Long tenantId) {
+        return list(Wrappers.lambdaQuery(SkillRecord.class)
+                .eq(SkillRecord::getTenantId, tenantId)
+                .eq(SkillRecord::getDeletedFlag, 1)
                 .orderByDesc(SkillRecord::getUpdateTime)
                 .orderByDesc(SkillRecord::getId));
     }
@@ -29,6 +40,7 @@ public class SkillRecordServiceImpl extends ServiceImpl<SkillRecordMapper, Skill
         return getOne(Wrappers.lambdaQuery(SkillRecord.class)
                 .eq(SkillRecord::getTenantId, tenantId)
                 .eq(SkillRecord::getSkillCode, skillCode.trim())
+                .and(wrapper -> wrapper.ne(SkillRecord::getDeletedFlag, 1).or().isNull(SkillRecord::getDeletedFlag))
                 .last(SqlConstants.LIMIT_ONE));
     }
 }

@@ -14,4 +14,16 @@ public class SkillStatisticsResponse {
     private Integer publishedCount;
 
     private Integer hotUpdateEnabledCount;
+
+    private Integer draftCount;
+
+    private Integer deletedCount;
+
+    private Integer totalTestCaseCount;
+
+    private Integer totalLogCount;
+
+    private Integer successLogCount;
+
+    private Integer failureLogCount;
 }

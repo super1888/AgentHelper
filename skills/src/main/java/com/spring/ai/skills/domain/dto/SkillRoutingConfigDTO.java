@@ -10,9 +10,23 @@ public class SkillRoutingConfigDTO {
 
     private List<String> routeTags;
 
-    private String contextWindowStrategy;
+    private List<String> manualIntentBindings;
 
-    private String memoryPolicy;
+    private String conflictResolutionPolicy;
+
+    private List<String> dependencySkillCodes;
+
+    private List<String> mutexSkillCodes;
+
+    private List<String> preCheckRules;
+
+    private List<String> contextReadableKeys;
+
+    private List<String> contextWritableKeys;
+
+    private Integer contextExpireMinutes;
+
+    private String slotFillStrategy;
 
     private String fallbackSkillCode;
 }

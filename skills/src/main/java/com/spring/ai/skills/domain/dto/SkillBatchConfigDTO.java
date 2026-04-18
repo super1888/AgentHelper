@@ -1,5 +1,6 @@
 package com.spring.ai.skills.domain.dto;
 
+import java.util.List;
 import lombok.Data;
 
 @Data
@@ -11,7 +12,17 @@ public class SkillBatchConfigDTO {
 
     private Integer exportEnabled;
 
-    private String importTemplate;
+    private List<String> importFormats;
 
-    private String exportTemplate;
+    private List<String> exportFormats;
+
+    private Integer tagBatchSupported;
+
+    private Integer categoryBatchSupported;
+
+    private Integer logicalDeleteEnabled;
+
+    private Integer recycleEnabled;
+
+    private Integer copyEnabled;
 }

@@ -11,5 +11,7 @@ public class SkillExportResponse {
 
     private String skillName;
 
+    private String exportFormat;
+
     private String exportPayload;
 }

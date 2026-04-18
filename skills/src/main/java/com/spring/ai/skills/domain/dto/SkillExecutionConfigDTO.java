@@ -1,21 +1,28 @@
 package com.spring.ai.skills.domain.dto;
 
+import java.util.Map;
 import lombok.Data;
 
 @Data
 public class SkillExecutionConfigDTO {
 
-    private String executionType;
+    private String actionType;
 
-    private String apiEndpoint;
+    private Integer timeoutMs;
 
-    private String httpMethod;
+    private Integer retryTimes;
 
-    private String functionName;
+    private Map<String, Object> httpConfig;
 
-    private String timeoutMs;
+    private Map<String, Object> grpcConfig;
 
-    private String requestTemplate;
+    private Map<String, Object> databaseConfig;
 
-    private String responseMapping;
+    private Map<String, Object> pluginConfig;
+
+    private Map<String, Object> functionConfig;
+
+    private Map<String, Object> scriptConfig;
+
+    private Map<String, Object> workflowJumpConfig;
 }

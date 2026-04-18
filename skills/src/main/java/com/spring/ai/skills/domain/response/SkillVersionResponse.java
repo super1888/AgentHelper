@@ -11,9 +11,15 @@ public class SkillVersionResponse {
 
     private Integer versionNo;
 
+    private String versionCode;
+
+    private String versionDescription;
+
     private String versionStatus;
 
     private String publishStatus;
+
+    private String releaseStage;
 
     private Long createTime;
 }

@@ -23,6 +23,9 @@ public class SkillRecord extends BaseEntity {
     @TableField("description")
     private String description;
 
+    @TableField("skill_type")
+    private String skillType;
+
     @TableField("skill_category")
     private String skillCategory;
 
@@ -35,6 +38,9 @@ public class SkillRecord extends BaseEntity {
     @TableField("version_mode")
     private String versionMode;
 
+    @TableField("sort_weight")
+    private Integer sortWeight;
+
     @TableField("current_version_no")
     private Integer currentVersionNo;
 
@@ -46,6 +52,9 @@ public class SkillRecord extends BaseEntity {
 
     @TableField("hot_update_enabled")
     private Integer hotUpdateEnabled;
+
+    @TableField("deleted_flag")
+    private Integer deletedFlag;
 
     @TableField("tenant_id")
     private Long tenantId;

@@ -8,5 +8,7 @@ public interface SkillRecordService extends IService<SkillRecord> {
 
     List<SkillRecord> listByTenantId(Long tenantId);
 
+    List<SkillRecord> listDeletedByTenantId(Long tenantId);
+
     SkillRecord getBySkillCode(Long tenantId, String skillCode);
 }

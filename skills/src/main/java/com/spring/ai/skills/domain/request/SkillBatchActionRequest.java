@@ -9,4 +9,10 @@ public class SkillBatchActionRequest {
     private List<Long> skillIds;
 
     private String skillStatus;
+
+    private String targetCategoryCode;
+
+    private List<String> tagNames;
+
+    private String versionDescription;
 }

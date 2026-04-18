@@ -2,36 +2,58 @@ package com.spring.ai.skills.application.manager;
 
 import com.spring.ai.common.enums.ErrorCodeEnum;
 import com.spring.ai.common.exception.BusinessException;
+import com.spring.ai.common.repository.enitiy.SkillExecutionLogRecord;
 import com.spring.ai.common.repository.enitiy.SkillRecord;
+import com.spring.ai.common.repository.enitiy.SkillTestCaseRecord;
 import com.spring.ai.common.repository.enitiy.SkillVersionRecord;
+import com.spring.ai.common.repository.service.SkillExecutionLogRecordService;
 import com.spring.ai.common.repository.service.SkillRecordService;
+import com.spring.ai.common.repository.service.SkillTestCaseRecordService;
 import com.spring.ai.common.repository.service.SkillVersionRecordService;
 import com.spring.ai.skills.application.assmbler.SkillAssembler;
-import com.spring.ai.common.constants.SkillManagementConstants;
+import com.spring.ai.skills.config.SkillManagementConstants;
+import com.spring.ai.skills.domain.dto.SkillCategoryDTO;
+import com.spring.ai.skills.domain.dto.SkillDebugTraceStepDTO;
 import com.spring.ai.skills.domain.dto.SkillSnapshotDTO;
+import com.spring.ai.skills.domain.dto.SkillTagDTO;
 import com.spring.ai.skills.domain.request.SkillBatchActionRequest;
+import com.spring.ai.skills.domain.request.SkillCopyRequest;
+import com.spring.ai.skills.domain.request.SkillDebugRequest;
 import com.spring.ai.skills.domain.request.SkillImportRequest;
+import com.spring.ai.skills.domain.request.SkillLogQueryRequest;
 import com.spring.ai.skills.domain.request.SkillSaveRequest;
+import com.spring.ai.skills.domain.request.SkillTestCaseSaveRequest;
+import com.spring.ai.skills.domain.request.SkillVersionCompareRequest;
+import com.spring.ai.skills.domain.request.SkillVersionRollbackRequest;
+import com.spring.ai.skills.domain.response.SkillDebugResponse;
+import com.spring.ai.skills.domain.response.SkillExecutionLogResponse;
 import com.spring.ai.skills.domain.response.SkillExportResponse;
 import com.spring.ai.skills.domain.response.SkillResponse;
 import com.spring.ai.skills.domain.response.SkillStatisticsResponse;
+import com.spring.ai.skills.domain.response.SkillTestCaseResponse;
+import com.spring.ai.skills.domain.response.SkillVersionCompareResponse;
 import jakarta.annotation.Resource;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 /**
- * 文件用途：Skill 管理应用层编排入口
- * 作者：Codex
- * 创建时间：2026-04-17
- * 核心功能：负责用户管理 Skill 的增删改查、版本流转、发布热更新、批量操作与导入导出
+ * 文件用途：Skills 管理应用服务
+ * 核心功能：封装技能配置、版本、发布、回收、批量、导入导出、调试、测试用例和日志业务逻辑
  */
 @Component
 public class SkillApplicationManager {
 
+    private static final String DEFAULT_SKILL_TYPE = "API_CALL";
     private static final String DEFAULT_SKILL_CATEGORY = "USER_MANAGEMENT";
+    private static final String DEFAULT_CHANNEL_CODE = "WEB";
+    private static final String DEFAULT_LOCALE = "zh-CN";
 
     @Resource
     private SkillRecordService skillRecordService;
@@ -40,136 +62,135 @@ public class SkillApplicationManager {
     private SkillVersionRecordService skillVersionRecordService;
 
     @Resource
+    private SkillTestCaseRecordService skillTestCaseRecordService;
+
+    @Resource
+    private SkillExecutionLogRecordService skillExecutionLogRecordService;
+
+    @Resource
     private SkillSupportManager skillSupportManager;
 
     /**
-     * 查询当前租户下的 Skill 列表，并组装版本与配置快照。
+     * 查询当前租户未删除的技能列表。
      */
     public List<SkillResponse> listSkills() {
         Long tenantId = skillSupportManager.getCurrentTenantId();
         return skillRecordService.listByTenantId(tenantId).stream()
-                .map(record -> SkillAssembler.toResponse(
-                        record,
-                        skillSupportManager.parseSnapshot(record.getExt()),
-                        skillVersionRecordService.listBySkillId(record.getId(), tenantId)))
+                .map(this::toResponse)
                 .toList();
     }
 
     /**
-     * 查询单个 Skill 详情。
+     * 查询当前租户回收站中的技能列表。
      */
-    public SkillResponse getSkillDetail(Long skillId) {
-        SkillRecord record = skillSupportManager.requireSkill(skillId);
-        return SkillAssembler.toResponse(
-                record,
-                skillSupportManager.parseSnapshot(record.getExt()),
-                skillVersionRecordService.listBySkillId(record.getId(), record.getTenantId()));
+    public List<SkillResponse> listDeletedSkills() {
+        Long tenantId = skillSupportManager.getCurrentTenantId();
+        return skillRecordService.listDeletedByTenantId(tenantId).stream()
+                .map(this::toResponse)
+                .toList();
     }
 
     /**
-     * 创建 Skill，并写入首个版本快照。
+     * 查询技能详情。
+     */
+    public SkillResponse getSkillDetail(Long skillId) {
+        return toResponse(skillSupportManager.requireSkill(skillId));
+    }
+
+    /**
+     * 创建技能并生成初始版本。
      */
     @Transactional(rollbackFor = Exception.class)
     public SkillResponse createSkill(SkillSaveRequest request) {
         validateSaveRequest(request, true);
         Long tenantId = skillSupportManager.getCurrentTenantId();
-        if (skillRecordService.getBySkillCode(tenantId, request.getSkillCode()) != null) {
-            throw new BusinessException(
-                    ErrorCodeEnum.BAD_REQUEST,
-                    HttpStatus.BAD_REQUEST,
-                    "Skill 编码已存在");
+        String skillCode = request.getSkillCode().trim();
+        if (skillRecordService.getBySkillCode(tenantId, skillCode) != null) {
+            throw badRequest("技能编码已存在：" + skillCode);
         }
+
         SkillRecord record = new SkillRecord();
-        record.setSkillCode(request.getSkillCode().trim());
-        record.setSkillName(request.getSkillName().trim());
-        record.setDescription(trimToNull(request.getDescription()));
-        record.setSkillCategory(defaultText(request.getSkillCategory(), DEFAULT_SKILL_CATEGORY));
-        record.setSkillStatus(defaultText(request.getSkillStatus(), SkillManagementConstants.SKILL_STATUS_ENABLED));
-        record.setPublishStatus(SkillManagementConstants.PUBLISH_STATUS_DRAFT);
-        record.setVersionMode(defaultText(request.getVersionMode(), SkillManagementConstants.VERSION_MODE_MANUAL));
+        record.setSkillCode(skillCode);
+        fillRecord(record, request, SkillManagementConstants.PUBLISH_STATUS_DRAFT);
         record.setCurrentVersionNo(1);
         record.setLatestVersionNo(1);
         record.setPublishedVersionNo(null);
-        record.setHotUpdateEnabled(defaultFlag(request.getHotUpdateEnabled()));
+        record.setDeletedFlag(0);
         record.setTenantId(tenantId);
         record.setOwnerUserId(skillSupportManager.getCurrentUserId());
         record.setOwnerUserName(skillSupportManager.getCurrentUserName());
-        record.setRemark(trimToNull(request.getRemark()));
         record.setExt(skillSupportManager.toJson(toSnapshot(request, SkillManagementConstants.PUBLISH_STATUS_DRAFT)));
         skillRecordService.save(record);
-        // 首次创建时同步生成当前版本记录，确保发布链路和版本追踪可直接使用。
         createVersion(record, 1, SkillManagementConstants.VERSION_STATUS_CURRENT, SkillManagementConstants.PUBLISH_STATUS_DRAFT);
         return getSkillDetail(record.getId());
     }
 
     /**
-     * 更新 Skill，并把当前版本推进到新版本号。
+     * 更新技能并创建新的当前版本。
      */
     @Transactional(rollbackFor = Exception.class)
     public SkillResponse updateSkill(Long skillId, SkillSaveRequest request) {
         SkillRecord record = skillSupportManager.requireSkill(skillId);
         validateSaveRequest(request, false);
-        record.setSkillName(request.getSkillName().trim());
-        record.setDescription(trimToNull(request.getDescription()));
-        record.setSkillCategory(defaultText(request.getSkillCategory(), record.getSkillCategory()));
-        record.setSkillStatus(defaultText(request.getSkillStatus(), record.getSkillStatus()));
-        record.setVersionMode(defaultText(request.getVersionMode(), record.getVersionMode()));
-        record.setHotUpdateEnabled(defaultFlag(request.getHotUpdateEnabled()));
-        record.setRemark(trimToNull(request.getRemark()));
         int nextVersionNo = record.getLatestVersionNo() == null ? 1 : record.getLatestVersionNo() + 1;
+        markCurrentVersionAsHistory(record);
+        fillRecord(record, request, record.getPublishStatus());
         record.setCurrentVersionNo(nextVersionNo);
         record.setLatestVersionNo(nextVersionNo);
         record.setExt(skillSupportManager.toJson(toSnapshot(request, record.getPublishStatus())));
         skillRecordService.updateById(record);
-        // 只保留一个当前版本，其余旧版本统一转为历史版本。
-        skillVersionRecordService.listBySkillId(record.getId(), record.getTenantId()).forEach(item -> {
-            if (SkillManagementConstants.VERSION_STATUS_CURRENT.equals(item.getVersionStatus())) {
-                item.setVersionStatus(SkillManagementConstants.VERSION_STATUS_HISTORY);
-                skillVersionRecordService.updateById(item);
-            }
-        });
         createVersion(record, nextVersionNo, SkillManagementConstants.VERSION_STATUS_CURRENT, record.getPublishStatus());
         return getSkillDetail(record.getId());
     }
 
     /**
-     * 删除 Skill，同时清理其版本记录。
+     * 将技能移入回收站，保留版本、测试用例和日志以支持恢复。
      */
     @Transactional(rollbackFor = Exception.class)
     public void deleteSkill(Long skillId) {
         SkillRecord record = skillSupportManager.requireSkill(skillId);
-        List<Long> versionIds = skillVersionRecordService.listBySkillId(record.getId(), record.getTenantId()).stream()
-                .map(SkillVersionRecord::getId)
-                .toList();
-        if (!versionIds.isEmpty()) {
-            skillVersionRecordService.removeByIds(versionIds);
-        }
-        skillRecordService.removeById(record.getId());
+        record.setDeletedFlag(1);
+        skillRecordService.updateById(record);
     }
 
     /**
-     * 发布当前 Skill 版本。
+     * 从回收站恢复技能。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public SkillResponse restoreSkill(Long skillId) {
+        SkillRecord record = requireDeletedSkill(skillId);
+        record.setDeletedFlag(0);
+        skillRecordService.updateById(record);
+        return getSkillDetail(record.getId());
+    }
+
+    /**
+     * 发布当前版本。
      */
     @Transactional(rollbackFor = Exception.class)
     public SkillResponse publishSkill(Long skillId) {
         SkillRecord record = skillSupportManager.requireSkill(skillId);
         record.setPublishStatus(SkillManagementConstants.PUBLISH_STATUS_PUBLISHED);
         record.setPublishedVersionNo(record.getCurrentVersionNo());
-        SkillSnapshotDTO snapshot = skillSupportManager.parseSnapshot(record.getExt());
-        snapshot.setPublishStatus(SkillManagementConstants.PUBLISH_STATUS_PUBLISHED);
-        record.setExt(skillSupportManager.toJson(snapshot));
-        skillRecordService.updateById(record);
-        SkillVersionRecord versionRecord = skillVersionRecordService.getBySkillIdAndVersionNo(
-                record.getId(), record.getTenantId(), record.getCurrentVersionNo());
-        if (versionRecord != null) {
-            versionRecord.setPublishStatus(SkillManagementConstants.PUBLISH_STATUS_PUBLISHED);
-            skillVersionRecordService.updateById(versionRecord);
-        }
+        updateSnapshotPublishStatus(record, SkillManagementConstants.PUBLISH_STATUS_PUBLISHED);
+        updateCurrentVersionPublishStatus(record, SkillManagementConstants.PUBLISH_STATUS_PUBLISHED);
         return getSkillDetail(record.getId());
     }
 
     /**
-     * 开启 Skill 热更新。
+     * 下线已发布技能。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public SkillResponse offlineSkill(Long skillId) {
+        SkillRecord record = skillSupportManager.requireSkill(skillId);
+        record.setPublishStatus(SkillManagementConstants.PUBLISH_STATUS_OFFLINE);
+        updateSnapshotPublishStatus(record, SkillManagementConstants.PUBLISH_STATUS_OFFLINE);
+        updateCurrentVersionPublishStatus(record, SkillManagementConstants.PUBLISH_STATUS_OFFLINE);
+        return getSkillDetail(record.getId());
+    }
+
+    /**
+     * 打开技能热更新开关。
      */
     @Transactional(rollbackFor = Exception.class)
     public SkillResponse hotUpdateSkill(Long skillId) {
@@ -183,7 +204,142 @@ public class SkillApplicationManager {
     }
 
     /**
-     * 批量删除 Skill。
+     * 回滚到指定历史版本，并把回滚结果作为新的当前版本保存。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public SkillResponse rollbackSkill(Long skillId, SkillVersionRollbackRequest request) {
+        SkillRecord record = skillSupportManager.requireSkill(skillId);
+        if (request == null || request.getTargetVersionNo() == null) {
+            throw badRequest("目标版本号不能为空");
+        }
+        SkillVersionRecord targetVersion = requireVersion(record, request.getTargetVersionNo());
+        SkillSnapshotDTO snapshot = skillSupportManager.parseSnapshot(targetVersion.getSnapshotJson());
+        if (StringUtils.hasText(request.getVersionDescription())) {
+            snapshot.setVersionDescription(request.getVersionDescription().trim());
+        }
+        snapshot.setPublishStatus(record.getPublishStatus());
+
+        int nextVersionNo = record.getLatestVersionNo() == null ? 1 : record.getLatestVersionNo() + 1;
+        markCurrentVersionAsHistory(record);
+        record.setSkillName(defaultText(snapshot.getSkillName(), record.getSkillName()));
+        record.setDescription(trimToNull(snapshot.getDescription()));
+        record.setSkillType(defaultText(snapshot.getSkillType(), record.getSkillType()));
+        record.setSkillCategory(defaultText(snapshot.getSkillCategory(), record.getSkillCategory()));
+        record.setSkillStatus(defaultText(snapshot.getSkillStatus(), record.getSkillStatus()));
+        record.setVersionMode(defaultText(snapshot.getVersionMode(), record.getVersionMode()));
+        record.setSortWeight(snapshot.getSortWeight() == null ? record.getSortWeight() : snapshot.getSortWeight());
+        record.setHotUpdateEnabled(defaultFlag(snapshot.getHotUpdateEnabled()));
+        record.setRemark(trimToNull(snapshot.getRemark()));
+        record.setCurrentVersionNo(nextVersionNo);
+        record.setLatestVersionNo(nextVersionNo);
+        record.setExt(skillSupportManager.toJson(snapshot));
+        skillRecordService.updateById(record);
+        createVersion(record, nextVersionNo, SkillManagementConstants.VERSION_STATUS_ROLLBACK, record.getPublishStatus());
+        return getSkillDetail(record.getId());
+    }
+
+    /**
+     * 对比两个版本快照。
+     */
+    public SkillVersionCompareResponse compareVersions(Long skillId, SkillVersionCompareRequest request) {
+        SkillRecord record = skillSupportManager.requireSkill(skillId);
+        if (request == null || request.getSourceVersionNo() == null || request.getTargetVersionNo() == null) {
+            throw badRequest("源版本号和目标版本号不能为空");
+        }
+        SkillVersionRecord source = requireVersion(record, request.getSourceVersionNo());
+        SkillVersionRecord target = requireVersion(record, request.getTargetVersionNo());
+        return SkillVersionCompareResponse.builder()
+                .sourceVersionNo(source.getVersionNo())
+                .targetVersionNo(target.getVersionNo())
+                .sourceSnapshotJson(source.getSnapshotJson())
+                .targetSnapshotJson(target.getSnapshotJson())
+                .diffSummary(buildDiffSummary(source.getSnapshotJson(), target.getSnapshotJson()))
+                .build();
+    }
+
+    /**
+     * 复制技能，可选复制测试用例。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public SkillResponse copySkill(Long skillId, SkillCopyRequest request) {
+        SkillRecord source = skillSupportManager.requireSkill(skillId);
+        if (request == null || !StringUtils.hasText(request.getNewSkillCode()) || !StringUtils.hasText(request.getNewSkillName())) {
+            throw badRequest("新技能编码和名称不能为空");
+        }
+        SkillSnapshotDTO snapshot = skillSupportManager.parseSnapshot(source.getExt());
+        SkillSaveRequest saveRequest = new SkillSaveRequest();
+        fillSaveRequestFromSnapshot(saveRequest, snapshot);
+        saveRequest.setSkillCode(request.getNewSkillCode().trim());
+        saveRequest.setSkillName(request.getNewSkillName().trim());
+        saveRequest.setVersionDescription("复制自 " + source.getSkillCode());
+        SkillResponse copied = createSkill(saveRequest);
+        if (Integer.valueOf(1).equals(request.getIncludeTestCases())) {
+            duplicateTestCases(source.getId(), copied.getId(), copied.getSkillCode());
+        }
+        return getSkillDetail(copied.getId());
+    }
+
+    /**
+     * 导出技能快照。
+     */
+    public SkillExportResponse exportSkill(Long skillId) {
+        SkillRecord record = skillSupportManager.requireSkill(skillId);
+        return SkillExportResponse.builder()
+                .skillCode(record.getSkillCode())
+                .skillName(record.getSkillName())
+                .exportFormat("JSON")
+                .exportPayload(skillSupportManager.prettyJson(skillSupportManager.parseSnapshot(record.getExt())))
+                .build();
+    }
+
+    /**
+     * 导入技能快照，可按请求直接发布。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public SkillResponse importSkill(SkillImportRequest request) {
+        if (request == null || !StringUtils.hasText(request.getImportPayload())) {
+            throw badRequest("导入内容不能为空");
+        }
+        SkillSnapshotDTO snapshot = skillSupportManager.parseSnapshot(request.getImportPayload());
+        SkillSaveRequest saveRequest = new SkillSaveRequest();
+        fillSaveRequestFromSnapshot(saveRequest, snapshot);
+        if (!StringUtils.hasText(saveRequest.getSkillCode())) {
+            saveRequest.setSkillCode("SKILL_" + UUID.randomUUID().toString().replace("-", "").substring(0, 12).toUpperCase());
+        }
+        SkillResponse imported = createSkill(saveRequest);
+        if (Integer.valueOf(1).equals(request.getPublishAfterImport())) {
+            return publishSkill(imported.getId());
+        }
+        return imported;
+    }
+
+    /**
+     * 查询技能统计。
+     */
+    public SkillStatisticsResponse statistics() {
+        Long tenantId = skillSupportManager.getCurrentTenantId();
+        List<SkillRecord> records = skillRecordService.listByTenantId(tenantId);
+        List<SkillRecord> deletedRecords = skillRecordService.listDeletedByTenantId(tenantId);
+        List<SkillExecutionLogRecord> logs = skillExecutionLogRecordService.listByTenantId(tenantId);
+        int testCaseCount = records.stream()
+                .mapToInt(record -> skillTestCaseRecordService.listBySkillId(record.getId(), tenantId).size())
+                .sum();
+        return SkillStatisticsResponse.builder()
+                .totalCount(records.size())
+                .enabledCount((int) records.stream().filter(item -> SkillManagementConstants.SKILL_STATUS_ENABLED.equals(item.getSkillStatus())).count())
+                .publishedCount((int) records.stream().filter(item -> SkillManagementConstants.PUBLISH_STATUS_PUBLISHED.equals(item.getPublishStatus())).count())
+                .hotUpdateEnabledCount((int) records.stream().filter(item -> Integer.valueOf(1).equals(item.getHotUpdateEnabled())).count())
+                .draftCount((int) records.stream().filter(item -> SkillManagementConstants.PUBLISH_STATUS_DRAFT.equals(item.getPublishStatus())).count())
+                .deletedCount(deletedRecords.size())
+                .totalTestCaseCount(testCaseCount)
+                .totalLogCount(logs.size())
+                .successLogCount((int) logs.stream().filter(item -> Integer.valueOf(1).equals(item.getSuccessFlag())).count())
+                .failureLogCount((int) logs.stream().filter(item -> Integer.valueOf(0).equals(item.getSuccessFlag())).count())
+                .build();
+    }
+
+    /**
+     * 批量删除技能。
      */
     @Transactional(rollbackFor = Exception.class)
     public void batchDelete(SkillBatchActionRequest request) {
@@ -192,178 +348,552 @@ public class SkillApplicationManager {
     }
 
     /**
-     * 批量更新 Skill 状态。
+     * 批量修改技能状态。
      */
     @Transactional(rollbackFor = Exception.class)
     public List<SkillResponse> batchUpdateStatus(SkillBatchActionRequest request) {
         validateBatchRequest(request);
         if (!StringUtils.hasText(request.getSkillStatus())) {
-            throw new BusinessException(
-                    ErrorCodeEnum.BAD_REQUEST,
-                    HttpStatus.BAD_REQUEST,
-                    "Skill 状态不能为空");
+            throw badRequest("目标技能状态不能为空");
         }
         request.getSkillIds().forEach(skillId -> {
             SkillRecord record = skillSupportManager.requireSkill(skillId);
             record.setSkillStatus(request.getSkillStatus().trim());
+            SkillSnapshotDTO snapshot = skillSupportManager.parseSnapshot(record.getExt());
+            snapshot.setSkillStatus(record.getSkillStatus());
+            record.setExt(skillSupportManager.toJson(snapshot));
             skillRecordService.updateById(record);
         });
         return listSkills();
     }
 
     /**
-     * 统计 Skill 关键指标。
-     */
-    public SkillStatisticsResponse statistics() {
-        List<SkillRecord> records = skillRecordService.listByTenantId(skillSupportManager.getCurrentTenantId());
-        return SkillStatisticsResponse.builder()
-                .totalCount(records.size())
-                .enabledCount((int) records.stream()
-                        .filter(item -> SkillManagementConstants.SKILL_STATUS_ENABLED.equals(item.getSkillStatus()))
-                        .count())
-                .publishedCount((int) records.stream()
-                        .filter(item -> SkillManagementConstants.PUBLISH_STATUS_PUBLISHED.equals(item.getPublishStatus()))
-                        .count())
-                .hotUpdateEnabledCount((int) records.stream()
-                        .filter(item -> Integer.valueOf(1).equals(item.getHotUpdateEnabled()))
-                        .count())
-                .build();
-    }
-
-    /**
-     * 导出 Skill 快照。
-     */
-    public SkillExportResponse exportSkill(Long skillId) {
-        SkillRecord record = skillSupportManager.requireSkill(skillId);
-        return SkillExportResponse.builder()
-                .skillCode(record.getSkillCode())
-                .skillName(record.getSkillName())
-                .exportPayload(record.getExt())
-                .build();
-    }
-
-    /**
-     * 导入 Skill 快照，并复用创建链路落库。
+     * 批量覆盖技能标签。
      */
     @Transactional(rollbackFor = Exception.class)
-    public SkillResponse importSkill(SkillImportRequest request) {
-        if (request == null || !StringUtils.hasText(request.getImportPayload())) {
-            throw new BusinessException(
-                    ErrorCodeEnum.BAD_REQUEST,
-                    HttpStatus.BAD_REQUEST,
-                    "导入内容不能为空");
-        }
-        SkillSnapshotDTO snapshot = skillSupportManager.parseSnapshot(request.getImportPayload());
-        SkillSaveRequest saveRequest = new SkillSaveRequest();
-        saveRequest.setSkillCode(snapshot.getSkillCode());
-        saveRequest.setSkillName(snapshot.getSkillName());
-        saveRequest.setDescription(snapshot.getDescription());
-        saveRequest.setSkillCategory(snapshot.getSkillCategory());
-        saveRequest.setSkillStatus(snapshot.getSkillStatus());
-        saveRequest.setVersionMode(snapshot.getVersionMode());
-        saveRequest.setHotUpdateEnabled(snapshot.getHotUpdateEnabled());
-        saveRequest.setIntentConfigs(snapshot.getIntentConfigs());
-        saveRequest.setExecutionConfig(snapshot.getExecutionConfig());
-        saveRequest.setRoutingConfig(snapshot.getRoutingConfig());
-        saveRequest.setPermissionConfig(snapshot.getPermissionConfig());
-        saveRequest.setObservabilityConfig(snapshot.getObservabilityConfig());
-        saveRequest.setReleaseConfig(snapshot.getReleaseConfig());
-        saveRequest.setBatchConfig(snapshot.getBatchConfig());
-        saveRequest.setWorkflowConfig(snapshot.getWorkflowConfig());
-        saveRequest.setRemark(snapshot.getRemark());
-        return createSkill(saveRequest);
+    public List<SkillResponse> batchUpdateTags(SkillBatchActionRequest request) {
+        validateBatchRequest(request);
+        List<SkillTagDTO> tags = request.getTagNames() == null ? List.of() : request.getTagNames().stream()
+                .filter(StringUtils::hasText)
+                .map(this::toTag)
+                .toList();
+        request.getSkillIds().forEach(skillId -> {
+            SkillRecord record = skillSupportManager.requireSkill(skillId);
+            SkillSnapshotDTO snapshot = skillSupportManager.parseSnapshot(record.getExt());
+            snapshot.setTags(tags);
+            record.setExt(skillSupportManager.toJson(snapshot));
+            skillRecordService.updateById(record);
+        });
+        return listSkills();
     }
 
     /**
-     * 校验保存参数是否满足最小要求。
+     * 批量迁移技能分类。
      */
-    private void validateSaveRequest(SkillSaveRequest request, boolean createMode) {
-        if (request == null) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "Skill 请求参数不能为空");
+    @Transactional(rollbackFor = Exception.class)
+    public List<SkillResponse> batchMoveCategory(SkillBatchActionRequest request) {
+        validateBatchRequest(request);
+        if (!StringUtils.hasText(request.getTargetCategoryCode())) {
+            throw badRequest("目标分类不能为空");
         }
-        if (createMode && !StringUtils.hasText(request.getSkillCode())) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "Skill 编码不能为空");
-        }
-        if (!StringUtils.hasText(request.getSkillName())) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "Skill 名称不能为空");
-        }
-        if (request.getExecutionConfig() == null) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "API / 函数执行配置不能为空");
-        }
-        if (request.getRoutingConfig() == null) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "路由调度与上下文配置不能为空");
-        }
-        if (request.getPermissionConfig() == null) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "权限与风控配置不能为空");
-        }
+        request.getSkillIds().forEach(skillId -> {
+            SkillRecord record = skillSupportManager.requireSkill(skillId);
+            record.setSkillCategory(request.getTargetCategoryCode().trim());
+            SkillSnapshotDTO snapshot = skillSupportManager.parseSnapshot(record.getExt());
+            snapshot.setSkillCategory(record.getSkillCategory());
+            snapshot.setCategoryChain(List.of(toCategory(record.getSkillCategory())));
+            record.setExt(skillSupportManager.toJson(snapshot));
+            skillRecordService.updateById(record);
+        });
+        return listSkills();
     }
 
     /**
-     * 校验批量操作参数。
+     * 批量发布技能。
      */
-    private void validateBatchRequest(SkillBatchActionRequest request) {
-        if (request == null || request.getSkillIds() == null || request.getSkillIds().isEmpty()) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "批量操作的 Skill 不能为空");
-        }
+    @Transactional(rollbackFor = Exception.class)
+    public List<SkillResponse> batchPublish(SkillBatchActionRequest request) {
+        validateBatchRequest(request);
+        request.getSkillIds().forEach(this::publishSkill);
+        return listSkills();
     }
 
     /**
-     * 把请求对象收敛为可持久化的 Skill 配置快照。
+     * 批量下线技能。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public List<SkillResponse> batchOffline(SkillBatchActionRequest request) {
+        validateBatchRequest(request);
+        request.getSkillIds().forEach(this::offlineSkill);
+        return listSkills();
+    }
+
+    /**
+     * 查询技能测试用例。
+     */
+    public List<SkillTestCaseResponse> listTestCases(Long skillId) {
+        SkillRecord record = skillSupportManager.requireSkill(skillId);
+        return skillTestCaseRecordService.listBySkillId(record.getId(), record.getTenantId()).stream()
+                .map(SkillAssembler::toTestCaseResponse)
+                .toList();
+    }
+
+    /**
+     * 创建技能测试用例。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public SkillTestCaseResponse createTestCase(Long skillId, SkillTestCaseSaveRequest request) {
+        SkillRecord record = skillSupportManager.requireSkill(skillId);
+        validateTestCaseRequest(request);
+        SkillTestCaseRecord testCase = new SkillTestCaseRecord();
+        fillTestCase(testCase, record, request);
+        skillTestCaseRecordService.save(testCase);
+        return SkillAssembler.toTestCaseResponse(testCase);
+    }
+
+    /**
+     * 更新技能测试用例。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public SkillTestCaseResponse updateTestCase(Long testCaseId, SkillTestCaseSaveRequest request) {
+        SkillTestCaseRecord testCase = requireTestCase(testCaseId);
+        SkillRecord record = skillSupportManager.requireSkill(testCase.getSkillId());
+        validateTestCaseRequest(request);
+        fillTestCase(testCase, record, request);
+        skillTestCaseRecordService.updateById(testCase);
+        return SkillAssembler.toTestCaseResponse(testCase);
+    }
+
+    /**
+     * 删除技能测试用例。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteTestCase(Long testCaseId) {
+        SkillTestCaseRecord testCase = requireTestCase(testCaseId);
+        skillTestCaseRecordService.removeById(testCase.getId());
+    }
+
+    /**
+     * 运行测试用例并写入调试日志。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public SkillDebugResponse runTestCase(Long testCaseId) {
+        SkillTestCaseRecord testCase = requireTestCase(testCaseId);
+        SkillDebugRequest request = new SkillDebugRequest();
+        request.setSkillId(testCase.getSkillId());
+        request.setInputText(testCase.getInputText());
+        request.setForcedIntent(testCase.getExpectedIntent());
+        request.setSlotPayload(skillSupportManager.parseMap(testCase.getSlotPayloadJson()));
+        request.setChannelCode(defaultText(testCase.getChannelCode(), DEFAULT_CHANNEL_CODE));
+        request.setLocale(defaultText(testCase.getLocale(), DEFAULT_LOCALE));
+        SkillDebugResponse response = executeDebug(request, SkillManagementConstants.LOG_SOURCE_TEST, testCase.getId());
+        testCase.setLastRunStatus(Integer.valueOf(1).equals(response.getSuccessFlag()) ? "SUCCESS" : "FAILED");
+        testCase.setLastRunDurationMs(response.getElapsedMs());
+        testCase.setLastRunAt(LocalDateTime.now());
+        testCase.setLastResultJson(skillSupportManager.toJson(response));
+        skillTestCaseRecordService.updateById(testCase);
+        return response;
+    }
+
+    /**
+     * 在线调试技能并写入调试日志。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public SkillDebugResponse debugSkill(SkillDebugRequest request) {
+        return executeDebug(request, SkillManagementConstants.LOG_SOURCE_DEBUG, null);
+    }
+
+    /**
+     * 查询技能执行日志。
+     */
+    public List<SkillExecutionLogResponse> listLogs(SkillLogQueryRequest request) {
+        Long tenantId = skillSupportManager.getCurrentTenantId();
+        List<SkillExecutionLogRecord> records = request != null && request.getSkillId() != null
+                ? skillExecutionLogRecordService.listBySkillId(request.getSkillId(), tenantId)
+                : skillExecutionLogRecordService.listByTenantId(tenantId);
+        return records.stream()
+                .filter(item -> request == null || !StringUtils.hasText(request.getSourceType()) || request.getSourceType().equals(item.getSourceType()))
+                .filter(item -> request == null || request.getSuccessFlag() == null || request.getSuccessFlag().equals(item.getSuccessFlag()))
+                .map(SkillAssembler::toLogResponse)
+                .toList();
+    }
+
+    /**
+     * 将实体转换成前端响应对象，并补充版本、用例和日志数量。
+     */
+    private SkillResponse toResponse(SkillRecord record) {
+        Long tenantId = record.getTenantId();
+        return SkillAssembler.toResponse(
+                record,
+                skillSupportManager.parseSnapshot(record.getExt()),
+                skillVersionRecordService.listBySkillId(record.getId(), tenantId),
+                skillTestCaseRecordService.listBySkillId(record.getId(), tenantId).size(),
+                skillExecutionLogRecordService.listBySkillId(record.getId(), tenantId).size());
+    }
+
+    /**
+     * 填充 SkillRecord 的通用字段。
+     */
+    private void fillRecord(SkillRecord record, SkillSaveRequest request, String publishStatus) {
+        record.setSkillName(request.getSkillName().trim());
+        record.setDescription(trimToNull(request.getDescription()));
+        record.setSkillType(defaultText(request.getSkillType(), DEFAULT_SKILL_TYPE));
+        record.setSkillCategory(defaultText(request.getSkillCategory(), DEFAULT_SKILL_CATEGORY));
+        record.setSkillStatus(defaultText(request.getSkillStatus(), SkillManagementConstants.SKILL_STATUS_ENABLED));
+        record.setPublishStatus(defaultText(publishStatus, SkillManagementConstants.PUBLISH_STATUS_DRAFT));
+        record.setVersionMode(defaultText(request.getVersionMode(), SkillManagementConstants.VERSION_MODE_MANUAL));
+        record.setSortWeight(request.getSortWeight() == null ? 100 : request.getSortWeight());
+        record.setHotUpdateEnabled(defaultFlag(request.getHotUpdateEnabled()));
+        record.setRemark(trimToNull(request.getRemark()));
+    }
+
+    /**
+     * 将请求组装成可持久化的技能快照。
      */
     private SkillSnapshotDTO toSnapshot(SkillSaveRequest request, String publishStatus) {
         return SkillSnapshotDTO.builder()
                 .skillCode(trimToNull(request.getSkillCode()))
                 .skillName(trimToNull(request.getSkillName()))
                 .description(trimToNull(request.getDescription()))
+                .skillType(defaultText(request.getSkillType(), DEFAULT_SKILL_TYPE))
                 .skillCategory(defaultText(request.getSkillCategory(), DEFAULT_SKILL_CATEGORY))
+                .categoryChain(request.getCategoryChain() == null || request.getCategoryChain().isEmpty()
+                        ? List.of(toCategory(defaultText(request.getSkillCategory(), DEFAULT_SKILL_CATEGORY)))
+                        : request.getCategoryChain())
+                .tags(request.getTags() == null ? List.of() : request.getTags())
                 .skillStatus(defaultText(request.getSkillStatus(), SkillManagementConstants.SKILL_STATUS_ENABLED))
                 .publishStatus(defaultText(publishStatus, SkillManagementConstants.PUBLISH_STATUS_DRAFT))
+                .versionCode(trimToNull(request.getVersionCode()))
+                .versionDescription(trimToNull(request.getVersionDescription()))
                 .versionMode(defaultText(request.getVersionMode(), SkillManagementConstants.VERSION_MODE_MANUAL))
+                .sortWeight(request.getSortWeight() == null ? 100 : request.getSortWeight())
                 .hotUpdateEnabled(defaultFlag(request.getHotUpdateEnabled()))
-                .intentConfigs(request.getIntentConfigs() == null ? List.of() : request.getIntentConfigs())
-                .executionConfig(request.getExecutionConfig())
-                .routingConfig(request.getRoutingConfig())
-                .permissionConfig(request.getPermissionConfig())
                 .observabilityConfig(request.getObservabilityConfig())
                 .releaseConfig(request.getReleaseConfig())
                 .batchConfig(request.getBatchConfig())
                 .workflowConfig(request.getWorkflowConfig())
+                .channelAdaptations(request.getChannelAdaptations() == null ? List.of() : request.getChannelAdaptations())
+                .marketplaceConfig(request.getMarketplaceConfig())
                 .remark(trimToNull(request.getRemark()))
                 .build();
     }
 
     /**
-     * 写入版本快照记录。
+     * 创建版本快照记录。
      */
     private void createVersion(SkillRecord record, Integer versionNo, String versionStatus, String publishStatus) {
+        SkillSnapshotDTO snapshot = skillSupportManager.parseSnapshot(record.getExt());
         SkillVersionRecord versionRecord = new SkillVersionRecord();
         versionRecord.setSkillId(record.getId());
         versionRecord.setSkillCode(record.getSkillCode());
         versionRecord.setSkillName(record.getSkillName());
         versionRecord.setTenantId(record.getTenantId());
         versionRecord.setVersionNo(versionNo);
+        versionRecord.setVersionCode(snapshot.getVersionCode());
+        versionRecord.setVersionDescription(snapshot.getVersionDescription());
         versionRecord.setVersionStatus(versionStatus);
         versionRecord.setPublishStatus(publishStatus);
+        versionRecord.setReleaseStage(snapshot.getReleaseConfig() == null ? null : snapshot.getReleaseConfig().getReleaseStage());
         versionRecord.setSnapshotJson(record.getExt());
         skillVersionRecordService.save(versionRecord);
     }
 
     /**
-     * 字符串为空时转为 null，便于数据库统一处理。
+     * 将当前版本标记为历史版本。
+     */
+    private void markCurrentVersionAsHistory(SkillRecord record) {
+        skillVersionRecordService.listBySkillId(record.getId(), record.getTenantId()).forEach(version -> {
+            if (SkillManagementConstants.VERSION_STATUS_CURRENT.equals(version.getVersionStatus())) {
+                version.setVersionStatus(SkillManagementConstants.VERSION_STATUS_HISTORY);
+                skillVersionRecordService.updateById(version);
+            }
+        });
+    }
+
+    /**
+     * 更新技能和当前版本的发布状态。
+     */
+    private void updateSnapshotPublishStatus(SkillRecord record, String publishStatus) {
+        SkillSnapshotDTO snapshot = skillSupportManager.parseSnapshot(record.getExt());
+        snapshot.setPublishStatus(publishStatus);
+        record.setExt(skillSupportManager.toJson(snapshot));
+        skillRecordService.updateById(record);
+    }
+
+    /**
+     * 更新当前版本发布状态。
+     */
+    private void updateCurrentVersionPublishStatus(SkillRecord record, String publishStatus) {
+        SkillVersionRecord versionRecord = skillVersionRecordService.getBySkillIdAndVersionNo(
+                record.getId(), record.getTenantId(), record.getCurrentVersionNo());
+        if (versionRecord != null) {
+            versionRecord.setPublishStatus(publishStatus);
+            skillVersionRecordService.updateById(versionRecord);
+        }
+    }
+
+    /**
+     * 执行技能调试的轻量模拟，并统一生成执行日志。
+     */
+    private SkillDebugResponse executeDebug(SkillDebugRequest request, String sourceType, Long sourceId) {
+        if (request == null || !StringUtils.hasText(request.getInputText())) {
+            throw badRequest("调试输入不能为空");
+        }
+        long startAt = System.currentTimeMillis();
+        SkillRecord record = request.getSkillId() == null ? null : skillSupportManager.requireSkill(request.getSkillId());
+        String matchedIntent = StringUtils.hasText(request.getForcedIntent())
+                ? request.getForcedIntent().trim()
+                : record == null ? "GENERAL_SKILL_MATCH" : record.getSkillCode();
+        boolean success = record != null && SkillManagementConstants.SKILL_STATUS_ENABLED.equals(record.getSkillStatus());
+        String resultText = success
+                ? "技能 " + record.getSkillName() + " 已处理输入：" + request.getInputText().trim()
+                : "未找到可用技能或技能未启用";
+        SkillDebugResponse response = SkillDebugResponse.builder()
+                .skillId(record == null ? null : record.getId())
+                .skillCode(record == null ? null : record.getSkillCode())
+                .matchedIntent(matchedIntent)
+                .confidenceScore(success ? 0.92D : 0.18D)
+                .successFlag(success ? 1 : 0)
+                .responseText(success ? resultText : null)
+                .failureReason(success ? null : resultText)
+                .elapsedMs(Math.max(1L, System.currentTimeMillis() - startAt))
+                .resolvedSlots(request.getSlotPayload() == null ? Map.of() : request.getSlotPayload())
+                .contextPayload(request.getContextPayload() == null ? Map.of() : request.getContextPayload())
+                .traceSteps(List.of(
+                        SkillDebugTraceStepDTO.builder().stepName("参数接收").stepStatus("SUCCESS").detail("调试请求已解析").build(),
+                        SkillDebugTraceStepDTO.builder().stepName("技能匹配").stepStatus(success ? "SUCCESS" : "FAILED").detail(resultText).build()))
+                .build();
+        saveExecutionLog(request, record, response, sourceType, sourceId);
+        return response;
+    }
+
+    /**
+     * 保存执行日志，便于页面查看调试和测试记录。
+     */
+    private void saveExecutionLog(
+            SkillDebugRequest request,
+            SkillRecord record,
+            SkillDebugResponse response,
+            String sourceType,
+            Long sourceId
+    ) {
+        SkillExecutionLogRecord logRecord = new SkillExecutionLogRecord();
+        logRecord.setSkillId(record == null ? null : record.getId());
+        logRecord.setSkillCode(record == null ? null : record.getSkillCode());
+        logRecord.setSkillName(record == null ? null : record.getSkillName());
+        logRecord.setTenantId(skillSupportManager.getCurrentTenantId());
+        logRecord.setSourceType(sourceType);
+        logRecord.setSourceId(sourceId);
+        logRecord.setTraceId(UUID.randomUUID().toString());
+        logRecord.setSessionCode("skill-debug");
+        logRecord.setChannelCode(defaultText(request.getChannelCode(), DEFAULT_CHANNEL_CODE));
+        logRecord.setLocale(defaultText(request.getLocale(), DEFAULT_LOCALE));
+        logRecord.setInputText(request.getInputText());
+        logRecord.setMatchedIntent(response.getMatchedIntent());
+        logRecord.setConfidenceScore(response.getConfidenceScore());
+        logRecord.setSlotPayloadJson(skillSupportManager.toJson(request.getSlotPayload() == null ? Map.of() : request.getSlotPayload()));
+        logRecord.setContextPayloadJson(skillSupportManager.toJson(request.getContextPayload() == null ? Map.of() : request.getContextPayload()));
+        logRecord.setRequestPayloadJson(skillSupportManager.toJson(request));
+        logRecord.setResponsePayloadJson(skillSupportManager.toJson(response));
+        logRecord.setTracePayloadJson(skillSupportManager.toJson(response.getTraceSteps()));
+        logRecord.setExecuteStatus(Integer.valueOf(1).equals(response.getSuccessFlag()) ? SkillManagementConstants.DEBUG_STATUS_MATCHED : SkillManagementConstants.DEBUG_STATUS_FAILED);
+        logRecord.setSuccessFlag(response.getSuccessFlag());
+        logRecord.setElapsedMs(response.getElapsedMs());
+        logRecord.setFailureReason(response.getFailureReason());
+        logRecord.setOperatorUserId(skillSupportManager.getCurrentUserId());
+        logRecord.setOperatorUserName(skillSupportManager.getCurrentUserName());
+        skillExecutionLogRecordService.save(logRecord);
+    }
+
+    /**
+     * 填充测试用例实体。
+     */
+    private void fillTestCase(SkillTestCaseRecord testCase, SkillRecord skill, SkillTestCaseSaveRequest request) {
+        testCase.setSkillId(skill.getId());
+        testCase.setSkillCode(skill.getSkillCode());
+        testCase.setCaseName(request.getCaseName().trim());
+        testCase.setInputText(request.getInputText().trim());
+        testCase.setSlotPayloadJson(skillSupportManager.toJson(request.getSlotPayload() == null ? Map.of() : request.getSlotPayload()));
+        testCase.setExpectedIntent(trimToNull(request.getExpectedIntent()));
+        testCase.setExpectedSuccess(request.getExpectedSuccess() == null ? 1 : defaultFlag(request.getExpectedSuccess()));
+        testCase.setExpectedResponseContains(trimToNull(request.getExpectedResponseContains()));
+        testCase.setChannelCode(defaultText(request.getChannelCode(), DEFAULT_CHANNEL_CODE));
+        testCase.setLocale(defaultText(request.getLocale(), DEFAULT_LOCALE));
+        testCase.setEnabled(request.getEnabled() == null ? 1 : defaultFlag(request.getEnabled()));
+        testCase.setTenantId(skill.getTenantId());
+    }
+
+    /**
+     * 复制源技能的测试用例。
+     */
+    private void duplicateTestCases(Long sourceSkillId, Long targetSkillId, String targetSkillCode) {
+        Long tenantId = skillSupportManager.getCurrentTenantId();
+        skillTestCaseRecordService.listBySkillId(sourceSkillId, tenantId).forEach(source -> {
+            SkillTestCaseRecord copied = new SkillTestCaseRecord();
+            copied.setSkillId(targetSkillId);
+            copied.setSkillCode(targetSkillCode);
+            copied.setCaseName(source.getCaseName());
+            copied.setInputText(source.getInputText());
+            copied.setSlotPayloadJson(source.getSlotPayloadJson());
+            copied.setExpectedIntent(source.getExpectedIntent());
+            copied.setExpectedSuccess(source.getExpectedSuccess());
+            copied.setExpectedResponseContains(source.getExpectedResponseContains());
+            copied.setChannelCode(source.getChannelCode());
+            copied.setLocale(source.getLocale());
+            copied.setEnabled(source.getEnabled());
+            copied.setTenantId(tenantId);
+            skillTestCaseRecordService.save(copied);
+        });
+    }
+
+    /**
+     * 用快照填充保存请求。
+     */
+    private void fillSaveRequestFromSnapshot(SkillSaveRequest request, SkillSnapshotDTO snapshot) {
+        request.setSkillCode(snapshot.getSkillCode());
+        request.setSkillName(snapshot.getSkillName());
+        request.setDescription(snapshot.getDescription());
+        request.setSkillType(snapshot.getSkillType());
+        request.setSkillCategory(snapshot.getSkillCategory());
+        request.setCategoryChain(snapshot.getCategoryChain());
+        request.setTags(snapshot.getTags());
+        request.setSkillStatus(snapshot.getSkillStatus());
+        request.setSortWeight(snapshot.getSortWeight());
+        request.setVersionCode(snapshot.getVersionCode());
+        request.setVersionDescription(snapshot.getVersionDescription());
+        request.setVersionMode(snapshot.getVersionMode());
+        request.setHotUpdateEnabled(snapshot.getHotUpdateEnabled());
+        request.setObservabilityConfig(snapshot.getObservabilityConfig());
+        request.setReleaseConfig(snapshot.getReleaseConfig());
+        request.setBatchConfig(snapshot.getBatchConfig());
+        request.setWorkflowConfig(snapshot.getWorkflowConfig());
+        request.setChannelAdaptations(snapshot.getChannelAdaptations());
+        request.setMarketplaceConfig(snapshot.getMarketplaceConfig());
+        request.setRemark(snapshot.getRemark());
+    }
+
+    /**
+     * 要求指定版本存在。
+     */
+    private SkillVersionRecord requireVersion(SkillRecord record, Integer versionNo) {
+        SkillVersionRecord version = skillVersionRecordService.getBySkillIdAndVersionNo(record.getId(), record.getTenantId(), versionNo);
+        if (version == null) {
+            throw new BusinessException(ErrorCodeEnum.NOT_FOUND, HttpStatus.NOT_FOUND, "未找到技能版本：" + versionNo);
+        }
+        return version;
+    }
+
+    /**
+     * 要求指定测试用例存在且属于当前租户。
+     */
+    private SkillTestCaseRecord requireTestCase(Long testCaseId) {
+        SkillTestCaseRecord testCase = skillTestCaseRecordService.getById(testCaseId);
+        if (testCase == null || !Objects.equals(testCase.getTenantId(), skillSupportManager.getCurrentTenantId())) {
+            throw new BusinessException(ErrorCodeEnum.NOT_FOUND, HttpStatus.NOT_FOUND, "未找到测试用例：" + testCaseId);
+        }
+        return testCase;
+    }
+
+    /**
+     * 要求回收站中的技能存在。
+     */
+    private SkillRecord requireDeletedSkill(Long skillId) {
+        SkillRecord record = skillRecordService.getById(skillId);
+        if (record == null || !Objects.equals(record.getTenantId(), skillSupportManager.getCurrentTenantId()) || !Integer.valueOf(1).equals(record.getDeletedFlag())) {
+            throw new BusinessException(ErrorCodeEnum.NOT_FOUND, HttpStatus.NOT_FOUND, "未找到已删除技能：" + skillId);
+        }
+        return record;
+    }
+
+    /**
+     * 校验技能保存请求。
+     */
+    private void validateSaveRequest(SkillSaveRequest request, boolean createMode) {
+        if (request == null) {
+            throw badRequest("技能参数不能为空");
+        }
+        if (createMode && !StringUtils.hasText(request.getSkillCode())) {
+            throw badRequest("技能编码不能为空");
+        }
+        if (!StringUtils.hasText(request.getSkillName())) {
+            throw badRequest("技能名称不能为空");
+        }
+    }
+
+    /**
+     * 校验批量请求。
+     */
+    private void validateBatchRequest(SkillBatchActionRequest request) {
+        if (request == null || request.getSkillIds() == null || request.getSkillIds().isEmpty()) {
+            throw badRequest("请选择要操作的技能");
+        }
+    }
+
+    /**
+     * 校验测试用例请求。
+     */
+    private void validateTestCaseRequest(SkillTestCaseSaveRequest request) {
+        if (request == null || !StringUtils.hasText(request.getCaseName()) || !StringUtils.hasText(request.getInputText())) {
+            throw badRequest("测试用例名称和输入不能为空");
+        }
+    }
+
+    /**
+     * 生成版本差异摘要。
+     */
+    private String buildDiffSummary(String sourceSnapshotJson, String targetSnapshotJson) {
+        if (Objects.equals(sourceSnapshotJson, targetSnapshotJson)) {
+            return "两个版本快照一致";
+        }
+        return "两个版本快照存在差异，请查看 sourceSnapshotJson 与 targetSnapshotJson";
+    }
+
+    /**
+     * 将标签名称转换成标签对象。
+     */
+    private SkillTagDTO toTag(String tagName) {
+        SkillTagDTO tag = new SkillTagDTO();
+        tag.setTagName(tagName.trim());
+        tag.setTagCode(tagName.trim().toUpperCase().replace(" ", "_"));
+        tag.setTagType("CUSTOM");
+        tag.setColor("#6fa8ff");
+        return tag;
+    }
+
+    /**
+     * 将分类编码转换成分类对象。
+     */
+    private SkillCategoryDTO toCategory(String categoryCode) {
+        SkillCategoryDTO category = new SkillCategoryDTO();
+        category.setCategoryCode(categoryCode);
+        category.setCategoryName(categoryCode);
+        category.setCategoryLevel(1);
+        return category;
+    }
+
+    /**
+     * 构造业务参数错误。
+     */
+    private BusinessException badRequest(String message) {
+        return new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, message);
+    }
+
+    /**
+     * 字符串去空，空值返回 null。
      */
     private String trimToNull(String value) {
         return StringUtils.hasText(value) ? value.trim() : null;
     }
 
     /**
-     * 返回去空白后的值，若为空则回退默认值。
+     * 字符串默认值处理。
      */
     private String defaultText(String value, String defaultValue) {
         return StringUtils.hasText(value) ? value.trim() : defaultValue;
     }
 
     /**
-     * 统一将前端开关值收敛为 0/1。
+     * 统一处理 0/1 开关。
      */
     private Integer defaultFlag(Integer value) {
         return Integer.valueOf(1).equals(value) ? 1 : 0;

@@ -29,11 +29,20 @@ public class SkillVersionRecord extends BaseEntity {
     @TableField("version_no")
     private Integer versionNo;
 
+    @TableField("version_code")
+    private String versionCode;
+
+    @TableField("version_description")
+    private String versionDescription;
+
     @TableField("version_status")
     private String versionStatus;
 
     @TableField("publish_status")
     private String publishStatus;
+
+    @TableField("release_stage")
+    private String releaseStage;
 
     @TableField("snapshot_json")
     private String snapshotJson;

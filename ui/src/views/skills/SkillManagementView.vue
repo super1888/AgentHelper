@@ -1,697 +1,1278 @@
 <script setup lang="ts">
-// 文件用途：用户管理 Skill 前端管理页
-// 作者：Codex
-// 创建时间：2026-04-17
-// 核心功能：提供 Skill 的增删改查、版本查看、发布热更新、批量治理与导入导出能力
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
-import { CheckSquare, Download, Plus, RefreshCw, Sparkles, Trash2, Upload, Wand2 } from 'lucide-vue-next'
-import ConfirmDialog from '@/components/ConfirmDialog.vue'
+// 文件用途：Skills 管理页面
+// 核心功能：提供技能列表、批量操作、基础编辑、版本管理、导入导出、调试、测试用例与日志查看
+import { computed, onMounted, reactive, ref } from 'vue'
 import MainShell from '@/components/MainShell.vue'
 import {
   batchDeleteSkills,
+  batchMoveSkillCategory,
+  batchOfflineSkills,
+  batchPublishSkills,
   batchUpdateSkillStatus,
+  batchUpdateSkillTags,
+  compareSkillVersions,
+  copySkill,
   createSkill,
+  createSkillTestCase,
+  debugSkill,
   exportSkill,
   fetchSkillDetail,
   fetchSkillStats,
   hotUpdateSkill,
   importSkill,
+  offlineSkill,
   publishSkill,
+  queryDeletedSkills,
+  querySkillLogs,
   querySkills,
+  querySkillTestCases,
   removeSkill,
+  removeSkillTestCase,
+  restoreSkill,
+  rollbackSkill,
+  runSkillTestCase,
   updateSkill,
+  updateSkillTestCase,
 } from '@/api/skill'
 import type {
-  SkillBatchConfig,
-  SkillExecutionConfig,
-  SkillIntentConfig,
+  SkillDebugResult,
+  SkillExecutionLogItem,
   SkillItem,
-  SkillObservabilityConfig,
   SkillPayload,
-  SkillPermissionConfig,
-  SkillReleaseConfig,
-  SkillRoutingConfig,
   SkillStatistics,
-  SkillWorkflowConfig,
+  SkillTestCaseItem,
+  SkillTestCasePayload,
+  SkillVersionCompareResult,
 } from '@/types/skill'
 import { getErrorMessage } from '@/utils/errors'
 
 type FeedbackTone = 'success' | 'error' | 'info'
-type JsonFieldKey =
-  | 'intentConfigsText'
-  | 'executionConfigText'
-  | 'routingConfigText'
-  | 'permissionConfigText'
-  | 'observabilityConfigText'
-  | 'releaseConfigText'
-  | 'batchConfigText'
-  | 'workflowConfigText'
 
 interface FeedbackState {
   tone: FeedbackTone
   message: string
 }
 
-interface JsonSection {
-  title: string
-  field: JsonFieldKey
-  rows: number
-}
-
 const loading = ref(false)
-const statsLoading = ref(false)
-const submitting = ref(false)
-const actionPending = ref(false)
-const deletePending = ref(false)
+const saving = ref(false)
+const actionLoading = ref(false)
 const selectedSkillId = ref<number | null>(null)
 const selectedSkill = ref<SkillItem | null>(null)
-const deleteTarget = ref<SkillItem | null>(null)
+const selectedSkillIds = ref<number[]>([])
+const selectedTestCaseId = ref<number | null>(null)
 const skills = ref<SkillItem[]>([])
-const selectedIds = ref<number[]>([])
-const importPayload = ref('')
-const exportPayload = ref('')
+const deletedSkills = ref<SkillItem[]>([])
+const testCases = ref<SkillTestCaseItem[]>([])
+const logs = ref<SkillExecutionLogItem[]>([])
+const debugResult = ref<SkillDebugResult | null>(null)
+const compareResult = ref<SkillVersionCompareResult | null>(null)
+const exportText = ref('')
 const feedback = ref<FeedbackState | null>(null)
-let feedbackTimer: ReturnType<typeof setTimeout> | null = null
 
-const statistics = ref<SkillStatistics>({
+const stats = ref<SkillStatistics>({
   totalCount: 0,
   enabledCount: 0,
   publishedCount: 0,
   hotUpdateEnabledCount: 0,
+  deletedCount: 0,
+  totalTestCaseCount: 0,
+  totalLogCount: 0,
+  successLogCount: 0,
+  failureLogCount: 0,
 })
 
-// 各配置区块统一用 JSON 文本编辑，保证结构完整且便于导入导出。
-const sections: JsonSection[] = [
-  { title: '意图 / 关键词 / 参数配置', field: 'intentConfigsText', rows: 9 },
-  { title: 'API / 函数执行配置', field: 'executionConfigText', rows: 9 },
-  { title: '路由调度 + 上下文', field: 'routingConfigText', rows: 8 },
-  { title: '权限 + 风控', field: 'permissionConfigText', rows: 8 },
-  { title: '调试 + 测试 + 日志统计', field: 'observabilityConfigText', rows: 8 },
-  { title: '发布上线 + 热更新', field: 'releaseConfigText', rows: 8 },
-  { title: '批量管理 + 导入导出', field: 'batchConfigText', rows: 7 },
-  { title: '工作流组合 + 多渠道适配', field: 'workflowConfigText', rows: 7 },
-]
+const filters = reactive({
+  keyword: '',
+  publishStatus: 'ALL',
+  skillStatus: 'ALL',
+})
 
 const form = reactive({
   skillCode: '',
   skillName: '',
   description: '',
+  skillType: 'API_CALL',
   skillCategory: 'USER_MANAGEMENT',
   skillStatus: 'ENABLED',
+  sortWeight: 100,
+  versionCode: '',
+  versionDescription: '',
   versionMode: 'MANUAL',
-  hotUpdateEnabled: 0,
-  intentConfigsText: '',
-  executionConfigText: '',
-  routingConfigText: '',
-  permissionConfigText: '',
-  observabilityConfigText: '',
-  releaseConfigText: '',
-  batchConfigText: '',
-  workflowConfigText: '',
+  hotUpdateEnabled: 1,
+  tagsText: '[]',
+  observabilityConfigText: '{\n  "debugEnabled": 1,\n  "logEnabled": 1\n}',
+  releaseConfigText: '{\n  "hotUpdateEnabled": 1,\n  "releaseStage": "DRAFT",\n  "publishStrategy": "MANUAL"\n}',
+  batchConfigText: '{\n  "batchEnabled": 1,\n  "importEnabled": 1,\n  "exportEnabled": 1,\n  "logicalDeleteEnabled": 1,\n  "recycleEnabled": 1,\n  "copyEnabled": 1\n}',
+  workflowConfigText:
+    '{\n  "workflowEnabled": 0,\n  "workflowSteps": [],\n  "branchRules": [],\n  "loopEnabled": 0,\n  "childSkillCodes": [],\n  "channelAdapters": ["WEB"],\n  "orchestrationStrategy": "SEQUENTIAL"\n}',
+  marketplaceConfigText: '{\n  "marketplaceEnabled": 0,\n  "reviewRequired": 1,\n  "storeVisible": 0\n}',
   remark: '',
 })
 
-const isEditing = computed(() => selectedSkillId.value !== null)
-const hasSelection = computed(() => selectedIds.value.length > 0)
-const versions = computed(() => selectedSkill.value?.versions ?? [])
-const summary = computed(() =>
-  statsLoading.value ? '统计加载中...' : `共 ${statistics.value.totalCount} 个 Skill，已发布 ${statistics.value.publishedCount} 个`,
-)
+const batchForm = reactive({
+  skillStatus: 'ENABLED',
+  targetCategoryCode: 'USER_MANAGEMENT',
+  tagNamesText: '用户管理,核心',
+})
 
-function defaultIntentConfigs(): SkillIntentConfig[] {
-  return [
-    {
-      intentName: 'user_query',
-      keywords: ['用户查询', '账号查询', '用户列表'],
-      parameterConfigs: [{ parameterName: 'keyword', parameterType: 'string', required: 0, defaultValue: '', description: '查询关键词' }],
-    },
-    {
-      intentName: 'user_update',
-      keywords: ['修改用户', '更新账号', '用户编辑'],
-      parameterConfigs: [{ parameterName: 'userId', parameterType: 'long', required: 1, defaultValue: null, description: '目标用户 ID' }],
-    },
-  ]
+const importForm = reactive({
+  importPayload: '',
+  publishAfterImport: 0,
+})
+
+const copyForm = reactive({
+  newSkillCode: '',
+  newSkillName: '',
+  includeTestCases: 1,
+})
+
+const versionForm = reactive({
+  sourceVersionNo: 1,
+  targetVersionNo: 1,
+  rollbackVersionNo: 1,
+  rollbackDescription: '',
+})
+
+const debugForm = reactive({
+  inputText: '查询用户 10001 的信息',
+  forcedIntent: '',
+  slotPayloadText: '{\n  "userId": "10001"\n}',
+  contextPayloadText: '{\n  "operator": "admin"\n}',
+})
+
+const logQuery = reactive({
+  sourceType: '',
+  successFlag: '',
+})
+
+const testCaseForm = reactive({
+  caseName: '',
+  inputText: '',
+  slotPayloadText: '{\n  "userId": "10001"\n}',
+  expectedIntent: '',
+  expectedResponseContains: '',
+})
+
+const filteredSkills = computed(() => {
+  const keyword = filters.keyword.trim().toLowerCase()
+  return skills.value.filter((item) => {
+    const matchKeyword = !keyword
+      || [item.skillName, item.skillCode, item.description, item.skillCategory]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(keyword))
+    const matchPublish = filters.publishStatus === 'ALL' || item.publishStatus === filters.publishStatus
+    const matchStatus = filters.skillStatus === 'ALL' || item.skillStatus === filters.skillStatus
+    return matchKeyword && matchPublish && matchStatus
+  })
+})
+
+const currentSummary = computed(() => {
+  if (!selectedSkill.value) return '未选择技能'
+  return `${selectedSkill.value.skillName} / 当前版本 ${selectedSkill.value.currentVersionNo ?? '-'} / 发布状态 ${selectedSkill.value.publishStatus}`
+})
+
+const selectedCountText = computed(() => `已勾选 ${selectedSkillIds.value.length} 个技能`)
+
+function showFeedback(tone: FeedbackTone, message: string) {
+  feedback.value = { tone, message }
 }
 
-function defaultExecutionConfig(): SkillExecutionConfig {
-  return {
-    executionType: 'API_AND_FUNCTION',
-    apiEndpoint: '/agentHelper/users/page',
-    httpMethod: 'POST',
-    functionName: 'queryUsers',
-    timeoutMs: '5000',
-    requestTemplate: JSON.stringify({ username: '{{keyword}}', tenantScoped: true }, null, 2),
-    responseMapping: JSON.stringify({ list: '$.data.list', total: '$.data.total' }, null, 2),
+function parseJson<T>(value: string, label: string): T {
+  try {
+    return JSON.parse(value) as T
+  } catch {
+    throw new Error(`${label} 不是合法 JSON`)
   }
 }
 
-function defaultRoutingConfig(): SkillRoutingConfig {
-  return {
-    routePolicy: 'KEYWORD_FIRST',
-    routeTags: ['user', 'management', 'account'],
-    contextWindowStrategy: 'RECENT_10',
-    memoryPolicy: 'KEEP_SESSION',
-    fallbackSkillCode: 'USER_ASSIST_FALLBACK',
-  }
+function formatTime(value?: number | null) {
+  if (!value) return '未记录'
+  return new Intl.DateTimeFormat('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(value)
 }
 
-function defaultPermissionConfig(): SkillPermissionConfig {
-  return {
-    allowedRoles: ['ADMIN', 'OPERATOR'],
-    dataScopes: ['TENANT', 'SELF'],
-    approvalPolicy: 'AUTO',
-    riskLevel: 'MEDIUM',
-    riskControlPolicy: '敏感操作二次确认 + 高频限流',
-  }
+function resetTestCaseForm() {
+  selectedTestCaseId.value = null
+  testCaseForm.caseName = ''
+  testCaseForm.inputText = ''
+  testCaseForm.slotPayloadText = '{\n  "userId": "10001"\n}'
+  testCaseForm.expectedIntent = ''
+  testCaseForm.expectedResponseContains = ''
 }
 
-function defaultObservabilityConfig(): SkillObservabilityConfig {
-  return {
-    debugEnabled: 1,
-    debugScript: '覆盖增删改查、版本、权限、批量导入导出和热更新回归。',
-    testCaseSummary: '验证查询、创建、修改、停用、发布、导入、导出、工作流调度。',
-    logEnabled: 1,
-    metricsPolicy: '统计调用量、成功率、耗时、失败原因和渠道占比。',
-  }
-}
-
-function defaultReleaseConfig(): SkillReleaseConfig {
-  return {
-    hotUpdateEnabled: 1,
-    releaseChannel: 'WEB',
-    grayPolicy: '按租户与角色灰度发布',
-    rollbackPolicy: '按最近稳定版本快速回滚',
-  }
-}
-
-function defaultBatchConfig(): SkillBatchConfig {
-  return {
-    batchEnabled: 1,
-    importEnabled: 1,
-    exportEnabled: 1,
-    importTemplate: 'JSON',
-    exportTemplate: 'JSON',
-  }
-}
-
-function defaultWorkflowConfig(): SkillWorkflowConfig {
-  return {
-    workflowSteps: ['意图识别', '参数装配', '权限校验', '路由执行', '结果包装', '日志统计'],
-    channelAdapters: ['WEB', 'WORKFLOW', 'API'],
-    orchestrationStrategy: 'SEQUENTIAL',
-  }
-}
-
-function toJson(value: unknown) {
-  return JSON.stringify(value, null, 2)
-}
-
-// 重置表单到默认模板，便于新建 Skill 时直接开始编辑。
 function resetForm() {
   selectedSkillId.value = null
   selectedSkill.value = null
-  exportPayload.value = ''
+  exportText.value = ''
+  debugResult.value = null
+  compareResult.value = null
+  testCases.value = []
+  logs.value = []
   form.skillCode = ''
   form.skillName = ''
   form.description = ''
+  form.skillType = 'API_CALL'
   form.skillCategory = 'USER_MANAGEMENT'
   form.skillStatus = 'ENABLED'
+  form.sortWeight = 100
+  form.versionCode = ''
+  form.versionDescription = ''
   form.versionMode = 'MANUAL'
-  form.hotUpdateEnabled = 0
-  form.intentConfigsText = toJson(defaultIntentConfigs())
-  form.executionConfigText = toJson(defaultExecutionConfig())
-  form.routingConfigText = toJson(defaultRoutingConfig())
-  form.permissionConfigText = toJson(defaultPermissionConfig())
-  form.observabilityConfigText = toJson(defaultObservabilityConfig())
-  form.releaseConfigText = toJson(defaultReleaseConfig())
-  form.batchConfigText = toJson(defaultBatchConfig())
-  form.workflowConfigText = toJson(defaultWorkflowConfig())
+  form.hotUpdateEnabled = 1
+  form.tagsText = '[]'
+  form.observabilityConfigText = '{\n  "debugEnabled": 1,\n  "logEnabled": 1\n}'
+  form.releaseConfigText = '{\n  "hotUpdateEnabled": 1,\n  "releaseStage": "DRAFT",\n  "publishStrategy": "MANUAL"\n}'
+  form.batchConfigText =
+    '{\n  "batchEnabled": 1,\n  "importEnabled": 1,\n  "exportEnabled": 1,\n  "logicalDeleteEnabled": 1,\n  "recycleEnabled": 1,\n  "copyEnabled": 1\n}'
+  form.workflowConfigText =
+    '{\n  "workflowEnabled": 0,\n  "workflowSteps": [],\n  "branchRules": [],\n  "loopEnabled": 0,\n  "childSkillCodes": [],\n  "channelAdapters": ["WEB"],\n  "orchestrationStrategy": "SEQUENTIAL"\n}'
+  form.marketplaceConfigText = '{\n  "marketplaceEnabled": 0,\n  "reviewRequired": 1,\n  "storeVisible": 0\n}'
   form.remark = ''
+  resetTestCaseForm()
 }
 
-// 详情回填时统一把对象转回格式化 JSON，避免编辑区结构错乱。
 function fillForm(skill: SkillItem) {
   selectedSkillId.value = skill.id
   selectedSkill.value = skill
   form.skillCode = skill.skillCode
   form.skillName = skill.skillName
   form.description = skill.description ?? ''
+  form.skillType = skill.skillType
   form.skillCategory = skill.skillCategory
   form.skillStatus = skill.skillStatus
+  form.sortWeight = skill.sortWeight ?? 100
+  form.versionCode = skill.versionCode ?? ''
+  form.versionDescription = skill.versionDescription ?? ''
   form.versionMode = skill.versionMode
-  form.hotUpdateEnabled = skill.hotUpdateEnabled
-  form.intentConfigsText = toJson(skill.intentConfigs ?? defaultIntentConfigs())
-  form.executionConfigText = toJson(skill.executionConfig ?? defaultExecutionConfig())
-  form.routingConfigText = toJson(skill.routingConfig ?? defaultRoutingConfig())
-  form.permissionConfigText = toJson(skill.permissionConfig ?? defaultPermissionConfig())
-  form.observabilityConfigText = toJson(skill.observabilityConfig ?? defaultObservabilityConfig())
-  form.releaseConfigText = toJson(skill.releaseConfig ?? defaultReleaseConfig())
-  form.batchConfigText = toJson(skill.batchConfig ?? defaultBatchConfig())
-  form.workflowConfigText = toJson(skill.workflowConfig ?? defaultWorkflowConfig())
+  form.hotUpdateEnabled = skill.hotUpdateEnabled ?? 0
+  form.tagsText = JSON.stringify(skill.tags ?? [], null, 2)
+  form.observabilityConfigText = JSON.stringify(skill.observabilityConfig ?? {}, null, 2)
+  form.releaseConfigText = JSON.stringify(skill.releaseConfig ?? {}, null, 2)
+  form.batchConfigText = JSON.stringify(skill.batchConfig ?? {}, null, 2)
+  form.workflowConfigText = JSON.stringify(skill.workflowConfig ?? {}, null, 2)
+  form.marketplaceConfigText = JSON.stringify(skill.marketplaceConfig ?? {}, null, 2)
   form.remark = skill.remark ?? ''
+  if (skill.versions?.length) {
+    versionForm.sourceVersionNo = skill.versions[0].versionNo
+    versionForm.targetVersionNo = skill.versions[skill.versions.length - 1].versionNo
+    versionForm.rollbackVersionNo = skill.versions[0].versionNo
+  }
 }
 
-// 保存前把表单中的 JSON 文本还原成请求对象。
+function fillTestCaseForm(item: SkillTestCaseItem) {
+  selectedTestCaseId.value = item.id
+  testCaseForm.caseName = item.caseName
+  testCaseForm.inputText = item.inputText
+  testCaseForm.slotPayloadText = item.slotPayloadJson || '{}'
+  testCaseForm.expectedIntent = item.expectedIntent || ''
+  testCaseForm.expectedResponseContains = item.expectedResponseContains || ''
+}
+
 function buildPayload(): SkillPayload {
   return {
     skillCode: form.skillCode.trim(),
     skillName: form.skillName.trim(),
     description: form.description.trim() || null,
+    skillType: form.skillType,
     skillCategory: form.skillCategory.trim(),
+    categoryChain: [{ categoryCode: form.skillCategory.trim(), categoryName: form.skillCategory.trim(), categoryLevel: 1 }],
+    tags: parseJson(form.tagsText, '标签配置'),
     skillStatus: form.skillStatus,
+    sortWeight: form.sortWeight,
+    versionCode: form.versionCode.trim() || null,
+    versionDescription: form.versionDescription.trim() || null,
     versionMode: form.versionMode,
     hotUpdateEnabled: form.hotUpdateEnabled,
-    intentConfigs: JSON.parse(form.intentConfigsText),
-    executionConfig: JSON.parse(form.executionConfigText),
-    routingConfig: JSON.parse(form.routingConfigText),
-    permissionConfig: JSON.parse(form.permissionConfigText),
-    observabilityConfig: JSON.parse(form.observabilityConfigText),
-    releaseConfig: JSON.parse(form.releaseConfigText),
-    batchConfig: JSON.parse(form.batchConfigText),
-    workflowConfig: JSON.parse(form.workflowConfigText),
+    observabilityConfig: parseJson(form.observabilityConfigText, '观测配置'),
+    releaseConfig: parseJson(form.releaseConfigText, '发布配置'),
+    batchConfig: parseJson(form.batchConfigText, '批量配置'),
+    workflowConfig: parseJson(form.workflowConfigText, '工作流配置'),
+    channelAdaptations: [],
+    marketplaceConfig: parseJson(form.marketplaceConfigText, '市场配置'),
     remark: form.remark.trim() || null,
   }
 }
 
-// 统一控制悬浮提示的展示与自动关闭。
-function showFeedback(tone: FeedbackTone, message: string) {
-  if (feedbackTimer) clearTimeout(feedbackTimer)
-  feedback.value = { tone, message }
-  feedbackTimer = setTimeout(() => {
-    feedback.value = null
-    feedbackTimer = null
-  }, 3200)
+function buildTestCasePayload(): SkillTestCasePayload {
+  return {
+    caseName: testCaseForm.caseName.trim(),
+    inputText: testCaseForm.inputText.trim(),
+    slotPayload: parseJson(testCaseForm.slotPayloadText, '测试用例槽位'),
+    expectedIntent: testCaseForm.expectedIntent.trim() || null,
+    expectedSuccess: 1,
+    expectedResponseContains: testCaseForm.expectedResponseContains.trim() || null,
+    channelCode: 'WEB',
+    locale: 'zh-CN',
+    enabled: 1,
+  }
 }
 
-function clearFeedback() {
-  if (feedbackTimer) clearTimeout(feedbackTimer)
-  feedbackTimer = null
-  feedback.value = null
+async function loadStats() {
+  stats.value = await fetchSkillStats()
 }
 
-function formatTime(value: number | null) {
-  if (!value) return '未记录'
-  return new Intl.DateTimeFormat('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).format(value)
+async function loadSkills() {
+  skills.value = await querySkills()
+  deletedSkills.value = await queryDeletedSkills()
 }
 
-// 刷新列表时尽量保持当前选中项，避免编辑中的上下文丢失。
-async function loadSkills(successMessage?: string) {
+async function loadLogs() {
+  logs.value = await querySkillLogs({
+    skillId: selectedSkillId.value,
+    sourceType: logQuery.sourceType || null,
+    successFlag: logQuery.successFlag === '' ? null : Number(logQuery.successFlag),
+  })
+}
+
+async function selectSkill(skillId: number) {
+  const [detail, detailTestCases] = await Promise.all([fetchSkillDetail(skillId), querySkillTestCases(skillId)])
+  fillForm(detail)
+  testCases.value = detailTestCases
+  await loadLogs()
+}
+
+async function refreshAll(keepSelection = true) {
   loading.value = true
   try {
-    skills.value = await querySkills()
-    selectedIds.value = selectedIds.value.filter((id) => skills.value.some((item) => item.id === id))
-    if (selectedSkillId.value) {
-      const current = skills.value.find((item) => item.id === selectedSkillId.value)
-      if (current) {
-        await selectSkill(current.id, false)
+    const currentId = keepSelection ? selectedSkillId.value : null
+    await Promise.all([loadSkills(), loadStats()])
+    if (currentId) {
+      const exists = skills.value.find((item) => item.id === currentId)
+      if (exists) {
+        await selectSkill(currentId)
       } else {
         resetForm()
       }
     }
-    if (successMessage) showFeedback('success', successMessage)
   } catch (error) {
-    showFeedback('error', getErrorMessage(error, 'Skill 列表加载失败。'))
+    showFeedback('error', getErrorMessage(error, '技能数据加载失败'))
   } finally {
     loading.value = false
   }
 }
 
-async function loadStatistics() {
-  statsLoading.value = true
-  try {
-    statistics.value = await fetchSkillStats()
-  } catch (error) {
-    showFeedback('error', getErrorMessage(error, 'Skill 统计加载失败。'))
-  } finally {
-    statsLoading.value = false
-  }
-}
-
-async function refreshAll(successMessage?: string) {
-  await Promise.all([loadSkills(successMessage), loadStatistics()])
-}
-
-// 选中 Skill 后加载完整详情，而不是只依赖列表卡片中的简要数据。
-async function selectSkill(skillId: number, clearExport = true) {
-  try {
-    fillForm(await fetchSkillDetail(skillId))
-    if (clearExport) exportPayload.value = ''
-  } catch (error) {
-    showFeedback('error', getErrorMessage(error, 'Skill 详情加载失败。'))
-  }
-}
-
-// 发布、热更新、导出、导入等动作统一复用刷新逻辑，保持页面状态一致。
-async function handleSubmit() {
-  submitting.value = true
+async function handleSave() {
+  saving.value = true
   try {
     const payload = buildPayload()
     if (selectedSkillId.value) {
       await updateSkill(selectedSkillId.value, payload)
-      await refreshAll('Skill 已更新。')
+      showFeedback('success', '技能已更新')
+      await refreshAll()
     } else {
-      await createSkill(payload)
-      await refreshAll('Skill 已创建。')
+      const created = await createSkill(payload)
+      showFeedback('success', '技能已创建')
+      await refreshAll(false)
+      await selectSkill(created.id)
     }
   } catch (error) {
-    showFeedback('error', getErrorMessage(error, 'Skill 保存失败，请检查 JSON 配置。'))
+    showFeedback('error', getErrorMessage(error, '技能保存失败'))
   } finally {
-    submitting.value = false
+    saving.value = false
   }
+}
+
+async function handleAction(action: () => Promise<unknown>, message: string) {
+  actionLoading.value = true
+  try {
+    await action()
+    showFeedback('success', message)
+    await refreshAll()
+  } catch (error) {
+    showFeedback('error', getErrorMessage(error, `${message}失败`))
+  } finally {
+    actionLoading.value = false
+  }
+}
+
+async function handleDelete(skillId: number) {
+  if (!window.confirm('确认删除该技能吗？')) return
+  await handleAction(() => removeSkill(skillId), '技能已删除')
+  if (selectedSkillId.value === skillId) resetForm()
+}
+
+async function handleRestore(skillId: number) {
+  await handleAction(() => restoreSkill(skillId), '技能已恢复')
 }
 
 async function handlePublish() {
   if (!selectedSkillId.value) return
-  actionPending.value = true
-  try {
-    await publishSkill(selectedSkillId.value)
-    await refreshAll('Skill 已发布上线。')
-  } catch (error) {
-    showFeedback('error', getErrorMessage(error, 'Skill 发布失败。'))
-  } finally {
-    actionPending.value = false
-  }
+  await handleAction(() => publishSkill(selectedSkillId.value as number), '技能已发布')
+}
+
+async function handleOffline() {
+  if (!selectedSkillId.value) return
+  await handleAction(() => offlineSkill(selectedSkillId.value as number), '技能已下线')
 }
 
 async function handleHotUpdate() {
   if (!selectedSkillId.value) return
-  actionPending.value = true
-  try {
-    await hotUpdateSkill(selectedSkillId.value)
-    await refreshAll('Skill 已开启热更新。')
-  } catch (error) {
-    showFeedback('error', getErrorMessage(error, '热更新配置失败。'))
-  } finally {
-    actionPending.value = false
-  }
+  await handleAction(() => hotUpdateSkill(selectedSkillId.value as number), '技能已热更新')
 }
 
-async function handleExport(skillId?: number) {
-  const targetId = skillId ?? selectedSkillId.value
-  if (!targetId) return
-  actionPending.value = true
+async function handleExport() {
+  if (!selectedSkillId.value) return
+  actionLoading.value = true
   try {
-    const result = await exportSkill(targetId)
-    exportPayload.value = result.exportPayload
-    await navigator.clipboard.writeText(result.exportPayload)
-    if (selectedSkillId.value !== targetId) await selectSkill(targetId)
-    showFeedback('success', '导出内容已复制到剪贴板。')
+    const result = await exportSkill(selectedSkillId.value)
+    exportText.value = result.exportPayload
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(result.exportPayload)
+    }
+    showFeedback('success', '导出内容已生成')
   } catch (error) {
-    showFeedback('error', getErrorMessage(error, 'Skill 导出失败。'))
+    showFeedback('error', getErrorMessage(error, '技能导出失败'))
   } finally {
-    actionPending.value = false
+    actionLoading.value = false
   }
 }
 
 async function handleImport() {
-  if (!importPayload.value.trim()) {
-    showFeedback('error', '请输入导入内容。')
+  await handleAction(
+    () =>
+      importSkill({
+        importPayload: importForm.importPayload.trim(),
+        importFormat: 'JSON',
+        publishAfterImport: importForm.publishAfterImport,
+      }),
+    '技能已导入',
+  )
+  importForm.importPayload = ''
+}
+
+async function handleCopy() {
+  if (!selectedSkillId.value) return
+  await handleAction(
+    () =>
+      copySkill(selectedSkillId.value as number, {
+        newSkillCode: copyForm.newSkillCode.trim(),
+        newSkillName: copyForm.newSkillName.trim(),
+        includeTestCases: copyForm.includeTestCases,
+      }),
+    '技能已复制',
+  )
+}
+
+async function handleCompareVersions() {
+  if (!selectedSkillId.value) return
+  actionLoading.value = true
+  try {
+    compareResult.value = await compareSkillVersions(selectedSkillId.value, {
+      sourceVersionNo: versionForm.sourceVersionNo,
+      targetVersionNo: versionForm.targetVersionNo,
+    })
+    showFeedback('success', '版本对比完成')
+  } catch (error) {
+    showFeedback('error', getErrorMessage(error, '版本对比失败'))
+  } finally {
+    actionLoading.value = false
+  }
+}
+
+async function handleRollback() {
+  if (!selectedSkillId.value) return
+  await handleAction(
+    () =>
+      rollbackSkill(selectedSkillId.value as number, {
+        targetVersionNo: versionForm.rollbackVersionNo,
+        versionDescription: versionForm.rollbackDescription.trim() || undefined,
+      }),
+    '版本已回滚',
+  )
+}
+
+async function handleBatch(action: () => Promise<unknown>, message: string) {
+  if (!selectedSkillIds.value.length) {
+    showFeedback('info', '请先勾选技能')
     return
   }
-  actionPending.value = true
-  try {
-    await importSkill(importPayload.value.trim())
-    importPayload.value = ''
-    await refreshAll('Skill 已导入。')
-  } catch (error) {
-    showFeedback('error', getErrorMessage(error, 'Skill 导入失败。'))
-  } finally {
-    actionPending.value = false
-  }
+  await handleAction(action, message)
 }
 
-function requestDelete(skill: SkillItem) {
-  deleteTarget.value = skill
+async function handleBatchStatus() {
+  await handleBatch(
+    () => batchUpdateSkillStatus({ skillIds: selectedSkillIds.value, skillStatus: batchForm.skillStatus }),
+    '批量状态更新成功',
+  )
 }
 
-async function confirmDelete() {
-  if (!deleteTarget.value) return
-  deletePending.value = true
-  try {
-    await removeSkill(deleteTarget.value.id)
-    if (selectedSkillId.value === deleteTarget.value.id) resetForm()
-    deleteTarget.value = null
-    await refreshAll('Skill 已删除。')
-  } catch (error) {
-    showFeedback('error', getErrorMessage(error, 'Skill 删除失败。'))
-  } finally {
-    deletePending.value = false
-  }
+async function handleBatchTags() {
+  await handleBatch(
+    () =>
+      batchUpdateSkillTags({
+        skillIds: selectedSkillIds.value,
+        tagNames: batchForm.tagNamesText.split(',').map((item) => item.trim()).filter(Boolean),
+      }),
+    '批量标签更新成功',
+  )
 }
 
-async function handleBatchDisable() {
-  if (!hasSelection.value) return
-  actionPending.value = true
-  try {
-    await batchUpdateSkillStatus(selectedIds.value, 'DISABLED')
-    selectedIds.value = []
-    await refreshAll('已批量停用选中的 Skill。')
-  } catch (error) {
-    showFeedback('error', getErrorMessage(error, '批量停用失败。'))
-  } finally {
-    actionPending.value = false
-  }
+async function handleBatchCategory() {
+  await handleBatch(
+    () => batchMoveSkillCategory({ skillIds: selectedSkillIds.value, targetCategoryCode: batchForm.targetCategoryCode }),
+    '批量分类迁移成功',
+  )
+}
+
+async function handleBatchPublish() {
+  await handleBatch(() => batchPublishSkills({ skillIds: selectedSkillIds.value }), '批量发布成功')
+}
+
+async function handleBatchOffline() {
+  await handleBatch(() => batchOfflineSkills({ skillIds: selectedSkillIds.value }), '批量下线成功')
 }
 
 async function handleBatchDelete() {
-  if (!hasSelection.value) return
-  actionPending.value = true
+  if (!selectedSkillIds.value.length || !window.confirm('确认批量删除选中技能吗？')) return
+  await handleBatch(() => batchDeleteSkills({ skillIds: selectedSkillIds.value }), '批量删除成功')
+}
+
+async function handleDebug() {
+  actionLoading.value = true
   try {
-    await batchDeleteSkills(selectedIds.value)
-    selectedIds.value = []
-    resetForm()
-    await refreshAll('已批量删除选中的 Skill。')
+    debugResult.value = await debugSkill({
+      skillId: selectedSkillId.value,
+      inputText: debugForm.inputText.trim(),
+      forcedIntent: debugForm.forcedIntent.trim() || undefined,
+      slotPayload: parseJson(debugForm.slotPayloadText, '调试槽位'),
+      contextPayload: parseJson(debugForm.contextPayloadText, '调试上下文'),
+      channelCode: 'WEB',
+      locale: 'zh-CN',
+    })
+    await loadLogs()
+    showFeedback('success', '调试执行完成')
   } catch (error) {
-    showFeedback('error', getErrorMessage(error, '批量删除失败。'))
+    showFeedback('error', getErrorMessage(error, '调试执行失败'))
   } finally {
-    actionPending.value = false
+    actionLoading.value = false
   }
 }
 
-function toggleSelection(skillId: number, checked: boolean) {
-  selectedIds.value = checked
-    ? [...selectedIds.value.filter((item) => item !== skillId), skillId]
-    : selectedIds.value.filter((item) => item !== skillId)
+async function handleSaveTestCase() {
+  if (!selectedSkillId.value) return
+  actionLoading.value = true
+  try {
+    if (selectedTestCaseId.value) {
+      await updateSkillTestCase(selectedTestCaseId.value, buildTestCasePayload())
+      showFeedback('success', '测试用例已更新')
+    } else {
+      await createSkillTestCase(selectedSkillId.value, buildTestCasePayload())
+      showFeedback('success', '测试用例已创建')
+    }
+    testCases.value = await querySkillTestCases(selectedSkillId.value)
+    resetTestCaseForm()
+    await refreshAll()
+  } catch (error) {
+    showFeedback('error', getErrorMessage(error, '测试用例保存失败'))
+  } finally {
+    actionLoading.value = false
+  }
 }
 
-onMounted(() => {
-  resetForm()
-  void refreshAll()
-})
+async function handleRunTestCase(testCaseId: number) {
+  actionLoading.value = true
+  try {
+    debugResult.value = await runSkillTestCase(testCaseId)
+    if (selectedSkillId.value) {
+      testCases.value = await querySkillTestCases(selectedSkillId.value)
+      await loadLogs()
+    }
+    showFeedback('success', '测试用例已执行')
+  } catch (error) {
+    showFeedback('error', getErrorMessage(error, '测试用例执行失败'))
+  } finally {
+    actionLoading.value = false
+  }
+}
 
-onBeforeUnmount(() => clearFeedback())
+async function handleDeleteTestCase(testCaseId: number) {
+  if (!window.confirm('确认删除该测试用例吗？')) return
+  await handleAction(() => removeSkillTestCase(testCaseId), '测试用例已删除')
+  if (selectedSkillId.value) {
+    testCases.value = await querySkillTestCases(selectedSkillId.value)
+  }
+}
+
+onMounted(async () => {
+  resetForm()
+  await refreshAll(false)
+})
 </script>
 
 <template>
   <MainShell>
-    <Transition name="toast-fade">
-      <section v-if="feedback" class="feedback-toast" :class="`feedback-toast--${feedback.tone}`">
-        <div class="feedback-toast__body">
-          <strong>{{ feedback.tone === 'success' ? '操作成功' : feedback.tone === 'error' ? '操作失败' : '提示' }}</strong>
-          <span>{{ feedback.message }}</span>
-        </div>
-        <button type="button" class="feedback-toast__close" @click="clearFeedback">关闭</button>
-      </section>
-    </Transition>
-
     <section class="skill-page">
-      <article class="panel-card skill-hero">
-        <div class="skill-hero__copy">
-          <p class="section-kicker">Skill Studio</p>
-          <h2>用户管理 Skill 中心</h2>
-          <p class="skill-hero__meta">覆盖增删改查、版本、意图、执行、路由、权限、风控、调试、测试、发布、热更新、批量治理与多渠道适配。</p>
-          <p class="skill-hero__summary">{{ summary }}</p>
+      <article class="panel-card hero-panel">
+        <div class="hero-panel__head">
+          <div>
+            <p class="section-kicker">Skill Workspace</p>
+            <h2>Skills 管理台</h2>
+            <p class="hero-panel__summary">{{ currentSummary }}</p>
+          </div>
+          <div class="toolbar-actions">
+            <button class="app-button app-button--secondary" type="button" :disabled="loading" @click="refreshAll()">刷新</button>
+            <button class="app-button" type="button" @click="resetForm">新建技能</button>
+          </div>
         </div>
-        <div class="skill-hero__actions">
-          <button type="button" class="app-button app-button--secondary" :disabled="loading || statsLoading" @click="refreshAll()">
-            <RefreshCw :size="16" />
-            刷新
-          </button>
-          <button type="button" class="app-button" @click="resetForm">
-            <Plus :size="16" />
-            新建 Skill
-          </button>
+        <div v-if="feedback" class="feedback-banner" :class="`feedback-banner--${feedback.tone}`">
+          {{ feedback.message }}
+        </div>
+        <div class="stats-strip">
+          <article class="metric-card"><span>技能总数</span><strong>{{ stats.totalCount }}</strong></article>
+          <article class="metric-card"><span>已发布</span><strong>{{ stats.publishedCount }}</strong></article>
+          <article class="metric-card"><span>回收站</span><strong>{{ stats.deletedCount ?? 0 }}</strong></article>
+          <article class="metric-card"><span>测试用例</span><strong>{{ stats.totalTestCaseCount ?? 0 }}</strong></article>
+          <article class="metric-card"><span>执行日志</span><strong>{{ stats.totalLogCount ?? 0 }}</strong></article>
         </div>
       </article>
 
-      <div class="skill-grid">
-        <article class="panel-card skill-list-panel">
-          <div class="section-header skill-list-panel__head">
-            <div>
-              <strong>Skill 列表</strong>
-              <p>统一治理用户管理类 Skill 的状态、版本和发布节奏。</p>
-            </div>
-            <div class="skill-list-panel__stats">
-              <span>启用 {{ statistics.enabledCount }}</span>
-              <span>发布 {{ statistics.publishedCount }}</span>
-              <span>热更新 {{ statistics.hotUpdateEnabledCount }}</span>
-            </div>
+      <article class="panel-card section-panel">
+        <div class="section-panel__head">
+          <div>
+            <h3>技能列表与批量操作</h3>
+            <p>先筛选和选择技能，再执行批量动作或进入下方单个技能编辑。</p>
           </div>
+          <p class="section-panel__hint">{{ selectedCountText }}</p>
+        </div>
 
-          <div class="skill-batch-bar">
-            <button type="button" class="app-button app-button--secondary" :disabled="!hasSelection || actionPending" @click="handleBatchDisable">
-              <CheckSquare :size="16" />
-              批量停用
+        <div class="filter-grid">
+          <label class="field"><span class="field__label">关键字搜索</span><input v-model="filters.keyword" class="app-input" type="text" placeholder="按名称、编码、描述、分类搜索" /></label>
+          <label class="field"><span class="field__label">发布状态</span><select v-model="filters.publishStatus" class="app-select"><option value="ALL">全部</option><option value="DRAFT">草稿</option><option value="PUBLISHED">已发布</option><option value="OFFLINE">已下线</option></select></label>
+          <label class="field"><span class="field__label">技能状态</span><select v-model="filters.skillStatus" class="app-select"><option value="ALL">全部</option><option value="ENABLED">启用</option><option value="DISABLED">停用</option></select></label>
+        </div>
+
+        <div class="batch-toolbar">
+          <label class="field"><span class="field__label">批量状态</span><select v-model="batchForm.skillStatus" class="app-select"><option value="ENABLED">启用</option><option value="DISABLED">停用</option></select></label>
+          <label class="field"><span class="field__label">批量分类</span><input v-model="batchForm.targetCategoryCode" class="app-input" type="text" /></label>
+          <label class="field"><span class="field__label">批量标签</span><input v-model="batchForm.tagNamesText" class="app-input" type="text" /></label>
+        </div>
+
+        <div class="action-grid">
+          <button class="app-button app-button--secondary" type="button" @click="handleBatchStatus">更新状态</button>
+          <button class="app-button app-button--secondary" type="button" @click="handleBatchTags">更新标签</button>
+          <button class="app-button app-button--secondary" type="button" @click="handleBatchCategory">迁移分类</button>
+          <button class="app-button app-button--secondary" type="button" @click="handleBatchPublish">批量发布</button>
+          <button class="app-button app-button--secondary" type="button" @click="handleBatchOffline">批量下线</button>
+          <button class="app-button app-button--secondary" type="button" @click="handleBatchDelete">批量删除</button>
+        </div>
+
+        <div v-if="loading" class="empty-state">正在加载技能列表...</div>
+        <div v-else-if="filteredSkills.length === 0" class="empty-state">当前没有符合筛选条件的技能。</div>
+        <div v-else class="skill-list">
+          <label v-for="item in filteredSkills" :key="item.id" class="skill-row" :class="{ 'skill-row--active': selectedSkillId === item.id }">
+            <div class="skill-row__select"><input v-model="selectedSkillIds" type="checkbox" :value="item.id" /></div>
+            <button type="button" class="skill-row__main" @click="selectSkill(item.id)">
+              <div class="skill-row__title"><strong>{{ item.skillName }}</strong><span>{{ item.skillCode }}</span></div>
+              <div class="skill-row__meta"><span>{{ item.skillCategory }}</span><span>{{ item.skillType }}</span><span>{{ item.skillStatus }}</span><span>{{ item.publishStatus }}</span><span>V{{ item.currentVersionNo ?? '-' }}</span></div>
+              <p class="skill-row__desc">{{ item.description || '暂无描述' }}</p>
             </button>
-            <button type="button" class="app-button app-button--secondary" :disabled="!hasSelection || actionPending" @click="handleBatchDelete">
-              <Trash2 :size="16" />
-              批量删除
-            </button>
-          </div>
+            <div class="skill-row__actions">
+              <button class="app-button app-button--secondary" type="button" @click="selectSkill(item.id)">编辑</button>
+              <button class="app-button app-button--secondary" type="button" @click="handleDelete(item.id)">删除</button>
+            </div>
+          </label>
+        </div>
+      </article>
 
-          <div v-if="loading" class="empty-state">正在加载 Skill 列表...</div>
-          <div v-else-if="skills.length === 0" class="empty-state">当前还没有用户管理 Skill，请先创建。</div>
-          <div v-else class="skill-list">
-            <article v-for="item in skills" :key="item.id" class="skill-card" :class="{ 'skill-card--active': selectedSkillId === item.id }" @click="selectSkill(item.id)">
-              <label class="skill-card__checkbox" @click.stop>
-                <input :checked="selectedIds.includes(item.id)" type="checkbox" @change="toggleSelection(item.id, ($event.target as HTMLInputElement).checked)" />
-              </label>
-              <div class="skill-card__body">
-                <div class="skill-card__head">
-                  <div>
-                    <strong>{{ item.skillName }}</strong>
-                    <p>{{ item.skillCode }}</p>
-                  </div>
-                  <span class="skill-card__tag">{{ item.publishStatus }}</span>
-                </div>
-                <p class="skill-card__desc">{{ item.description || '暂未填写 Skill 描述。' }}</p>
-                <div class="skill-card__meta">
-                  <span>版本 {{ item.currentVersionNo || '-' }}</span>
-                  <span>{{ item.skillStatus }}</span>
-                  <span>{{ item.hotUpdateEnabled ? '热更新开启' : '热更新关闭' }}</span>
-                </div>
-                <div class="skill-card__actions">
-                  <button type="button" class="app-button app-button--secondary" :disabled="actionPending" @click.stop="handleExport(item.id)">导出</button>
-                  <button type="button" class="app-button app-button--secondary" :disabled="deletePending" @click.stop="requestDelete(item)">删除</button>
-                </div>
-              </div>
-            </article>
+      <article class="panel-card section-panel">
+        <div class="section-panel__head">
+          <div>
+            <h3>已删除技能</h3>
+            <p>这里展示回收站中的技能，恢复后会重新出现在列表中。</p>
           </div>
-        </article>
-
-        <article class="panel-card skill-editor">
-          <div class="section-header skill-editor__head">
+        </div>
+        <div v-if="deletedSkills.length === 0" class="empty-state empty-state--compact">暂无已删除技能</div>
+        <div v-else class="deleted-list">
+          <div v-for="item in deletedSkills" :key="item.id" class="deleted-row">
             <div>
-              <strong>{{ isEditing ? '编辑 Skill' : '新建 Skill' }}</strong>
-              <p>按模块维护配置，便于后续发布、导入导出和版本追踪。</p>
+              <strong>{{ item.skillName }}</strong>
+              <p>{{ item.skillCode }}</p>
             </div>
-            <div class="skill-editor__actions">
-              <button type="button" class="app-button app-button--secondary" :disabled="!isEditing || actionPending" @click="handlePublish">
-                <Wand2 :size="16" />
-                发布上线
-              </button>
-              <button type="button" class="app-button app-button--secondary" :disabled="!isEditing || actionPending" @click="handleHotUpdate">
-                <Sparkles :size="16" />
-                热更新
-              </button>
-              <button type="button" class="app-button" :disabled="submitting" @click="handleSubmit">{{ submitting ? '保存中...' : '保存 Skill' }}</button>
+            <button class="app-button app-button--secondary" type="button" @click="handleRestore(item.id)">恢复</button>
+          </div>
+        </div>
+      </article>
+
+      <article class="panel-card section-panel">
+        <div class="section-panel__head">
+          <div>
+            <h3>基础信息与技能配置</h3>
+            <p>单个技能的核心信息放在一个区域内，减少来回视线切换。</p>
+          </div>
+          <div class="toolbar-actions">
+            <button class="app-button app-button--secondary" type="button" :disabled="!selectedSkillId || actionLoading" @click="handlePublish">发布</button>
+            <button class="app-button app-button--secondary" type="button" :disabled="!selectedSkillId || actionLoading" @click="handleOffline">下线</button>
+            <button class="app-button app-button--secondary" type="button" :disabled="!selectedSkillId || actionLoading" @click="handleHotUpdate">热更新</button>
+            <button class="app-button" type="button" :disabled="saving" @click="handleSave">{{ saving ? '保存中...' : '保存技能' }}</button>
+          </div>
+        </div>
+
+        <div class="form-grid form-grid--triple">
+          <label class="field"><span class="field__label">技能编码</span><input v-model="form.skillCode" class="app-input" type="text" :disabled="Boolean(selectedSkillId)" /></label>
+          <label class="field"><span class="field__label">技能名称</span><input v-model="form.skillName" class="app-input" type="text" /></label>
+          <label class="field"><span class="field__label">技能类型</span><input v-model="form.skillType" class="app-input" type="text" /></label>
+          <label class="field"><span class="field__label">技能分类</span><input v-model="form.skillCategory" class="app-input" type="text" /></label>
+          <label class="field"><span class="field__label">技能状态</span><select v-model="form.skillStatus" class="app-select"><option value="ENABLED">启用</option><option value="DISABLED">停用</option></select></label>
+          <label class="field"><span class="field__label">排序权重</span><input v-model.number="form.sortWeight" class="app-input" type="number" /></label>
+          <label class="field"><span class="field__label">版本编码</span><input v-model="form.versionCode" class="app-input" type="text" /></label>
+          <label class="field"><span class="field__label">版本模式</span><select v-model="form.versionMode" class="app-select"><option value="MANUAL">手动</option><option value="AUTO">自动</option></select></label>
+          <label class="field"><span class="field__label">热更新</span><select v-model.number="form.hotUpdateEnabled" class="app-select"><option :value="1">开启</option><option :value="0">关闭</option></select></label>
+        </div>
+
+        <label class="field"><span class="field__label">描述</span><textarea v-model="form.description" class="app-textarea" rows="3" /></label>
+        <label class="field"><span class="field__label">版本说明</span><input v-model="form.versionDescription" class="app-input" type="text" /></label>
+        <label class="field"><span class="field__label">标签 JSON</span><textarea v-model="form.tagsText" class="app-textarea code-area" rows="5" /></label>
+        <label class="field"><span class="field__label">观测配置 JSON</span><textarea v-model="form.observabilityConfigText" class="app-textarea code-area" rows="6" /></label>
+        <label class="field"><span class="field__label">发布配置 JSON</span><textarea v-model="form.releaseConfigText" class="app-textarea code-area" rows="6" /></label>
+        <label class="field"><span class="field__label">批量配置 JSON</span><textarea v-model="form.batchConfigText" class="app-textarea code-area" rows="6" /></label>
+        <label class="field"><span class="field__label">工作流配置 JSON</span><textarea v-model="form.workflowConfigText" class="app-textarea code-area" rows="6" /></label>
+        <label class="field"><span class="field__label">市场配置 JSON</span><textarea v-model="form.marketplaceConfigText" class="app-textarea code-area" rows="5" /></label>
+        <label class="field"><span class="field__label">备注</span><textarea v-model="form.remark" class="app-textarea" rows="3" /></label>
+      </article>
+
+      <article class="panel-card section-panel">
+        <div class="section-panel__head">
+          <div>
+            <h3>版本管理与导入导出</h3>
+            <p>把版本动作和资产流转放在同一行程里，避免分散到右侧窄栏。</p>
+          </div>
+        </div>
+
+        <div class="split-grid">
+          <section class="sub-panel">
+            <h4>版本对比与回滚</h4>
+            <div class="form-grid form-grid--double">
+              <label class="field"><span class="field__label">源版本</span><input v-model.number="versionForm.sourceVersionNo" class="app-input" type="number" /></label>
+              <label class="field"><span class="field__label">目标版本</span><input v-model.number="versionForm.targetVersionNo" class="app-input" type="number" /></label>
             </div>
+            <button class="app-button app-button--secondary" type="button" :disabled="!selectedSkillId" @click="handleCompareVersions">执行版本对比</button>
+            <label class="field"><span class="field__label">回滚版本</span><input v-model.number="versionForm.rollbackVersionNo" class="app-input" type="number" /></label>
+            <label class="field"><span class="field__label">回滚说明</span><input v-model="versionForm.rollbackDescription" class="app-input" type="text" /></label>
+            <button class="app-button app-button--secondary" type="button" :disabled="!selectedSkillId" @click="handleRollback">回滚到指定版本</button>
+            <div v-if="selectedSkill?.versions?.length" class="version-list">
+              <div v-for="version in selectedSkill.versions" :key="version.id" class="version-row">
+                <strong>V{{ version.versionNo }}</strong>
+                <span>{{ version.versionStatus }}</span>
+                <span>{{ version.publishStatus }}</span>
+              </div>
+            </div>
+            <pre v-if="compareResult" class="result-box">{{ compareResult.diffSummary }}</pre>
+          </section>
+
+          <section class="sub-panel">
+            <h4>导入、导出与复制</h4>
+            <label class="field"><span class="field__label">导入 JSON</span><textarea v-model="importForm.importPayload" class="app-textarea code-area" rows="8" /></label>
+            <label class="field field--inline"><span class="field__label">导入后立即发布</span><input v-model="importForm.publishAfterImport" type="checkbox" :true-value="1" :false-value="0" /></label>
+            <div class="toolbar-actions">
+              <button class="app-button app-button--secondary" type="button" @click="handleImport">导入技能</button>
+              <button class="app-button app-button--secondary" type="button" :disabled="!selectedSkillId" @click="handleExport">导出技能</button>
+            </div>
+            <label class="field"><span class="field__label">导出结果</span><textarea :value="exportText" class="app-textarea code-area" rows="8" readonly /></label>
+            <div class="form-grid form-grid--double">
+              <label class="field"><span class="field__label">复制后编码</span><input v-model="copyForm.newSkillCode" class="app-input" type="text" /></label>
+              <label class="field"><span class="field__label">复制后名称</span><input v-model="copyForm.newSkillName" class="app-input" type="text" /></label>
+            </div>
+            <label class="field field--inline"><span class="field__label">复制测试用例</span><input v-model="copyForm.includeTestCases" type="checkbox" :true-value="1" :false-value="0" /></label>
+            <button class="app-button app-button--secondary" type="button" :disabled="!selectedSkillId" @click="handleCopy">复制当前技能</button>
+          </section>
+        </div>
+      </article>
+
+      <article class="panel-card section-panel">
+        <div class="section-panel__head">
+          <div>
+            <h3>调试、测试与执行日志</h3>
+            <p>运行过程相关内容统一收拢，便于从输入、结果到日志连续排查。</p>
           </div>
+        </div>
 
-          <div class="skill-form">
-            <section class="skill-section">
-              <p class="section-kicker">基础信息</p>
-              <div class="skill-form__grid skill-form__grid--basic">
-                <label class="field"><span class="field__label">Skill 编码</span><div class="input-shell"><input v-model="form.skillCode" class="app-input" type="text" :disabled="isEditing" placeholder="USER_MANAGEMENT_SKILL" /></div></label>
-                <label class="field"><span class="field__label">Skill 名称</span><div class="input-shell"><input v-model="form.skillName" class="app-input" type="text" placeholder="用户管理 Skill" /></div></label>
-                <label class="field"><span class="field__label">分类</span><div class="input-shell"><input v-model="form.skillCategory" class="app-input" type="text" placeholder="USER_MANAGEMENT" /></div></label>
-                <label class="field"><span class="field__label">状态</span><select v-model="form.skillStatus" class="app-select"><option value="ENABLED">启用</option><option value="DISABLED">停用</option></select></label>
-                <label class="field"><span class="field__label">版本模式</span><select v-model="form.versionMode" class="app-select"><option value="MANUAL">手动版本</option><option value="AUTO">自动版本</option></select></label>
-                <label class="field"><span class="field__label">热更新</span><select v-model.number="form.hotUpdateEnabled" class="app-select"><option :value="0">关闭</option><option :value="1">开启</option></select></label>
-              </div>
-              <label class="field"><span class="field__label">描述</span><div class="input-shell input-shell--textarea"><textarea v-model="form.description" class="app-textarea" rows="3" placeholder="描述 Skill 的范围、边界和适用场景" /></div></label>
-              <label class="field"><span class="field__label">备注</span><div class="input-shell input-shell--textarea"><textarea v-model="form.remark" class="app-textarea" rows="2" placeholder="补充上线说明或协作备注"></textarea></div></label>
-            </section>
-
-            <section v-for="section in sections" :key="section.field" class="skill-section">
-              <p class="section-kicker">{{ section.title }}</p>
-              <div class="input-shell input-shell--textarea">
-                <textarea v-model="form[section.field]" class="app-textarea skill-json" :rows="section.rows" />
-              </div>
-            </section>
-
-            <section class="skill-section">
-              <p class="section-kicker">导入 / 导出</p>
-              <div class="skill-form__grid skill-form__grid--dual">
-                <label class="field">
-                  <span class="field__label">导入内容</span>
-                  <div class="input-shell input-shell--textarea"><textarea v-model="importPayload" class="app-textarea skill-json" rows="8" placeholder="粘贴导出的 Skill JSON 内容" /></div>
-                  <button type="button" class="app-button app-button--secondary" :disabled="actionPending" @click="handleImport"><Upload :size="16" />导入 Skill</button>
-                </label>
-                <label class="field">
-                  <span class="field__label">导出内容</span>
-                  <div class="input-shell input-shell--textarea"><textarea :value="exportPayload" class="app-textarea skill-json" rows="8" readonly placeholder="选中 Skill 后执行导出"></textarea></div>
-                  <button type="button" class="app-button app-button--secondary" :disabled="!isEditing || actionPending" @click="handleExport()"><Download :size="16" />导出并复制</button>
-                </label>
-              </div>
-            </section>
-
-            <section v-if="isEditing" class="skill-section">
-              <p class="section-kicker">版本信息</p>
-              <div v-if="versions.length === 0" class="empty-state">当前 Skill 还没有版本记录。</div>
-              <div v-else class="version-list">
-                <article v-for="item in versions" :key="item.id" class="version-card">
-                  <strong>V{{ item.versionNo }}</strong>
-                  <span>{{ item.versionStatus }} / {{ item.publishStatus }}</span>
-                  <small>{{ formatTime(item.createTime) }}</small>
-                </article>
-              </div>
-            </section>
+        <div class="sub-panel">
+          <h4>在线调试</h4>
+          <label class="field"><span class="field__label">输入文本</span><textarea v-model="debugForm.inputText" class="app-textarea" rows="3" /></label>
+          <div class="form-grid form-grid--double">
+            <label class="field"><span class="field__label">强制意图</span><input v-model="debugForm.forcedIntent" class="app-input" type="text" /></label>
+            <div></div>
           </div>
-        </article>
-      </div>
+          <div class="form-grid form-grid--double">
+            <label class="field"><span class="field__label">槽位 JSON</span><textarea v-model="debugForm.slotPayloadText" class="app-textarea code-area" rows="6" /></label>
+            <label class="field"><span class="field__label">上下文 JSON</span><textarea v-model="debugForm.contextPayloadText" class="app-textarea code-area" rows="6" /></label>
+          </div>
+          <button class="app-button" type="button" @click="handleDebug">执行调试</button>
+          <pre v-if="debugResult" class="result-box">{{ JSON.stringify(debugResult, null, 2) }}</pre>
+        </div>
+
+        <div class="split-grid">
+          <section class="sub-panel">
+            <h4>测试用例</h4>
+            <label class="field"><span class="field__label">用例名称</span><input v-model="testCaseForm.caseName" class="app-input" type="text" /></label>
+            <label class="field"><span class="field__label">输入文本</span><textarea v-model="testCaseForm.inputText" class="app-textarea" rows="3" /></label>
+            <label class="field"><span class="field__label">槽位 JSON</span><textarea v-model="testCaseForm.slotPayloadText" class="app-textarea code-area" rows="5" /></label>
+            <div class="form-grid form-grid--double">
+              <label class="field"><span class="field__label">期望意图</span><input v-model="testCaseForm.expectedIntent" class="app-input" type="text" /></label>
+              <label class="field"><span class="field__label">期望响应包含</span><input v-model="testCaseForm.expectedResponseContains" class="app-input" type="text" /></label>
+            </div>
+            <div class="toolbar-actions">
+              <button class="app-button app-button--secondary" type="button" :disabled="!selectedSkillId" @click="handleSaveTestCase">{{ selectedTestCaseId ? '更新用例' : '新增用例' }}</button>
+              <button class="app-button app-button--secondary" type="button" @click="resetTestCaseForm">清空表单</button>
+            </div>
+            <div v-if="testCases.length === 0" class="empty-state empty-state--compact">暂无测试用例</div>
+            <div v-else class="stack-list">
+              <article v-for="item in testCases" :key="item.id" class="stack-card">
+                <div class="stack-card__head">
+                  <strong>{{ item.caseName }}</strong>
+                  <small>{{ item.lastRunStatus || '未执行' }} / {{ formatTime(item.lastRunAt) }}</small>
+                </div>
+                <p>{{ item.inputText }}</p>
+                <div class="toolbar-actions">
+                  <button class="app-button app-button--secondary" type="button" @click="fillTestCaseForm(item)">编辑</button>
+                  <button class="app-button app-button--secondary" type="button" @click="handleRunTestCase(item.id)">运行</button>
+                  <button class="app-button app-button--secondary" type="button" @click="handleDeleteTestCase(item.id)">删除</button>
+                </div>
+              </article>
+            </div>
+          </section>
+
+          <section class="sub-panel">
+            <h4>执行日志</h4>
+            <div class="form-grid form-grid--double">
+              <label class="field"><span class="field__label">来源</span><input v-model="logQuery.sourceType" class="app-input" type="text" /></label>
+              <label class="field"><span class="field__label">结果</span><select v-model="logQuery.successFlag" class="app-select"><option value="">全部</option><option value="1">成功</option><option value="0">失败</option></select></label>
+            </div>
+            <button class="app-button app-button--secondary" type="button" @click="loadLogs">筛选日志</button>
+            <div v-if="logs.length === 0" class="empty-state empty-state--compact">暂无执行日志</div>
+            <div v-else class="stack-list">
+              <article v-for="item in logs" :key="item.id" class="stack-card">
+                <div class="stack-card__head">
+                  <strong>{{ item.sourceType || 'UNKNOWN' }} / {{ item.skillCode || 'NO_SKILL' }}</strong>
+                  <small>{{ item.successFlag === 1 ? '成功' : '失败' }} / {{ formatTime(item.createTime) }}</small>
+                </div>
+                <p>{{ item.inputText || '无输入文本' }}</p>
+              </article>
+            </div>
+          </section>
+        </div>
+      </article>
     </section>
-
-    <ConfirmDialog :model-value="Boolean(deleteTarget)" title="删除 Skill" :description="deleteTarget ? `确认删除 Skill「${deleteTarget.skillName}」吗？` : ''" confirm-text="删除" :loading="deletePending" @update:model-value="deleteTarget = null" @confirm="confirmDelete" />
   </MainShell>
 </template>
 
 <style scoped>
-/* 悬浮提示 */
-.feedback-toast { position: fixed; top: 24px; right: 24px; z-index: 1200; display: flex; gap: 16px; width: min(420px, calc(100vw - 32px)); padding: 16px 18px; border: 1px solid rgba(255,255,255,.12); border-radius: 20px; background: rgba(9,16,28,.94); box-shadow: 0 18px 48px rgba(3,8,18,.42); backdrop-filter: blur(18px); }
-.feedback-toast--success { border-color: rgba(86,214,164,.34); }
-.feedback-toast--error { border-color: rgba(255,120,120,.34); }
-.feedback-toast--info { border-color: rgba(105,190,255,.34); }
-.feedback-toast__body { display: grid; gap: 6px; flex: 1; }
-.feedback-toast__body strong { color: var(--color-ink-strong); font-size: .94rem; }
-.feedback-toast__body span { color: var(--color-ink-soft); line-height: 1.6; }
-.feedback-toast__close { border: 0; padding: 0; color: var(--color-ink-muted); background: transparent; cursor: pointer; }
-.toast-fade-enter-active,.toast-fade-leave-active { transition: opacity 180ms ease, transform 180ms ease; }
-.toast-fade-enter-from,.toast-fade-leave-to { opacity: 0; transform: translate3d(0,-10px,0); }
+.skill-page {
+  display: grid;
+  gap: 24px;
+}
 
-/* 页面骨架 */
-.skill-page { display: grid; gap: 24px; }
-.skill-hero { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; padding: 26px 28px; }
-.skill-hero__copy { display: grid; gap: 10px; max-width: 54rem; }
-.skill-hero__copy h2 { font-size: clamp(1.9rem, 2.2vw, 2.55rem); }
-.skill-hero__meta,.skill-hero__summary,.empty-state,.version-card span,.version-card small { color: var(--color-ink-soft); line-height: 1.7; }
-.skill-hero__actions,.skill-batch-bar,.skill-editor__actions { display: flex; flex-wrap: wrap; gap: 12px; }
-.skill-grid { display: grid; grid-template-columns: 360px minmax(0,1fr); gap: 24px; }
-.skill-list-panel,.skill-editor { padding: 22px; }
+.hero-panel,
+.section-panel,
+.sub-panel,
+.metric-card,
+.skill-row,
+.deleted-row,
+.stack-card,
+.feedback-banner,
+.result-box,
+.empty-state {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+}
 
-/* 列表卡片 */
-.skill-list-panel__head,.skill-editor__head,.skill-card__head,.skill-card__meta,.skill-card__actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.skill-list-panel__stats { display: grid; gap: 6px; color: var(--color-ink-muted); font-size: .82rem; text-align: right; }
-.skill-list,.skill-form { display: grid; gap: 16px; margin-top: 18px; }
-.skill-card { display: grid; grid-template-columns: 28px minmax(0,1fr); gap: 12px; padding: 16px; border: 1px solid rgba(255,255,255,.06); border-radius: 22px; background: rgba(255,255,255,.03); cursor: pointer; transition: transform 180ms ease, border-color 180ms ease, background-color 180ms ease; }
-.skill-card:hover { transform: translateY(-1px); border-color: rgba(83,184,255,.22); }
-.skill-card--active { border-color: rgba(119,224,255,.4); background: rgba(83,184,255,.08); }
-.skill-card__checkbox { display: flex; align-items: flex-start; justify-content: center; padding-top: 4px; }
-.skill-card__head p,.skill-card__desc { margin-top: 6px; color: var(--color-ink-soft); line-height: 1.6; }
-.skill-card__tag { display: inline-flex; align-items: center; min-height: 28px; padding: 0 10px; border-radius: 999px; background: rgba(255,255,255,.08); color: var(--color-ink-strong); font-size: .74rem; }
-.skill-card__meta { margin-top: 12px; color: var(--color-ink-muted); font-size: .8rem; }
-.skill-card__actions { margin-top: 14px; }
+.hero-panel,
+.section-panel {
+  padding: 28px;
+  border-radius: 28px;
+}
 
-/* 编辑表单 */
-.skill-section { display: grid; gap: 12px; padding: 18px; border: 1px solid rgba(255,255,255,.05); border-radius: 24px; background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02)), rgba(6,12,24,.7); }
-.skill-form__grid { display: grid; gap: 14px; }
-.skill-form__grid--basic { grid-template-columns: repeat(3, minmax(0,1fr)); }
-.skill-form__grid--dual { grid-template-columns: repeat(2, minmax(0,1fr)); }
-.skill-json { min-height: 180px; font-family: var(--font-mono); font-size: .84rem; }
-.version-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px,1fr)); gap: 12px; }
-.version-card { display: grid; gap: 6px; padding: 14px; border-radius: 18px; background: rgba(255,255,255,.035); border: 1px solid rgba(255,255,255,.05); }
+.section-panel {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.018)),
+    rgba(7, 14, 26, 0.78);
+}
 
-/* 响应式适配 */
-@media (max-width: 1180px) { .skill-grid,.skill-form__grid--basic,.skill-form__grid--dual { grid-template-columns: 1fr; } }
-@media (max-width: 720px) { .feedback-toast { top: 16px; right: 16px; left: 16px; width: auto; } .skill-hero,.skill-list-panel__head,.skill-editor__head,.skill-hero__actions,.skill-batch-bar,.skill-editor__actions { flex-direction: column; align-items: stretch; } }
+.hero-panel__head,
+.section-panel__head,
+.toolbar-actions,
+.stack-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.hero-panel__head h2,
+.section-panel__head h3,
+.sub-panel h4 {
+  margin: 0;
+  color: var(--color-ink-strong);
+}
+
+.hero-panel__head h2 {
+  font-size: clamp(2rem, 2.8vw, 2.8rem);
+}
+
+.hero-panel__summary,
+.section-panel__head p,
+.metric-card span,
+.skill-row__desc,
+.skill-row__title span,
+.stack-card p,
+.stack-card small,
+.deleted-row p,
+.empty-state,
+.section-panel__hint {
+  color: var(--color-ink-soft);
+  line-height: 1.7;
+}
+
+.feedback-banner {
+  padding: 14px 16px;
+  margin-top: 18px;
+  border-radius: 18px;
+}
+
+.feedback-banner--success {
+  border-color: rgba(84, 214, 160, 0.35);
+}
+
+.feedback-banner--error {
+  border-color: rgba(255, 112, 112, 0.35);
+}
+
+.feedback-banner--info {
+  border-color: rgba(102, 186, 255, 0.35);
+}
+
+.stats-strip {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.metric-card {
+  padding: 18px;
+  border-radius: 22px;
+  border-color: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.028);
+}
+
+.metric-card strong {
+  display: block;
+  margin-top: 8px;
+  color: var(--color-ink-strong);
+  font-size: 1.55rem;
+}
+
+.filter-grid,
+.form-grid,
+.batch-toolbar,
+.split-grid,
+.action-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.filter-grid,
+.batch-toolbar,
+.form-grid--triple {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.form-grid--double,
+.split-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.action-grid {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.field {
+  display: grid;
+  gap: 8px;
+}
+
+.field > .app-input,
+.field > .app-textarea,
+.field > .app-select {
+  width: 100%;
+  border: 1px solid rgba(141, 171, 224, 0.2);
+  border-radius: 18px;
+  background: rgba(8, 16, 30, 0.84);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 0 0 1px rgba(255, 255, 255, 0.02);
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+
+.field > .app-input {
+  min-height: 56px;
+  padding: 0 16px;
+}
+
+.field > .app-textarea {
+  min-height: 132px;
+  padding: 16px;
+}
+
+.field > .app-select {
+  min-height: 56px;
+  padding: 0 16px;
+}
+
+.field > .app-input:hover,
+.field > .app-textarea:hover,
+.field > .app-select:hover {
+  border-color: rgba(104, 187, 255, 0.26);
+  background: rgba(10, 19, 34, 0.92);
+}
+
+.field > .app-input:focus,
+.field > .app-textarea:focus,
+.field > .app-select:focus {
+  border-color: rgba(94, 194, 255, 0.46);
+  background: rgba(10, 19, 34, 0.98);
+  box-shadow:
+    0 0 0 4px rgba(77, 179, 255, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  transform: translateY(-1px);
+}
+
+.field > .app-input::placeholder,
+.field > .app-textarea::placeholder {
+  color: rgba(166, 183, 211, 0.56);
+}
+
+.field__label {
+  color: var(--color-ink-strong);
+  font-size: 0.92rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.field--inline {
+  grid-template-columns: auto auto;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 12px;
+}
+
+.skill-list,
+.deleted-list,
+.stack-list,
+.version-list {
+  display: grid;
+  gap: 12px;
+}
+
+.skill-row {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: center;
+  padding: 18px;
+  border-radius: 22px;
+  border-color: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.028);
+  transition: border-color 180ms ease, background-color 180ms ease, transform 180ms ease;
+}
+
+.skill-row:hover {
+  transform: translateY(-1px);
+  border-color: rgba(110, 200, 255, 0.22);
+}
+
+.skill-row--active {
+  border-color: rgba(119, 224, 255, 0.38);
+  background: rgba(83, 184, 255, 0.08);
+}
+
+.skill-row__main {
+  display: grid;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  text-align: left;
+  background: transparent;
+  cursor: pointer;
+}
+
+.skill-row__title,
+.skill-row__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.skill-row__title strong {
+  color: var(--color-ink-strong);
+  font-size: 1rem;
+}
+
+.skill-row__meta span,
+.version-row span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  color: var(--color-ink-soft);
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 0.8rem;
+}
+
+.skill-row__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.deleted-row,
+.sub-panel,
+.stack-card {
+  padding: 18px;
+  border-radius: 22px;
+}
+
+.deleted-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-color: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.sub-panel {
+  display: grid;
+  gap: 16px;
+  border-color: rgba(255, 255, 255, 0.04);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.032), rgba(255, 255, 255, 0.012)),
+    rgba(5, 11, 22, 0.56);
+}
+
+.sub-panel h4 {
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.stack-card {
+  border-color: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.026);
+}
+
+.version-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.version-row:last-child {
+  border-bottom: 0;
+}
+
+.result-box {
+  margin: 0;
+  padding: 16px;
+  border-radius: 20px;
+  border-color: rgba(105, 188, 255, 0.18);
+  background: rgba(8, 16, 30, 0.82);
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: var(--font-mono);
+  font-size: 0.84rem;
+}
+
+.code-area {
+  font-family: var(--font-mono);
+  font-size: 0.84rem;
+}
+
+.empty-state {
+  display: grid;
+  place-items: center;
+  min-height: 120px;
+  padding: 20px;
+  border-radius: 20px;
+  border-style: dashed;
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.018);
+  text-align: center;
+}
+
+.empty-state--compact {
+  min-height: 84px;
+}
+
+@media (max-width: 1380px) {
+  .stats-strip {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .action-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1080px) {
+  .filter-grid,
+  .batch-toolbar,
+  .form-grid--triple,
+  .form-grid--double,
+  .split-grid,
+  .stats-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .skill-row {
+    grid-template-columns: 28px minmax(0, 1fr);
+  }
+
+  .skill-row__actions {
+    grid-column: 2;
+  }
+}
+
+@media (max-width: 760px) {
+  .hero-panel,
+  .section-panel {
+    padding: 20px;
+  }
+
+  .hero-panel__head,
+  .section-panel__head,
+  .toolbar-actions,
+  .deleted-row,
+  .stack-card__head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .action-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .skill-row {
+    grid-template-columns: 1fr;
+  }
+
+  .skill-row__select,
+  .skill-row__actions {
+    grid-column: auto;
+  }
+}
 </style>
