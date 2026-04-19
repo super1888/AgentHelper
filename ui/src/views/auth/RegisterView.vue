@@ -271,39 +271,7 @@ async function handleSubmit() {
 </template>
 
 <style scoped>
-.auth-form {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-
-.auth-form__grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-}
-
 .auth-form__submit {
-  width: 100%;
   margin-top: 4px;
-}
-
-.auth-links {
-  display: flex;
-  justify-content: center;
-  gap: 8px;
-  margin-top: 20px;
-  color: var(--color-ink-soft);
-}
-
-.auth-links a {
-  color: var(--color-accent-strong);
-  font-weight: 700;
-}
-
-@media (max-width: 640px) {
-  .auth-form__grid {
-    grid-template-columns: 1fr;
-  }
 }
 </style>

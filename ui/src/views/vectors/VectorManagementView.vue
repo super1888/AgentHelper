@@ -280,18 +280,6 @@ onBeforeUnmount(() => {
 
 <template>
   <MainShell>
-    <section
-      v-if="feedback"
-      class="feedback-banner"
-      :class="`feedback-banner--${feedback.tone}`"
-      aria-live="polite"
-    >
-      <span>{{ feedback.message }}</span>
-      <button type="button" class="app-button app-button--secondary" @click="clearFeedback">
-        关闭
-      </button>
-    </section>
-
     <Transition name="toast-fade">
       <section
         v-if="feedback"
@@ -309,8 +297,8 @@ onBeforeUnmount(() => {
       </section>
     </Transition>
 
-    <section class="vector-workspace panel-card">
-      <header class="vector-workspace__hero">
+    <section class="management-page vector-workspace">
+      <header class="vector-workspace__hero panel-card management-hero">
         <div class="vector-workspace__headline">
           <p class="section-kicker">Vector Studio</p>
           <h2>向量管理中心</h2>
@@ -593,10 +581,6 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-.feedback-banner {
-  display: none;
-}
-
 .feedback-toast {
   position: fixed;
   top: 24px;
@@ -666,7 +650,8 @@ onBeforeUnmount(() => {
 }
 
 .vector-workspace {
-  padding: 30px;
+  display: grid;
+  gap: 18px;
 }
 
 .vector-workspace__hero {
@@ -888,12 +873,6 @@ onBeforeUnmount(() => {
   color: var(--color-ink-strong);
 }
 
-.app-button--ghost {
-  color: var(--color-ink-strong);
-  background: rgba(255, 255, 255, 0.06);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
-}
-
 @media (max-width: 1100px) {
   .vector-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -910,10 +889,6 @@ onBeforeUnmount(() => {
     right: 16px;
     left: 16px;
     width: auto;
-  }
-
-  .vector-workspace {
-    padding: 22px;
   }
 
   .vector-workspace__hero {

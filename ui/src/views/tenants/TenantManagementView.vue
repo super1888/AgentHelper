@@ -180,32 +180,32 @@ onMounted(() => { void Promise.all([loadTenants(), loadStatistics()]) })
       <button type="button" class="app-button app-button--secondary" @click="clearFeedback">关闭</button>
     </section>
 
-    <section class="page-grid">
-      <article class="panel-card page-hero">
+    <section class="management-page">
+      <article class="panel-card management-hero">
         <div>
           <p class="section-kicker">Tenant Center</p>
           <h2>租户管理</h2>
-          <p class="page-hero__meta">{{ totalTenantsLabel }} · {{ statsSummary }}</p>
+          <p class="management-hero__meta">{{ totalTenantsLabel }} · {{ statsSummary }}</p>
         </div>
-        <div class="page-hero__actions">
+        <div class="management-hero__actions">
           <button class="app-button app-button--secondary" :disabled="loading || statsLoading" @click="refreshCurrentPage"><RefreshCw :size="16" />刷新</button>
           <button class="app-button" @click="openCreateDialog"><Plus :size="16" />新增租户</button>
         </div>
       </article>
 
-      <section class="stats-grid">
-        <article class="panel-card stat-card"><span>总租户</span><strong>{{ statistics.totalCount }}</strong></article>
-        <article class="panel-card stat-card"><span>启用租户</span><strong>{{ statistics.enabledCount }}</strong></article>
-        <article class="panel-card stat-card"><span>禁用租户</span><strong>{{ statistics.disabledCount }}</strong></article>
+      <section class="management-stats">
+        <article class="panel-card management-stat"><span>总租户</span><strong>{{ statistics.totalCount }}</strong></article>
+        <article class="panel-card management-stat"><span>启用租户</span><strong>{{ statistics.enabledCount }}</strong></article>
+        <article class="panel-card management-stat"><span>禁用租户</span><strong>{{ statistics.disabledCount }}</strong></article>
       </section>
 
-      <article class="panel-card panel-block">
-        <div class="panel-block__head">
+      <article class="panel-card management-panel">
+        <div class="management-head">
           <div><strong>筛选条件</strong><p>{{ resultsSummary }}</p></div>
           <button class="app-button app-button--secondary" @click="resetFilters">重置</button>
         </div>
 
-        <div class="filter-grid">
+        <div class="management-filter-grid">
           <label class="field">
             <span class="field__label">租户编码</span>
             <div class="input-shell"><span class="input-shell__icon"><Search :size="16" /></span><input v-model="filters.tenantCode" class="app-input" type="text" placeholder="按编码搜索" /></div>
@@ -222,38 +222,38 @@ onMounted(() => { void Promise.all([loadTenants(), loadStatistics()]) })
               <option value="disabled">禁用</option>
             </select>
           </label>
-          <button class="app-button filter-grid__submit" :disabled="loading" @click="executeSearch">执行搜索</button>
+          <button class="app-button management-filter-grid__submit" :disabled="loading" @click="executeSearch">执行搜索</button>
         </div>
       </article>
 
-      <article class="panel-card panel-block">
-        <div v-if="loading" class="empty-state">正在加载租户列表...</div>
-        <div v-else-if="pageState.list.length === 0" class="empty-state">当前没有租户数据，请调整筛选条件或新建租户。</div>
-        <div v-else class="tenant-list">
-          <article v-for="tenant in pageState.list" :key="tenant.id" class="tenant-card">
-            <div class="tenant-card__head">
+      <article class="panel-card management-panel">
+        <div v-if="loading" class="management-empty">正在加载租户列表...</div>
+        <div v-else-if="pageState.list.length === 0" class="management-empty">当前没有租户数据，请调整筛选条件或新建租户。</div>
+        <div v-else class="management-list">
+          <article v-for="tenant in pageState.list" :key="tenant.id" class="management-card">
+            <div class="management-card__head">
               <div>
                 <strong>{{ tenant.tenantName }}</strong>
                 <p>{{ tenant.tenantCode }}</p>
               </div>
               <StatusBadge :status="tenant.status" />
             </div>
-            <p class="tenant-card__desc">{{ tenant.description || '暂无租户描述' }}</p>
-            <div class="tenant-card__meta">
+            <p class="management-card__desc">{{ tenant.description || '暂无租户描述' }}</p>
+            <div class="management-card__meta">
               <span>负责人：{{ formatOwner(tenant) }}</span>
               <span>联系人：{{ formatContact(tenant) }}</span>
               <span>成员数：{{ tenant.memberCount }}</span>
             </div>
-            <div class="tenant-card__actions">
+            <div class="management-card__actions">
               <button class="app-button app-button--secondary" @click="openEditDialog(tenant)"><UserRoundPen :size="16" />编辑</button>
               <button class="app-button app-button--danger" @click="requestDelete(tenant)"><Trash2 :size="16" />删除</button>
             </div>
           </article>
         </div>
 
-        <div class="pager">
+        <div class="management-pager">
           <button class="app-button app-button--secondary" :disabled="!canGoPrev || loading" @click="goToPage(pageState.pageNum - 1)"><ChevronLeft :size="16" />上一页</button>
-          <span class="pager__summary">第 {{ pageState.pageNum }} / {{ Math.max(pageState.pages, 1) }} 页</span>
+          <span class="management-pager__summary">第 {{ pageState.pageNum }} / {{ Math.max(pageState.pages, 1) }} 页</span>
           <button class="app-button app-button--secondary" :disabled="!canGoNext || loading" @click="goToPage(pageState.pageNum + 1)">下一页<ChevronRight :size="16" /></button>
         </div>
       </article>
@@ -263,28 +263,3 @@ onMounted(() => { void Promise.all([loadTenants(), loadStatistics()]) })
     <ConfirmDialog :model-value="deleteTarget !== null" title="删除租户" :description="deleteDescription" confirm-text="确认删除" :loading="deletePending" @update:model-value="handleDeleteDialogVisibility" @confirm="confirmDelete" />
   </MainShell>
 </template>
-
-<style scoped>
-.page-grid,.stats-grid,.filter-grid { display: grid; gap: 18px; }
-.page-hero,.panel-block { padding: 26px; }
-.page-grid { grid-template-columns: 1fr; }
-.page-hero,.page-hero__actions,.panel-block__head,.tenant-card__head,.tenant-card__actions,.pager,.tenant-card__meta { display: flex; gap: 12px; }
-.page-hero,.panel-block__head,.tenant-card__head,.pager { justify-content: space-between; }
-.page-hero { align-items: flex-start; }
-.page-hero__actions,.tenant-card__actions,.tenant-card__meta { flex-wrap: wrap; }
-.page-hero__meta,.panel-block__head p,.tenant-card__head p,.tenant-card__desc { color: var(--color-ink-soft); }
-.stats-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.stat-card { padding: 20px; }
-.stat-card span { color: var(--color-ink-muted); }
-.stat-card strong { display: block; margin-top: 8px; color: var(--color-ink-strong); font-size: 1.6rem; }
-.filter-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) 180px; align-items: end; }
-.filter-grid__submit { width: 100%; }
-.tenant-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
-.tenant-card { padding: 18px; border-radius: 24px; background: rgba(255,255,255,.04); box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); }
-.tenant-card__desc { margin: 12px 0; line-height: 1.6; }
-.tenant-card__meta { font-size: .88rem; color: var(--color-ink-muted); margin-bottom: 16px; }
-.pager { align-items: center; margin-top: 18px; }
-.pager__summary { color: var(--color-ink-soft); }
-.empty-state { display: grid; place-items: center; min-height: 220px; color: var(--color-ink-soft); text-align: center; }
-@media (max-width: 980px) { .stats-grid,.tenant-list,.filter-grid { grid-template-columns: 1fr; } .page-hero,.panel-block__head,.pager { flex-direction: column; align-items: stretch; } }
-</style>

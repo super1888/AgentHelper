@@ -318,8 +318,8 @@ onMounted(() => {
   <MainShell>
     <section v-if="feedback" class="feedback" :class="`feedback--${feedbackTone}`">{{ feedback }}</section>
 
-    <section class="page panel-card">
-      <header class="page__hero">
+    <section class="management-page agent-page">
+      <header class="page__hero panel-card management-hero">
         <div>
           <p class="section-kicker">Agent Studio</p>
           <h2>Agent 配置工作台</h2>
@@ -332,7 +332,7 @@ onMounted(() => {
       </header>
 
       <div class="page__grid">
-        <article class="card-section">
+        <article class="card-section panel-card">
           <div class="section-head">
             <div>
               <strong>{{ formTitle }}</strong>
@@ -426,7 +426,7 @@ onMounted(() => {
           </button>
         </article>
 
-        <article class="card-section">
+        <article class="card-section panel-card">
           <div class="section-head">
             <div>
               <strong>Agent 列表</strong>
@@ -469,7 +469,7 @@ onMounted(() => {
       </div>
 
       <div class="page__grid page__grid--bottom">
-        <article class="card-section">
+        <article class="card-section panel-card">
           <div class="section-head">
             <div>
               <strong>Agent 详情</strong>
@@ -525,7 +525,7 @@ onMounted(() => {
           </div>
         </article>
 
-        <aside class="card-section">
+        <aside class="card-section panel-card">
           <div class="section-head">
             <div>
               <strong>会话入口</strong>
@@ -554,10 +554,9 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.page {
+.agent-page {
   display: grid;
   gap: 22px;
-  padding: 28px;
 }
 .page__hero,
 .section-head,
@@ -718,16 +717,6 @@ onMounted(() => {
   color: #d8f2ff;
   background: rgba(77, 179, 255, 0.16);
 }
-.app-button--ghost {
-  color: var(--color-ink-strong);
-  background: rgba(255, 255, 255, 0.06);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
-}
-.app-button--danger-ghost {
-  color: #ffd2d6;
-  background: rgba(255, 144, 151, 0.12);
-  box-shadow: inset 0 0 0 1px rgba(255, 144, 151, 0.16);
-}
 @media (max-width: 1080px) {
   .page__grid,
   .page__grid--bottom,
@@ -740,9 +729,6 @@ onMounted(() => {
   }
 }
 @media (max-width: 720px) {
-  .page {
-    padding: 22px;
-  }
   .page__hero,
   .section-head,
   .list-item__head,

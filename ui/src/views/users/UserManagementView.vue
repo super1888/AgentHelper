@@ -197,26 +197,32 @@ onMounted(() => { void Promise.all([loadUsers(), loadStatistics(), loadTenantOpt
       <button type="button" class="app-button app-button--secondary" @click="clearFeedback">关闭</button>
     </section>
 
-    <section class="page-grid">
-      <article class="panel-card page-hero">
+    <section class="management-page">
+      <article class="panel-card management-hero">
         <div>
           <p class="section-kicker">User Center</p>
           <h2>用户管理</h2>
-          <p class="page-hero__meta">{{ totalUsersLabel }}</p>
+          <p class="management-hero__meta">{{ totalUsersLabel }}</p>
         </div>
-        <div class="page-hero__actions">
+        <div class="management-hero__actions">
           <button class="app-button app-button--secondary" :disabled="loading || statsLoading" @click="refreshCurrentPage"><RefreshCw :size="16" />刷新</button>
           <button class="app-button" @click="openCreateDialog"><Plus :size="16" />新增用户</button>
         </div>
       </article>
 
-      <article class="panel-card panel-block">
-        <div class="panel-block__head">
+      <section class="management-stats">
+        <article class="panel-card management-stat"><span>总用户</span><strong>{{ statistics.totalCount }}</strong></article>
+        <article class="panel-card management-stat"><span>当前页</span><strong>{{ pageState.list.length }}</strong></article>
+        <article class="panel-card management-stat"><span>租户选项</span><strong>{{ tenantOptions.length }}</strong></article>
+      </section>
+
+      <article class="panel-card management-panel">
+        <div class="management-head">
           <div><strong>筛选条件</strong><p>{{ resultsSummary }}</p></div>
           <button class="app-button app-button--secondary" @click="resetFilters">重置</button>
         </div>
 
-        <div class="filter-grid">
+        <div class="management-filter-grid management-filter-grid--wide">
           <label class="field">
             <span class="field__label">用户名</span>
             <div class="input-shell"><span class="input-shell__icon"><Search :size="16" /></span><input v-model="filters.username" class="app-input" type="text" placeholder="按用户名搜索" /></div>
@@ -241,36 +247,36 @@ onMounted(() => { void Promise.all([loadUsers(), loadStatistics(), loadTenantOpt
               <option value="disabled">禁用</option>
             </select>
           </label>
-          <button class="app-button filter-grid__submit" :disabled="loading" @click="executeSearch">执行搜索</button>
+          <button class="app-button management-filter-grid__submit" :disabled="loading" @click="executeSearch">执行搜索</button>
         </div>
       </article>
 
-      <article class="panel-card panel-block">
-        <div v-if="loading" class="empty-state">正在加载用户列表...</div>
-        <div v-else-if="pageState.list.length === 0" class="empty-state">当前没有用户数据，请调整筛选条件或新建用户。</div>
-        <div v-else class="user-list">
-          <article v-for="user in pageState.list" :key="user.id" class="user-card">
-            <div class="user-card__head">
+      <article class="panel-card management-panel">
+        <div v-if="loading" class="management-empty">正在加载用户列表...</div>
+        <div v-else-if="pageState.list.length === 0" class="management-empty">当前没有用户数据，请调整筛选条件或新建用户。</div>
+        <div v-else class="management-list">
+          <article v-for="user in pageState.list" :key="user.id" class="management-card">
+            <div class="management-card__head">
               <div>
                 <strong>{{ user.username }}</strong>
                 <p>{{ user.nickname || '未设置昵称' }}</p>
               </div>
               <StatusBadge :status="user.status" />
             </div>
-            <div class="user-card__meta">
+            <div class="management-card__meta">
               <span><Users :size="14" />{{ formatTenant(user) }}</span>
               <span>{{ formatContact(user) }}</span>
             </div>
-            <div class="user-card__actions">
+            <div class="management-card__actions">
               <button class="app-button app-button--secondary" @click="openEditDialog(user)"><UserRoundPen :size="16" />编辑</button>
               <button class="app-button app-button--danger" @click="requestDelete(user)"><Trash2 :size="16" />删除</button>
             </div>
           </article>
         </div>
 
-        <div class="pager">
+        <div class="management-pager">
           <button class="app-button app-button--secondary" :disabled="!canGoPrev || loading" @click="goToPage(pageState.pageNum - 1)"><ChevronLeft :size="16" />上一页</button>
-          <span class="pager__summary">第 {{ pageState.pageNum }} / {{ Math.max(pageState.pages, 1) }} 页</span>
+          <span class="management-pager__summary">第 {{ pageState.pageNum }} / {{ Math.max(pageState.pages, 1) }} 页</span>
           <button class="app-button app-button--secondary" :disabled="!canGoNext || loading" @click="goToPage(pageState.pageNum + 1)">下一页<ChevronRight :size="16" /></button>
         </div>
       </article>
@@ -282,21 +288,9 @@ onMounted(() => { void Promise.all([loadUsers(), loadStatistics(), loadTenantOpt
 </template>
 
 <style scoped>
-.page-grid,.filter-grid { display: grid; gap: 18px; }
-.page-hero,.panel-block { padding: 26px; }
-.page-hero,.page-hero__actions,.panel-block__head,.user-card__head,.user-card__actions,.pager,.user-card__meta { display: flex; gap: 12px; }
-.page-hero,.panel-block__head,.user-card__head,.pager { justify-content: space-between; }
-.page-hero { align-items: flex-start; }
-.page-hero__actions,.user-card__actions,.user-card__meta { flex-wrap: wrap; }
-.page-hero__meta,.panel-block__head p,.user-card__head p { color: var(--color-ink-soft); }
-.filter-grid { grid-template-columns: repeat(5, minmax(0, 1fr)) 180px; align-items: end; }
-.filter-grid__submit { width: 100%; }
-.user-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
-.user-card { padding: 18px; border-radius: 24px; background: rgba(255,255,255,.04); box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); }
-.user-card__meta { margin: 14px 0 16px; font-size: .9rem; color: var(--color-ink-muted); }
-.user-card__meta span { display: inline-flex; align-items: center; gap: 6px; }
-.pager { align-items: center; margin-top: 18px; }
-.pager__summary { color: var(--color-ink-soft); }
-.empty-state { display: grid; place-items: center; min-height: 220px; color: var(--color-ink-soft); text-align: center; }
-@media (max-width: 1100px) { .filter-grid,.user-list { grid-template-columns: 1fr; } .page-hero,.panel-block__head,.pager { flex-direction: column; align-items: stretch; } }
+.management-card__meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
 </style>

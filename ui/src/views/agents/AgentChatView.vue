@@ -365,8 +365,8 @@ onBeforeUnmount(() => {
       </button>
     </section>
 
-    <section class="chat-workspace panel-card">
-      <header class="chat-workspace__hero">
+    <section class="management-page chat-workspace">
+      <header class="chat-workspace__hero panel-card management-hero">
         <div class="chat-workspace__headline">
           <button type="button" class="back-link" @click="router.push({ name: 'agents' })">
             <ArrowLeft :size="16" aria-hidden="true" />
@@ -503,7 +503,8 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .chat-workspace {
-  padding: 30px;
+  display: grid;
+  gap: 18px;
 }
 
 .chat-workspace__hero {
@@ -760,18 +761,6 @@ onBeforeUnmount(() => {
   font-size: 0.88rem;
 }
 
-.app-button--ghost {
-  color: var(--color-ink-strong);
-  background: rgba(255, 255, 255, 0.06);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
-}
-
-.app-button--danger-ghost {
-  color: #ffd8d8;
-  background: rgba(180, 57, 68, 0.14);
-  box-shadow: inset 0 0 0 1px rgba(244, 140, 140, 0.16);
-}
-
 .is-spinning {
   animation: spin 0.9s linear infinite;
 }
@@ -787,10 +776,6 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 860px) {
-  .chat-workspace {
-    padding: 22px;
-  }
-
   .chat-workspace__hero,
   .chat-workspace__actions,
   .composer__actions {

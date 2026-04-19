@@ -358,8 +358,8 @@ onMounted(() => {
       </button>
     </section>
 
-    <section class="workspace panel-card">
-      <header class="workspace__hero">
+    <section class="management-page prompt-page">
+      <header class="workspace__hero panel-card management-hero">
         <div class="workspace__headline">
           <p class="section-kicker">Prompt Center</p>
           <h2>提示词模板资产中心</h2>
@@ -618,8 +618,9 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.workspace {
-  padding: 30px;
+.prompt-page {
+  display: grid;
+  gap: 18px;
 }
 
 .workspace__hero,
@@ -894,18 +895,6 @@ onMounted(() => {
   color: #ffb7b7;
 }
 
-.app-button--ghost {
-  color: var(--color-ink-strong);
-  background: rgba(255, 255, 255, 0.06);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
-}
-
-.app-button--danger-ghost {
-  color: #ffd8d8;
-  background: rgba(180, 57, 68, 0.14);
-  box-shadow: inset 0 0 0 1px rgba(244, 140, 140, 0.16);
-}
-
 .empty-state {
   display: grid;
   place-items: center;
@@ -925,10 +914,6 @@ onMounted(() => {
 }
 
 @media (max-width: 820px) {
-  .workspace {
-    padding: 22px;
-  }
-
   .workspace__hero,
   .workspace__actions,
   .workspace__table-head,
