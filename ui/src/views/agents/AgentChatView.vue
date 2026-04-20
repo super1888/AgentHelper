@@ -36,6 +36,7 @@ interface ChatBubble {
   meta: string
   taskId: string | null
   tone?: 'error' | 'info'
+  streaming?: boolean
 }
 
 const route = useRoute()
@@ -57,6 +58,10 @@ const bubbles = ref<ChatBubble[]>([])
 const transcriptRef = ref<HTMLElement | null>(null)
 
 let socket: AgentChatSocket | null = null
+let scrollFrame: number | null = null
+
+const streamQueues = new Map<string, string>()
+const streamTimers = new Map<string, ReturnType<typeof setTimeout>>()
 
 const agentId = computed(() => String(route.params.agentId || ''))
 const routeSessionId = computed(() => String(route.query.sessionId || ''))
@@ -69,9 +74,7 @@ watch(
   () => bubbles.value.length,
   async () => {
     await nextTick()
-    if (transcriptRef.value) {
-      transcriptRef.value.scrollTop = transcriptRef.value.scrollHeight
-    }
+    scrollTranscriptToBottom(true)
   },
 )
 
@@ -85,9 +88,19 @@ function clearFeedback() {
 
 function pushBubble(bubble: ChatBubble) {
   bubbles.value = [...bubbles.value, bubble]
+  scrollTranscriptToBottom()
 }
 
-function upsertAssistantBubble(taskId: string | null, patch: { title?: string; content?: string; meta?: string; tone?: 'error' | 'info' }) {
+function upsertAssistantBubble(
+  taskId: string | null,
+  patch: {
+    title?: string
+    content?: string
+    meta?: string
+    tone?: 'error' | 'info'
+    streaming?: boolean
+  },
+) {
   const index = bubbles.value.findIndex((item) => item.role === 'assistant' && item.taskId === taskId)
   if (index === -1) {
     pushBubble({
@@ -98,6 +111,7 @@ function upsertAssistantBubble(taskId: string | null, patch: { title?: string; c
       meta: patch.meta || '刚刚',
       taskId,
       tone: patch.tone,
+      streaming: patch.streaming ?? false,
     })
     return
   }
@@ -108,8 +122,10 @@ function upsertAssistantBubble(taskId: string | null, patch: { title?: string; c
     ...patch,
     content: patch.content ?? next[index].content,
     meta: patch.meta ?? next[index].meta,
+    streaming: patch.streaming ?? next[index].streaming ?? false,
   }
   bubbles.value = next
+  scrollTranscriptToBottom()
 }
 
 function formatTimestamp(value: number) {
@@ -139,6 +155,117 @@ function extractText(data: unknown) {
   return JSON.stringify(data, null, 2)
 }
 
+function toTaskStreamKey(taskId: string | null) {
+  return taskId || '__default__'
+}
+
+function isTranscriptNearBottom() {
+  const element = transcriptRef.value
+  if (!element) {
+    return true
+  }
+  const distance = element.scrollHeight - element.scrollTop - element.clientHeight
+  return distance < 120
+}
+
+function scrollTranscriptToBottom(force = false) {
+  if (!force && !isTranscriptNearBottom()) {
+    return
+  }
+  if (scrollFrame != null) {
+    cancelAnimationFrame(scrollFrame)
+  }
+  scrollFrame = requestAnimationFrame(() => {
+    scrollFrame = null
+    if (transcriptRef.value) {
+      transcriptRef.value.scrollTop = transcriptRef.value.scrollHeight
+    }
+  })
+}
+
+function resolveStreamSliceSize(queue: string) {
+  const characters = Array.from(queue)
+  if (characters.length <= 6) {
+    return 1
+  }
+  if (characters.length <= 24) {
+    return 2
+  }
+  if (characters.length <= 80) {
+    return 4
+  }
+  return 8
+}
+
+function resolveStreamDelay(appendedText: string) {
+  if (!appendedText) {
+    return 24
+  }
+  if (/[，。！？；：,.!?;:]\s*$/.test(appendedText)) {
+    return 88
+  }
+  if (/\s$/.test(appendedText)) {
+    return 42
+  }
+  return 22
+}
+
+function drainAssistantStream(taskId: string | null, agentVersionNo?: string | number | null) {
+  const taskKey = toTaskStreamKey(taskId)
+  const queuedText = streamQueues.get(taskKey) || ''
+  if (!queuedText) {
+    streamTimers.delete(taskKey)
+    return
+  }
+
+  const queueCharacters = Array.from(queuedText)
+  const sliceSize = resolveStreamSliceSize(queuedText)
+  const appendedText = queueCharacters.slice(0, sliceSize).join('')
+  const remainingText = queueCharacters.slice(sliceSize).join('')
+  const previous = bubbles.value.find((item) => item.role === 'assistant' && item.taskId === taskId)?.content || ''
+
+  upsertAssistantBubble(taskId, {
+    title: 'Agent',
+    content: `${previous}${appendedText}`,
+    meta: agentVersionNo ? `姝ｅ湪鐢熸垚 · v${agentVersionNo}` : '姝ｅ湪鐢熸垚',
+    streaming: true,
+  })
+
+  if (!remainingText) {
+    streamQueues.delete(taskKey)
+    streamTimers.delete(taskKey)
+    return
+  }
+
+  streamQueues.set(taskKey, remainingText)
+  const timer = setTimeout(() => {
+    drainAssistantStream(taskId, agentVersionNo)
+  }, resolveStreamDelay(appendedText))
+  streamTimers.set(taskKey, timer)
+}
+
+function queueAssistantStream(taskId: string | null, text: string, agentVersionNo?: string | number | null) {
+  if (!text) {
+    return
+  }
+  const taskKey = toTaskStreamKey(taskId)
+  streamQueues.set(taskKey, `${streamQueues.get(taskKey) || ''}${text}`)
+  if (streamTimers.has(taskKey)) {
+    return
+  }
+  drainAssistantStream(taskId, agentVersionNo)
+}
+
+function stopAssistantStream(taskId: string | null) {
+  const taskKey = toTaskStreamKey(taskId)
+  const timer = streamTimers.get(taskKey)
+  if (timer) {
+    clearTimeout(timer)
+  }
+  streamTimers.delete(taskKey)
+  streamQueues.delete(taskKey)
+}
+
 function handleAgentEvent(event: AgentChatEvent) {
   lastReceivedEventSequence.value = String(Math.max(
     toSafeNumber(lastReceivedEventSequence.value),
@@ -147,6 +274,12 @@ function handleAgentEvent(event: AgentChatEvent) {
   lastTaskId.value = event.taskId
 
   if (event.event === 'CHAT_START' || event.event === 'METHOD_START') {
+    upsertAssistantBubble(event.taskId, {
+      title: 'Agent',
+      content: '',
+      meta: '姝ｅ湪缁勭粐鍥炲簲',
+      streaming: true,
+    })
     pushBubble({
       id: `system-start-${event.eventSequence}`,
       role: 'system',
@@ -172,12 +305,7 @@ function handleAgentEvent(event: AgentChatEvent) {
   }
 
   if (event.event === 'AGENT_TOKEN') {
-    const previous = bubbles.value.find((item) => item.role === 'assistant' && item.taskId === event.taskId)?.content || ''
-    upsertAssistantBubble(event.taskId, {
-      title: 'Agent',
-      content: `${previous}${extractText(event.data)}`,
-      meta: `版本 v${event.agentVersionNo}`,
-    })
+    queueAssistantStream(event.taskId, extractText(event.data), event.agentVersionNo)
     return
   }
 
@@ -208,18 +336,26 @@ function handleAgentEvent(event: AgentChatEvent) {
   }
 
   if (event.event === 'AGENT_FINISH') {
+    stopAssistantStream(event.taskId)
     upsertAssistantBubble(event.taskId, {
       title: 'Agent',
       content: extractText(event.data),
       meta: `完成于 ${formatTimestamp(toSafeNumber(event.timestamp))}`,
     })
+    upsertAssistantBubble(event.taskId, { streaming: false })
     sending.value = false
     lastFailedTaskId.value = null
     return
   }
 
   if (event.event === 'CHAT_ERROR') {
+    stopAssistantStream(event.taskId)
     lastFailedTaskId.value = event.taskId
+    upsertAssistantBubble(event.taskId, {
+      title: 'Agent',
+      meta: '已中断',
+      streaming: false,
+    })
     pushBubble({
       id: `error-${event.eventSequence}`,
       role: 'system',
@@ -388,6 +524,12 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  streamTimers.forEach((timer) => clearTimeout(timer))
+  streamTimers.clear()
+  streamQueues.clear()
+  if (scrollFrame != null) {
+    cancelAnimationFrame(scrollFrame)
+  }
   socket?.disconnect()
 })
 </script>
@@ -505,6 +647,7 @@ onBeforeUnmount(() => {
               :class="[
                 `bubble--${bubble.role}`,
                 bubble.tone ? `bubble--${bubble.tone}` : '',
+                bubble.streaming ? 'bubble--streaming' : '',
               ]"
             >
               <div class="bubble__header">
@@ -517,7 +660,10 @@ onBeforeUnmount(() => {
                 <span class="bubble__meta">{{ bubble.meta }}</span>
               </div>
 
-              <pre class="bubble__content">{{ bubble.content }}</pre>
+              <pre
+                class="bubble__content"
+                :class="{ 'bubble__content--streaming': bubble.streaming }"
+              >{{ bubble.content }}</pre>
             </article>
           </div>
 
@@ -721,6 +867,11 @@ onBeforeUnmount(() => {
   align-self: flex-start;
 }
 
+.bubble--streaming {
+  border-color: rgba(126, 229, 199, 0.3);
+  box-shadow: 0 0 0 1px rgba(126, 229, 199, 0.08), 0 18px 40px rgba(8, 18, 34, 0.28);
+}
+
 .bubble--system {
   align-self: center;
   max-width: min(88%, 760px);
@@ -762,6 +913,19 @@ onBeforeUnmount(() => {
   word-break: break-word;
   font-family: var(--font-body);
   line-height: 1.72;
+}
+
+.bubble__content--streaming::after {
+  content: '';
+  display: inline-block;
+  width: 0.72ch;
+  height: 1.1em;
+  margin-left: 0.18ch;
+  vertical-align: -0.18em;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(126, 229, 199, 0.96), rgba(83, 184, 255, 0.9));
+  box-shadow: 0 0 18px rgba(83, 184, 255, 0.32);
+  animation: stream-caret 0.95s ease-in-out infinite;
 }
 
 .composer {
@@ -810,6 +974,19 @@ onBeforeUnmount(() => {
 
 .is-spinning {
   animation: spin 0.9s linear infinite;
+}
+
+@keyframes stream-caret {
+  0%,
+  100% {
+    opacity: 0.22;
+    transform: scaleY(0.72);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scaleY(1);
+  }
 }
 
 @media (max-width: 1120px) {
