@@ -2,6 +2,8 @@ import { apiClient, unwrapResponse } from '@/api/client'
 import type {
   PromptTemplateItem,
   PromptTemplatePayload,
+  PromptTemplateRenderPayload,
+  PromptTemplateRenderResult,
   PromptTemplateStatistics,
 } from '@/types/prompt'
 
@@ -33,4 +35,9 @@ export async function updatePromptTemplate(promptTemplateId: number | string, pa
 export async function removePromptTemplate(promptTemplateId: number | string) {
   const response = await apiClient.delete(`/promptTemplates/${promptTemplateId}`)
   return unwrapResponse<void>(response)
+}
+
+export async function renderPromptTemplate(promptTemplateId: number | string, payload: PromptTemplateRenderPayload) {
+  const response = await apiClient.post(`/promptTemplates/${promptTemplateId}/render`, payload)
+  return unwrapResponse<PromptTemplateRenderResult>(response)
 }

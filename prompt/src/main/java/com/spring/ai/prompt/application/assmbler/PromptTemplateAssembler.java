@@ -2,6 +2,7 @@ package com.spring.ai.prompt.application.assmbler;
 
 import com.spring.ai.common.repository.enitiy.PromptTemplateRecord;
 import com.spring.ai.prompt.config.PromptTemplateConstants;
+import com.spring.ai.prompt.domain.dto.PromptTemplateEnterpriseConfigDTO;
 import com.spring.ai.prompt.domain.dto.PromptTemplateVariableDTO;
 import com.spring.ai.prompt.domain.response.PromptTemplateResponse;
 import com.spring.ai.prompt.domain.response.PromptTemplateStatisticsResponse;
@@ -18,6 +19,9 @@ public final class PromptTemplateAssembler {
     private PromptTemplateAssembler() {
     }
 
+    /**
+     * 构建新增模板时使用的持久化记录。
+     */
     public static PromptTemplateRecord toCreateRecord(
             Long tenantId,
             Long ownerUserId,
@@ -46,6 +50,9 @@ public final class PromptTemplateAssembler {
         return record;
     }
 
+    /**
+     * 将更新请求中的可变字段合并到已有模板记录。
+     */
     public static void mergeForUpdate(
             PromptTemplateRecord record,
             String templateName,
@@ -67,9 +74,13 @@ public final class PromptTemplateAssembler {
         }
     }
 
+    /**
+     * 将模板记录和扩展配置组装为接口响应对象。
+     */
     public static PromptTemplateResponse toResponse(
             PromptTemplateRecord record,
-            List<PromptTemplateVariableDTO> variableDefinitions
+            List<PromptTemplateVariableDTO> variableDefinitions,
+            PromptTemplateEnterpriseConfigDTO enterpriseConfig
     ) {
         return PromptTemplateResponse.builder()
                 .id(record.getId())
@@ -84,11 +95,15 @@ public final class PromptTemplateAssembler {
                 .ownerUserId(record.getOwnerUserId())
                 .ownerUserName(record.getOwnerUserName())
                 .variableDefinitions(variableDefinitions)
+                .enterpriseConfig(enterpriseConfig)
                 .createTime(toEpochMilli(record.getCreateTime()))
                 .updateTime(toEpochMilli(record.getUpdateTime()))
                 .build();
     }
 
+    /**
+     * 根据模板记录集合生成统计信息。
+     */
     public static PromptTemplateStatisticsResponse toStatistics(List<PromptTemplateRecord> records) {
         return PromptTemplateStatisticsResponse.builder()
                 .totalCount(records.size())
@@ -107,6 +122,9 @@ public final class PromptTemplateAssembler {
                 .build();
     }
 
+    /**
+     * 将本地时间转换为毫秒时间戳。
+     */
     public static Long toEpochMilli(LocalDateTime time) {
         if (time == null) {
             return null;

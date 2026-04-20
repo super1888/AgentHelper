@@ -1,7 +1,7 @@
 import type { PromptTemplateVariable } from '@/types/prompt'
 
 export interface AgentPromptConfig {
-  promptTemplateId?: number | null
+  promptTemplateId?: string | null
   promptTemplateCode?: string | null
   promptTemplateName?: string | null
   promptBindingType?: string | null
@@ -24,13 +24,13 @@ export interface AgentSummary {
 }
 
 export interface AgentVersion {
-  versionId: number
+  versionId: string
   versionNo: number
   agentName: string
   description: string | null
   systemPrompt: string | null
   selectedCapabilities: string[]
-  promptTemplateId?: number | null
+  promptTemplateId?: string | null
   promptTemplateCode?: string | null
   promptTemplateName?: string | null
   promptBindingType?: string | null
@@ -51,7 +51,7 @@ export interface AgentDetail {
   agentStatus: string
   currentVersionNo: number | null
   publishedVersionNo: number | null
-  ownerUserId: number
+  ownerUserId: string
   ownerUserName: string | null
   versions: AgentVersion[]
 }
@@ -85,36 +85,36 @@ export interface AgentSessionResult {
   sessionId: string
   agentId: string
   agentVersionNo: number
-  agentVersionId: number
+  agentVersionId: string
   sessionStatus: string
   connectionStatus: string
-  lastEventSequence: number
+  lastEventSequence: string
   websocketEndpoint: string
   websocketTopic: string
   websocketSendDestination: string
 }
 
 export interface AgentReconnectPayload {
-  lastReceivedEventSequence?: number
+  lastReceivedEventSequence?: string
 }
 
 export interface AgentChatPayload {
   agentId: string
   sessionId: string
   message: string
-  lastReceivedEventSequence?: number
+  lastReceivedEventSequence?: string
 }
 
 export interface AgentChatEvent {
   agentId: string
   sessionId: string
   taskId: string | null
-  agentVersionId: number
+  agentVersionId: string
   agentVersionNo: number
-  eventSequence: number
+  eventSequence: string
   event: string
   data: unknown
-  timestamp: number
+  timestamp: string
 }
 
 export interface AgentReconnectResult {

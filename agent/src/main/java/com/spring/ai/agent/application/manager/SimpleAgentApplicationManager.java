@@ -276,9 +276,13 @@ public class SimpleAgentApplicationManager {
 
     private PromptTemplateResolvedDTO resolvePromptConfig(SimpleAgentPromptConfigDTO promptConfig, String systemPrompt) {
         if (promptConfig != null) {
-            if (promptConfig.getPromptTemplateId() != null) {
+            Long promptTemplateId = simpleAgentSupportManager.parseLongId(
+                    promptConfig.getPromptTemplateId(),
+                    "promptTemplateId"
+            );
+            if (promptTemplateId != null) {
                 return promptTemplateResolver.resolveTemplateById(
-                        promptConfig.getPromptTemplateId(),
+                        promptTemplateId,
                         promptConfig.getPromptVariables()
                 );
             }
@@ -311,7 +315,9 @@ public class SimpleAgentApplicationManager {
             SimpleAgentPromptConfigDTO promptConfig
     ) {
         return SimpleAgentPromptConfigDTO.builder()
-                .promptTemplateId(promptResolved.getPromptTemplateId())
+                .promptTemplateId(promptResolved.getPromptTemplateId() == null
+                        ? null
+                        : String.valueOf(promptResolved.getPromptTemplateId()))
                 .promptTemplateCode(promptResolved.getPromptTemplateCode())
                 .promptTemplateName(promptResolved.getPromptTemplateName())
                 .promptBindingType(promptResolved.getPromptBindingType())

@@ -10,6 +10,7 @@ import {
   UserRound,
   UserRoundPlus,
 } from 'lucide-vue-next'
+import AppFeedbackDialog from '@/components/AppFeedbackDialog.vue'
 import AuthFrame from '@/components/AuthFrame.vue'
 import { useAuthStore } from '@/stores/auth'
 import { getErrorMessage } from '@/utils/errors'
@@ -62,6 +63,10 @@ function clearErrors() {
   }
 }
 
+function clearFormFeedback() {
+  delete errors.form
+}
+
 async function handleSubmit() {
   clearErrors()
 
@@ -100,6 +105,12 @@ async function handleSubmit() {
 </script>
 
 <template>
+  <AppFeedbackDialog
+    :model-value="Boolean(errors.form)"
+    tone="error"
+    :message="errors.form || ''"
+    @update:model-value="!$event && clearFormFeedback()"
+  />
   <AuthFrame
     eyebrow="Registration"
     title="开通平台账号"
@@ -109,7 +120,7 @@ async function handleSubmit() {
     :highlights="highlights"
   >
     <form class="auth-form" @submit.prevent="handleSubmit">
-      <div v-if="errors.form" class="feedback-banner feedback-banner--error" role="alert">
+      <div v-if="false && errors.form" class="feedback-banner feedback-banner--error" role="alert">
         {{ errors.form }}
       </div>
 

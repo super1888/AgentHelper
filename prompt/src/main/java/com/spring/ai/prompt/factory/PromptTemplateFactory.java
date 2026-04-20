@@ -21,6 +21,9 @@ public class PromptTemplateFactory implements InitializingBean, ApplicationConte
     private final Map<PromptTemplateTypeEnum, PromptTemplateCreator> creatorMap = new ConcurrentHashMap<>();
     private ApplicationContext applicationContext;
 
+    /**
+     * 按模板类型创建目标模板对象。
+     */
     @SuppressWarnings("unchecked")
     public <T> T createPromptTemplate(PromptTemplateTypeEnum type, Object dto) {
         PromptTemplateCreator creator = creatorMap.get(type);
@@ -30,16 +33,25 @@ public class PromptTemplateFactory implements InitializingBean, ApplicationConte
         return (T) creator.create(dto);
     }
 
+    /**
+     * 创建系统提示词模板。
+     */
     public SystemPromptTemplate createSystemPromptTemplate(SystemPromptTemplateDTO dto) {
         return createPromptTemplate(PromptTemplateTypeEnum.SYSTEM_PROMPT_TEMPLATE, dto);
     }
 
+    /**
+     * 启动后收集全部模板创建器并建立映射。
+     */
     @Override
     public void afterPropertiesSet() {
         applicationContext.getBeansOfType(PromptTemplateCreator.class).values()
                 .forEach(creator -> creatorMap.put(creator.getPromptTemplateType(), creator));
     }
 
+    /**
+     * 注入 Spring 上下文供创建器扫描使用。
+     */
     @Override
     public void setApplicationContext(@NotNull ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;

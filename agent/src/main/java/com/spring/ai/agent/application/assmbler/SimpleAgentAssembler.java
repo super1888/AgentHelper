@@ -214,7 +214,7 @@ public final class SimpleAgentAssembler {
             SimpleAgentVersionConfigDTO config
     ) {
         return SimpleAgentVersionResponse.builder()
-                .versionId(version.getId())
+                .versionId(version.getId() == null ? null : String.valueOf(version.getId()))
                 .versionNo(version.getVersionNo())
                 .agentName(version.getAgentName())
                 .description(version.getDescription())

@@ -13,7 +13,10 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class SimpleAgentPromptConfigDTO {
 
-    private Long promptTemplateId;
+    /**
+     * 绑定的提示词模板主键，统一使用字符串承接前端入参和版本快照，避免超长整型精度丢失。
+     */
+    private String promptTemplateId;
 
     private String promptTemplateCode;
 

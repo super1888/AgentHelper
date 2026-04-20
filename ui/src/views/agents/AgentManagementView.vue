@@ -2,6 +2,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { MessageSquareText, Plus, RefreshCw, Rocket, Search, ShieldBan, Trash2 } from 'lucide-vue-next'
+import AppFeedbackDialog from '@/components/AppFeedbackDialog.vue'
 import MainShell from '@/components/MainShell.vue'
 import { createAgent, createAgentSession, disableAgent, fetchAgentDetail, publishAgent, queryAgents, removeAgent, updateAgent } from '@/api/agent'
 import { queryPromptTemplates } from '@/api/prompt'
@@ -136,7 +137,9 @@ function enterEditMode() {
 
 function buildPromptConfig(): AgentPromptConfig | null {
   if (form.promptMode === 'template') {
-    return form.selectedPromptTemplateId ? { promptTemplateId: Number(form.selectedPromptTemplateId), promptBindingType: 'TEMPLATE', promptVariables: { ...form.promptVariableValues } } : null
+    return form.selectedPromptTemplateId
+      ? { promptTemplateId: form.selectedPromptTemplateId, promptBindingType: 'TEMPLATE', promptVariables: { ...form.promptVariableValues } }
+      : null
   }
   if (form.promptMode === 'custom-inline') {
     return form.customPromptContent.trim() ? { promptBindingType: 'CUSTOM', promptSourceType: 'INLINE_TEXT', promptTemplateContent: form.customPromptContent.trim() } : null
@@ -316,7 +319,12 @@ onMounted(() => {
 
 <template>
   <MainShell>
-    <section v-if="feedback" class="feedback" :class="`feedback--${feedbackTone}`">{{ feedback }}</section>
+    <AppFeedbackDialog
+      :model-value="Boolean(feedback)"
+      :tone="feedbackTone"
+      :message="feedback"
+      @update:model-value="!$event && (feedback = '')"
+    />
 
     <section class="management-page agent-page">
       <header class="page__hero panel-card management-hero">

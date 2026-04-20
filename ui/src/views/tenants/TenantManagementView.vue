@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ChevronLeft, ChevronRight, Plus, RefreshCw, Search, Trash2, UserRoundPen } from 'lucide-vue-next'
+import AppFeedbackDialog from '@/components/AppFeedbackDialog.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import MainShell from '@/components/MainShell.vue'
 import StatusBadge from '@/components/StatusBadge.vue'
@@ -175,8 +176,14 @@ onMounted(() => { void Promise.all([loadTenants(), loadStatistics()]) })
 
 <template>
   <MainShell>
-    <section v-if="feedback" class="feedback-banner" :class="`feedback-banner--${feedback.tone}`">
-      <span>{{ feedback.message }}</span>
+    <AppFeedbackDialog
+      :model-value="Boolean(feedback)"
+      :tone="feedback?.tone ?? 'info'"
+      :message="feedback?.message ?? ''"
+      @update:model-value="!$event && clearFeedback()"
+    />
+    <section v-if="false && feedback" class="feedback-banner" :class="`feedback-banner--${feedback?.tone}`">
+      <span>{{ feedback?.message }}</span>
       <button type="button" class="app-button app-button--secondary" @click="clearFeedback">关闭</button>
     </section>
 

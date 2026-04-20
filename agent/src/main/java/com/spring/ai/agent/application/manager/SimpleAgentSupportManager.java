@@ -191,6 +191,31 @@ public class SimpleAgentSupportManager {
         }
     }
 
+    /**
+     * 将字符串主键安全转换为 Long，避免前端传递超长整型时出现精度问题。
+     */
+    public Long parseLongId(String rawId, String fieldName) {
+        if (!StringUtils.hasText(rawId)) {
+            return null;
+        }
+        String normalizedId = rawId.trim();
+        if (!normalizedId.matches("\\d+")) {
+            throw new BusinessException(
+                    ErrorCodeEnum.BAD_REQUEST,
+                    HttpStatus.BAD_REQUEST,
+                    fieldName + " 必须为数字字符串");
+        }
+        try {
+            return Long.valueOf(normalizedId);
+        } catch (NumberFormatException exception) {
+            throw new BusinessException(
+                    ErrorCodeEnum.BAD_REQUEST,
+                    HttpStatus.BAD_REQUEST,
+                    fieldName + " 超出 Long 范围",
+                    exception);
+        }
+    }
+
     private boolean sameTenant(Long resourceTenantId, Long currentTenantId) {
         if (resourceTenantId == null) {
             return currentTenantId == null;

@@ -2,6 +2,7 @@
 import { computed, reactive, ref, watchEffect } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { ArrowRight, Eye, EyeOff, KeyRound, Server, UserRound } from 'lucide-vue-next'
+import AppFeedbackDialog from '@/components/AppFeedbackDialog.vue'
 import AuthFrame from '@/components/AuthFrame.vue'
 import { appConfig } from '@/config/env'
 import { useAuthStore } from '@/stores/auth'
@@ -22,6 +23,7 @@ const form = reactive<LoginFormState>({
 const errors = reactive<Partial<Record<LoginField | 'form', string>>>({})
 const passwordVisible = ref(false)
 const submitting = ref(false)
+const registeredNoticeDismissed = ref(false)
 
 const apiEndpointLabel = computed(() => {
   try {
@@ -37,6 +39,22 @@ const apiEndpointLabel = computed(() => {
 const registeredNotice = computed(() =>
   route.query.registered === '1' ? '注册成功，账号已创建，现在可以直接登录。' : '',
 )
+
+const authFeedback = computed(() => {
+  if (errors.form) {
+    return {
+      tone: 'error' as const,
+      message: errors.form,
+    }
+  }
+  if (!registeredNoticeDismissed.value && registeredNotice.value) {
+    return {
+      tone: 'success' as const,
+      message: registeredNotice.value,
+    }
+  }
+  return null
+})
 
 const highlights = [
   {
@@ -60,6 +78,14 @@ function clearErrors() {
   for (const key of Object.keys(errors) as Array<LoginField | 'form'>) {
     delete errors[key]
   }
+}
+
+function closeAuthFeedback() {
+  if (errors.form) {
+    delete errors.form
+    return
+  }
+  registeredNoticeDismissed.value = true
 }
 
 async function handleSubmit() {
@@ -97,6 +123,12 @@ watchEffect(() => {
 </script>
 
 <template>
+  <AppFeedbackDialog
+    :model-value="Boolean(authFeedback)"
+    :tone="authFeedback?.tone ?? 'info'"
+    :message="authFeedback?.message ?? ''"
+    @update:model-value="!$event && closeAuthFeedback()"
+  />
   <AuthFrame
     eyebrow="Authentication"
     title="Agent Helper 控制台"
@@ -114,11 +146,11 @@ watchEffect(() => {
     </div>
 
     <form class="auth-form" @submit.prevent="handleSubmit">
-      <div v-if="registeredNotice" class="feedback-banner feedback-banner--success" aria-live="polite">
+      <div v-if="false && registeredNotice" class="feedback-banner feedback-banner--success" aria-live="polite">
         {{ registeredNotice }}
       </div>
 
-      <div v-if="errors.form" class="feedback-banner feedback-banner--error" role="alert">
+      <div v-if="false && errors.form" class="feedback-banner feedback-banner--error" role="alert">
         {{ errors.form }}
       </div>
 

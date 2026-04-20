@@ -10,7 +10,7 @@ import java.util.Map;
 @Builder
 public class SimpleAgentVersionResponse {
 
-    Long versionId;
+    String versionId;
 
     Integer versionNo;
 
@@ -22,7 +22,7 @@ public class SimpleAgentVersionResponse {
 
     List<String> selectedCapabilities;
 
-    Long promptTemplateId;
+    String promptTemplateId;
 
     String promptTemplateCode;
 

@@ -13,11 +13,17 @@ import org.springframework.util.StringUtils;
 @Component
 public class SystemPromptTemplateCreator implements PromptTemplateCreator {
 
+    /**
+     * 返回当前创建器负责的模板类型。
+     */
     @Override
     public PromptTemplateTypeEnum getPromptTemplateType() {
         return PromptTemplateTypeEnum.SYSTEM_PROMPT_TEMPLATE;
     }
 
+    /**
+     * 根据 DTO 中的模板文本、资源和变量配置构建系统提示词模板。
+     */
     @Override
     public Object create(Object dto) {
         SystemPromptTemplateDTO templateDTO = (SystemPromptTemplateDTO) dto;

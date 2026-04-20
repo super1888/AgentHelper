@@ -15,6 +15,7 @@ import {
   Waves,
 } from 'lucide-vue-next'
 import MainShell from '@/components/MainShell.vue'
+import AppFeedbackDialog from '@/components/AppFeedbackDialog.vue'
 import { closeAgentSession, fetchAgentDetail, reconnectAgentSession, recoverAgentTask } from '@/api/agent'
 import { AgentChatSocket } from '@/services/agentChatSocket'
 import type { AgentChatEvent, AgentDetail } from '@/types/agent'
@@ -51,7 +52,7 @@ const inputMessage = ref('')
 const feedback = ref<FeedbackState | null>(null)
 const lastTaskId = ref<string | null>(null)
 const lastFailedTaskId = ref<string | null>(null)
-const lastReceivedEventSequence = ref<number>(0)
+const lastReceivedEventSequence = ref<string>('0')
 const bubbles = ref<ChatBubble[]>([])
 const transcriptRef = ref<HTMLElement | null>(null)
 
@@ -119,6 +120,13 @@ function formatTimestamp(value: number) {
   }).format(value)
 }
 
+function toSafeNumber(value: string | number | null | undefined) {
+  if (typeof value === 'number') return value
+  if (!value) return 0
+  const parsedValue = Number(value)
+  return Number.isFinite(parsedValue) ? parsedValue : 0
+}
+
 function extractText(data: unknown) {
   if (typeof data === 'string') {
     return data
@@ -132,7 +140,10 @@ function extractText(data: unknown) {
 }
 
 function handleAgentEvent(event: AgentChatEvent) {
-  lastReceivedEventSequence.value = Math.max(lastReceivedEventSequence.value, event.eventSequence || 0)
+  lastReceivedEventSequence.value = String(Math.max(
+    toSafeNumber(lastReceivedEventSequence.value),
+    toSafeNumber(event.eventSequence),
+  ))
   lastTaskId.value = event.taskId
 
   if (event.event === 'USER_MESSAGE') {
@@ -141,7 +152,7 @@ function handleAgentEvent(event: AgentChatEvent) {
       role: 'user',
       title: '我',
       content: extractText(event.data),
-      meta: formatTimestamp(event.timestamp),
+      meta: formatTimestamp(toSafeNumber(event.timestamp)),
       taskId: event.taskId,
     })
     return
@@ -163,7 +174,7 @@ function handleAgentEvent(event: AgentChatEvent) {
       role: 'system',
       title: '思考片段',
       content: extractText(event.data),
-      meta: formatTimestamp(event.timestamp),
+      meta: formatTimestamp(toSafeNumber(event.timestamp)),
       taskId: event.taskId,
       tone: 'info',
     })
@@ -176,7 +187,7 @@ function handleAgentEvent(event: AgentChatEvent) {
       role: 'system',
       title: '工具执行',
       content: extractText(event.data),
-      meta: formatTimestamp(event.timestamp),
+      meta: formatTimestamp(toSafeNumber(event.timestamp)),
       taskId: event.taskId,
       tone: 'info',
     })
@@ -187,7 +198,7 @@ function handleAgentEvent(event: AgentChatEvent) {
     upsertAssistantBubble(event.taskId, {
       title: 'Agent',
       content: extractText(event.data),
-      meta: `完成于 ${formatTimestamp(event.timestamp)}`,
+      meta: `完成于 ${formatTimestamp(toSafeNumber(event.timestamp))}`,
     })
     sending.value = false
     lastFailedTaskId.value = null
@@ -201,7 +212,7 @@ function handleAgentEvent(event: AgentChatEvent) {
       role: 'system',
       title: '执行失败',
       content: extractText(event.data),
-      meta: formatTimestamp(event.timestamp),
+      meta: formatTimestamp(toSafeNumber(event.timestamp)),
       taskId: event.taskId,
       tone: 'error',
     })
@@ -215,7 +226,7 @@ function handleAgentEvent(event: AgentChatEvent) {
       role: 'system',
       title: '恢复任务',
       content: `已根据失败任务 ${extractText(event.data)} 发起恢复。`,
-      meta: formatTimestamp(event.timestamp),
+      meta: formatTimestamp(toSafeNumber(event.timestamp)),
       taskId: event.taskId,
       tone: 'info',
     })
@@ -245,7 +256,7 @@ async function prepareSession() {
 
   try {
     const reconnectResult = await reconnectAgentSession(routeSessionId.value, {
-      lastReceivedEventSequence: lastReceivedEventSequence.value || 0,
+      lastReceivedEventSequence: lastReceivedEventSequence.value || '0',
     })
     sessionId.value = reconnectResult.session.sessionId
     reconnectResult.missedEvents.forEach(handleAgentEvent)
@@ -291,7 +302,7 @@ async function sendMessage() {
       agentId: agentId.value,
       sessionId: sessionId.value,
       message: text,
-      lastReceivedEventSequence: lastReceivedEventSequence.value || 0,
+      lastReceivedEventSequence: lastReceivedEventSequence.value || '0',
     })
   } catch (error) {
     sending.value = false
@@ -353,13 +364,19 @@ onBeforeUnmount(() => {
 
 <template>
   <MainShell>
+    <AppFeedbackDialog
+      :model-value="Boolean(feedback)"
+      :tone="feedback?.tone ?? 'info'"
+      :message="feedback?.message ?? ''"
+      @update:model-value="!$event && clearFeedback()"
+    />
     <section
-      v-if="feedback"
+      v-if="false && feedback"
       class="feedback-banner"
-      :class="`feedback-banner--${feedback.tone}`"
+      :class="`feedback-banner--${feedback?.tone}`"
       aria-live="polite"
     >
-      <span>{{ feedback.message }}</span>
+      <span>{{ feedback?.message }}</span>
       <button type="button" class="app-button app-button--ghost" @click="clearFeedback">
         关闭
       </button>

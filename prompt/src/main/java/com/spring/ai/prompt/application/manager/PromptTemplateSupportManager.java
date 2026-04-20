@@ -2,12 +2,15 @@ package com.spring.ai.prompt.application.manager;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spring.ai.common.enums.ErrorCodeEnum;
 import com.spring.ai.common.exception.BusinessException;
 import com.spring.ai.common.repository.enitiy.PromptTemplateRecord;
 import com.spring.ai.common.repository.service.PromptTemplateRecordService;
 import com.spring.ai.common.web.CurrentUserContextSupport;
+import com.spring.ai.prompt.domain.dto.PromptTemplateEnterpriseConfigDTO;
+import com.spring.ai.prompt.domain.dto.PromptTemplateExtDTO;
 import com.spring.ai.prompt.domain.dto.PromptTemplateVariableDTO;
 import jakarta.annotation.Resource;
 import java.util.Collections;
@@ -26,6 +29,8 @@ import org.springframework.util.StringUtils;
 public class PromptTemplateSupportManager {
 
     private static final TypeReference<List<PromptTemplateVariableDTO>> VARIABLE_LIST_TYPE = new TypeReference<>() {
+    };
+    private static final TypeReference<PromptTemplateExtDTO> EXT_TYPE = new TypeReference<>() {
     };
 
     @Resource
@@ -91,11 +96,35 @@ public class PromptTemplateSupportManager {
      * 解析模板变量定义 JSON。
      */
     public List<PromptTemplateVariableDTO> parseVariableDefinitions(String json) {
+        return parseTemplateExt(json).getVariableDefinitions();
+    }
+
+    /**
+     * 解析模板扩展配置，兼容旧版变量数组结构。
+     */
+    public PromptTemplateExtDTO parseTemplateExt(String json) {
         if (!StringUtils.hasText(json)) {
-            return Collections.emptyList();
+            return emptyExt();
         }
         try {
-            return objectMapper.readValue(json, VARIABLE_LIST_TYPE);
+            JsonNode rootNode = objectMapper.readTree(json);
+            if (rootNode == null || rootNode.isNull()) {
+                return emptyExt();
+            }
+            if (rootNode.isArray()) {
+                return PromptTemplateExtDTO.builder()
+                        .variableDefinitions(objectMapper.convertValue(rootNode, VARIABLE_LIST_TYPE))
+                        .enterpriseConfig(null)
+                        .build();
+            }
+            PromptTemplateExtDTO ext = objectMapper.convertValue(rootNode, EXT_TYPE);
+            if (ext == null) {
+                return emptyExt();
+            }
+            if (ext.getVariableDefinitions() == null) {
+                ext.setVariableDefinitions(Collections.emptyList());
+            }
+            return ext;
         } catch (JsonProcessingException e) {
             throw new BusinessException(
                     ErrorCodeEnum.INTERNAL_SERVER_ERROR,
@@ -103,5 +132,25 @@ public class PromptTemplateSupportManager {
                     "JSON 解析失败",
                     e);
         }
+    }
+
+    /**
+     * 统一序列化模板扩展配置。
+     */
+    public String buildTemplateExtJson(
+            List<PromptTemplateVariableDTO> variableDefinitions,
+            PromptTemplateEnterpriseConfigDTO enterpriseConfig
+    ) {
+        return toJson(PromptTemplateExtDTO.builder()
+                .variableDefinitions(variableDefinitions == null ? Collections.emptyList() : variableDefinitions)
+                .enterpriseConfig(enterpriseConfig)
+                .build());
+    }
+
+    private PromptTemplateExtDTO emptyExt() {
+        return PromptTemplateExtDTO.builder()
+                .variableDefinitions(Collections.emptyList())
+                .enterpriseConfig(null)
+                .build();
     }
 }

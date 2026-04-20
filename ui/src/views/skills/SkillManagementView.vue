@@ -2,6 +2,7 @@
 // 文件用途：Skills 管理页面
 // 核心功能：提供技能列表、批量操作、基础编辑、版本管理、导入导出、调试、测试用例与日志查看
 import { computed, onMounted, reactive, ref } from 'vue'
+import AppFeedbackDialog from '@/components/AppFeedbackDialog.vue'
 import MainShell from '@/components/MainShell.vue'
 import {
   batchDeleteSkills,
@@ -175,6 +176,10 @@ const selectedCountText = computed(() => `已勾选 ${selectedSkillIds.value.len
 
 function showFeedback(tone: FeedbackTone, message: string) {
   feedback.value = { tone, message }
+}
+
+function clearFeedback() {
+  feedback.value = null
 }
 
 function parseJson<T>(value: string, label: string): T {
@@ -606,6 +611,12 @@ onMounted(async () => {
 
 <template>
   <MainShell>
+    <AppFeedbackDialog
+      :model-value="Boolean(feedback)"
+      :tone="feedback?.tone ?? 'info'"
+      :message="feedback?.message ?? ''"
+      @update:model-value="!$event && clearFeedback()"
+    />
     <section class="skill-page">
       <article class="panel-card hero-panel">
         <div class="hero-panel__head">
@@ -619,8 +630,8 @@ onMounted(async () => {
             <button class="app-button" type="button" @click="resetForm">新建技能</button>
           </div>
         </div>
-        <div v-if="feedback" class="feedback-banner" :class="`feedback-banner--${feedback.tone}`">
-          {{ feedback.message }}
+        <div v-if="false && feedback" class="feedback-banner" :class="`feedback-banner--${feedback?.tone}`">
+          {{ feedback?.message }}
         </div>
         <div class="stats-strip">
           <article class="metric-card"><span>技能总数</span><strong>{{ stats.totalCount }}</strong></article>

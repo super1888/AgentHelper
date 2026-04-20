@@ -8,6 +8,7 @@ import {
   Trash2,
   Upload,
 } from 'lucide-vue-next'
+import AppFeedbackDialog from '@/components/AppFeedbackDialog.vue'
 import MainShell from '@/components/MainShell.vue'
 import {
   deleteAllVectorFiles,
@@ -42,7 +43,7 @@ const deletePending = ref(false)
 const selectedFile = ref<File | null>(null)
 const selectedFileName = ref('')
 const uploadFileInput = ref<HTMLInputElement | null>(null)
-const feedback = ref<FeedbackState | null>(null)
+const feedback = ref<FeedbackState>({ tone: 'info', message: '' })
 let feedbackTimer: ReturnType<typeof setTimeout> | null = null
 const files = ref<VectorStoreFileItem[]>([])
 const documents = ref<VectorStoreDocumentItem[]>([])
@@ -78,12 +79,9 @@ watch(selectedFileName, (fileName) => {
 function showFeedback(tone: FeedbackTone, message: string) {
   if (feedbackTimer) {
     clearTimeout(feedbackTimer)
+    feedbackTimer = null
   }
   feedback.value = { tone, message }
-  feedbackTimer = setTimeout(() => {
-    feedback.value = null
-    feedbackTimer = null
-  }, 3200)
 }
 
 function clearFeedback() {
@@ -91,7 +89,7 @@ function clearFeedback() {
     clearTimeout(feedbackTimer)
     feedbackTimer = null
   }
-  feedback.value = null
+  feedback.value = { tone: 'info', message: '' }
 }
 
 function formatBytes(value: number | null) {
@@ -280,16 +278,22 @@ onBeforeUnmount(() => {
 
 <template>
   <MainShell>
+    <AppFeedbackDialog
+      :model-value="Boolean(feedback.message)"
+      :tone="feedback.tone"
+      :message="feedback.message"
+      @update:model-value="!$event && clearFeedback()"
+    />
     <Transition name="toast-fade">
       <section
-        v-if="feedback"
+        v-if="false && feedback"
         class="feedback-toast"
-        :class="`feedback-toast--${feedback.tone}`"
+        :class="`feedback-toast--${feedback?.tone}`"
         aria-live="polite"
       >
         <div class="feedback-toast__body">
           <strong>{{ feedback.tone === 'success' ? '操作成功' : feedback.tone === 'error' ? '操作失败' : '提示' }}</strong>
-          <span>{{ feedback.message }}</span>
+          <span>{{ feedback?.message }}</span>
         </div>
         <button type="button" class="feedback-toast__close" @click="clearFeedback">
           关闭
