@@ -146,6 +146,19 @@ function handleAgentEvent(event: AgentChatEvent) {
   ))
   lastTaskId.value = event.taskId
 
+  if (event.event === 'CHAT_START' || event.event === 'METHOD_START') {
+    pushBubble({
+      id: `system-start-${event.eventSequence}`,
+      role: 'system',
+      title: '任务已开始',
+      content: '消息已送达，Agent 正在处理中。',
+      meta: formatTimestamp(toSafeNumber(event.timestamp)),
+      taskId: event.taskId,
+      tone: 'info',
+    })
+    return
+  }
+
   if (event.event === 'USER_MESSAGE') {
     pushBubble({
       id: `user-${event.eventSequence}`,
@@ -220,6 +233,20 @@ function handleAgentEvent(event: AgentChatEvent) {
     return
   }
 
+  if (event.event === 'METHOD_ERROR') {
+    pushBubble({
+      id: `method-error-${event.eventSequence}`,
+      role: 'system',
+      title: '消息处理失败',
+      content: extractText(event.data) || '消息已到达后端，但处理过程中出现异常。',
+      meta: formatTimestamp(toSafeNumber(event.timestamp)),
+      taskId: event.taskId,
+      tone: 'error',
+    })
+    sending.value = false
+    return
+  }
+
   if (event.event === 'TASK_RECOVER') {
     pushBubble({
       id: `recover-${event.eventSequence}`,
@@ -279,6 +306,9 @@ function connectSocket() {
     onEvent: handleAgentEvent,
     onConnectionChange: (value) => {
       connected.value = value
+      if (!value) {
+        sending.value = false
+      }
     },
     onError: (message) => {
       showFeedback('error', message)

@@ -1,7 +1,9 @@
 package com.spring.ai.websocket.config;
 
+import com.spring.ai.user.config.WebSocketAuthChannelInterceptor;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
@@ -13,9 +15,14 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 public class WebSocketModuleConfig implements WebSocketMessageBrokerConfigurer {
 
     private final WebSocketPushProperties properties;
+    private final WebSocketAuthChannelInterceptor webSocketAuthChannelInterceptor;
 
-    public WebSocketModuleConfig(WebSocketPushProperties properties) {
+    public WebSocketModuleConfig(
+            WebSocketPushProperties properties,
+            WebSocketAuthChannelInterceptor webSocketAuthChannelInterceptor
+    ) {
         this.properties = properties;
+        this.webSocketAuthChannelInterceptor = webSocketAuthChannelInterceptor;
     }
 
     @Override
@@ -37,5 +44,10 @@ public class WebSocketModuleConfig implements WebSocketMessageBrokerConfigurer {
         registry.addEndpoint(properties.getEndpoint())
                 .setAllowedOriginPatterns(properties.getAllowedOriginPatterns())
                 .withSockJS();
+    }
+
+    @Override
+    public void configureClientInboundChannel(ChannelRegistration registration) {
+        registration.interceptors(webSocketAuthChannelInterceptor);
     }
 }

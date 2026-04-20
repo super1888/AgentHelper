@@ -1,6 +1,7 @@
 import { Client } from '@stomp/stompjs'
 import SockJS from 'sockjs-client'
 import type { AgentChatEvent, AgentChatPayload } from '@/types/agent'
+import { loadAuthSnapshot } from '@/utils/storage'
 
 interface WebSocketPushMessage<T> {
   event: string
@@ -31,6 +32,7 @@ export class AgentChatSocket {
     this.onError = options.onError
 
     this.client = new Client({
+      connectHeaders: this.buildConnectHeaders(),
       reconnectDelay: 3000,
       heartbeatIncoming: 10000,
       heartbeatOutgoing: 10000,
@@ -81,5 +83,18 @@ export class AgentChatSocket {
       destination: '/app/agent/chat',
       body: JSON.stringify(payload),
     })
+  }
+
+  /**
+   * 构建 STOMP CONNECT 头，显式透传前端登录 token。
+   */
+  private buildConnectHeaders(): Record<string, string> {
+    const snapshot = loadAuthSnapshot()
+    if (!snapshot?.token?.tokenName || !snapshot.token.tokenValue) {
+      return {}
+    }
+    return {
+      [snapshot.token.tokenName]: snapshot.token.tokenValue,
+    }
   }
 }

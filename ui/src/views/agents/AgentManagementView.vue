@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { MessageSquareText, Plus, RefreshCw, Rocket, Search, ShieldBan, Trash2 } from 'lucide-vue-next'
@@ -29,6 +29,7 @@ const selectedAgentDetail = ref<AgentDetail | null>(null)
 const createdSession = ref<AgentSessionResult | null>(null)
 const formMode = ref<FormMode>('create')
 const editingAgentId = ref<string | null>(null)
+const formPanelRef = ref<HTMLElement | null>(null)
 
 const filters = reactive({ keyword: '', status: 'ALL' })
 const form = reactive({
@@ -45,12 +46,24 @@ const form = reactive({
 const filteredAgents = computed(() => {
   const keyword = filters.keyword.trim().toLowerCase()
   return agents.value.filter((item) => {
-    const matchesKeyword = !keyword || [item.agentName, item.description, item.ownerUserName].filter(Boolean).some((value) => String(value).toLowerCase().includes(keyword))
+    const matchesKeyword = !keyword || [item.agentName, item.description, item.ownerUserName]
+      .filter(Boolean)
+      .some((value) => String(value).toLowerCase().includes(keyword))
     const matchesStatus = filters.status === 'ALL' || item.agentStatus === filters.status
     return matchesKeyword && matchesStatus
   })
 })
-const latestVersion = computed<AgentVersion | null>(() => selectedAgentDetail.value?.versions?.[0] ?? null)
+
+const sortedVersions = computed<AgentVersion[]>(() => {
+  if (!selectedAgentDetail.value?.versions?.length) {
+    return []
+  }
+  return [...selectedAgentDetail.value.versions].sort((left, right) => right.versionNo - left.versionNo)
+})
+
+const latestVersion = computed<AgentVersion | null>(() => sortedVersions.value[0] ?? null)
+const canEditSelectedAgent = computed(() => Boolean(selectedAgentDetail.value && latestVersion.value) && actionPending.value === null)
+const canPublishLatest = computed(() => Boolean(latestVersion.value) && actionPending.value === null)
 const selectedPromptTemplate = computed(() => promptTemplates.value.find((item) => String(item.id) === form.selectedPromptTemplateId) ?? null)
 const selectedPromptVariables = computed<PromptTemplateVariable[]>(() => selectedPromptTemplate.value?.variableDefinitions ?? [])
 const capabilityPreview = computed(() => parseCapabilities(form.selectedCapabilitiesText))
@@ -68,7 +81,9 @@ watch(selectedAgentId, (value) => {
 })
 
 watch(() => [form.promptMode, form.selectedPromptTemplateId] as const, ([mode]) => {
-  if (mode === 'template') syncPromptVariableValues()
+  if (mode === 'template') {
+    syncPromptVariableValues()
+  }
 })
 
 function setFeedback(tone: 'success' | 'error' | 'info', message: string) {
@@ -107,13 +122,19 @@ function enterCreateMode() {
 }
 
 function enterEditMode() {
-  if (!selectedAgentDetail.value || !latestVersion.value) return
+  if (!selectedAgentDetail.value || !latestVersion.value) {
+    setFeedback('error', '当前 Agent 缺少可编辑的版本快照。')
+    return
+  }
   const version = latestVersion.value
   formMode.value = 'edit'
   editingAgentId.value = selectedAgentDetail.value.agentId
   form.agentName = selectedAgentDetail.value.agentName
   form.description = selectedAgentDetail.value.description ?? ''
   form.selectedCapabilitiesText = version.selectedCapabilities.join(', ')
+  requestAnimationFrame(() => {
+    formPanelRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  })
   if (version.promptBindingType === 'TEMPLATE' && version.promptTemplateId) {
     form.promptMode = 'template'
     form.selectedPromptTemplateId = String(version.promptTemplateId)
@@ -142,9 +163,13 @@ function buildPromptConfig(): AgentPromptConfig | null {
       : null
   }
   if (form.promptMode === 'custom-inline') {
-    return form.customPromptContent.trim() ? { promptBindingType: 'CUSTOM', promptSourceType: 'INLINE_TEXT', promptTemplateContent: form.customPromptContent.trim() } : null
+    return form.customPromptContent.trim()
+      ? { promptBindingType: 'CUSTOM', promptSourceType: 'INLINE_TEXT', promptTemplateContent: form.customPromptContent.trim() }
+      : null
   }
-  return form.customPromptPath.trim() ? { promptBindingType: 'CUSTOM', promptSourceType: 'FILE_PATH', promptTemplatePath: form.customPromptPath.trim() } : null
+  return form.customPromptPath.trim()
+    ? { promptBindingType: 'CUSTOM', promptSourceType: 'FILE_PATH', promptTemplatePath: form.customPromptPath.trim() }
+    : null
 }
 
 function buildPayload(): AgentCreatePayload {
@@ -196,9 +221,14 @@ async function loadAgents(options?: { keepSelection?: boolean; successMessage?: 
     const result = await queryAgents()
     agents.value = result
     const keepSelection = options?.keepSelection && result.some((item) => item.agentId === selectedAgentId.value)
-    if (!keepSelection) selectedAgentId.value = result[0]?.agentId ?? ''
-    else if (selectedAgentId.value) await loadAgentDetail(selectedAgentId.value)
-    if (options?.successMessage) setFeedback('success', options.successMessage)
+    if (!keepSelection) {
+      selectedAgentId.value = result[0]?.agentId ?? ''
+    } else if (selectedAgentId.value) {
+      await loadAgentDetail(selectedAgentId.value)
+    }
+    if (options?.successMessage) {
+      setFeedback('success', options.successMessage)
+    }
   } catch (error) {
     setFeedback('error', getErrorMessage(error, 'Agent 列表加载失败。'))
   } finally {
@@ -209,7 +239,11 @@ async function loadAgents(options?: { keepSelection?: boolean; successMessage?: 
 async function loadAgentDetail(agentId: string) {
   detailLoading.value = true
   try {
-    selectedAgentDetail.value = await fetchAgentDetail(agentId)
+    const detail = await fetchAgentDetail(agentId)
+    selectedAgentDetail.value = {
+      ...detail,
+      versions: [...detail.versions].sort((left, right) => right.versionNo - left.versionNo),
+    }
   } catch (error) {
     selectedAgentDetail.value = null
     setFeedback('error', getErrorMessage(error, 'Agent 详情加载失败。'))
@@ -219,8 +253,14 @@ async function loadAgentDetail(agentId: string) {
 }
 
 async function handleSubmit() {
-  if (!form.agentName.trim()) return setFeedback('error', '请输入 Agent 名称。')
-  if (!buildPromptConfig()) return setFeedback('error', '请选择提示词模板，或补全自定义提示词配置。')
+  if (!form.agentName.trim()) {
+    setFeedback('error', '请输入 Agent 名称。')
+    return
+  }
+  if (!buildPromptConfig()) {
+    setFeedback('error', '请选择提示词模板，或补全自定义提示词配置。')
+    return
+  }
   submitting.value = true
   try {
     if (formMode.value === 'create') {
@@ -229,7 +269,9 @@ async function handleSubmit() {
       enterCreateMode()
       await loadAgents({ keepSelection: true, successMessage: `Agent ${result.agentName} 已创建。` })
     } else {
-      if (!editingAgentId.value) throw new Error('缺少待编辑的 Agent 编码。')
+      if (!editingAgentId.value) {
+        throw new Error('缺少待编辑的 Agent 编码。')
+      }
       const result = await updateAgent(editingAgentId.value, buildPayload())
       selectedAgentId.value = result.agentId
       await loadAgents({ keepSelection: true, successMessage: `Agent ${result.agentName} 已更新并生成新版本。` })
@@ -243,11 +285,17 @@ async function handleSubmit() {
 }
 
 async function handlePublishLatest() {
-  if (!selectedAgentDetail.value || !latestVersion.value) return
+  if (!selectedAgentDetail.value || !latestVersion.value) {
+    setFeedback('error', '当前 Agent 没有可发布的版本。')
+    return
+  }
   actionPending.value = 'publish'
   try {
     await publishAgent(selectedAgentDetail.value.agentId, latestVersion.value.versionNo)
-    await loadAgents({ keepSelection: true, successMessage: `已发布 v${latestVersion.value.versionNo}。` })
+    await Promise.all([
+      loadAgents({ keepSelection: true, successMessage: `已发布 v${latestVersion.value.versionNo}。` }),
+      loadAgentDetail(selectedAgentDetail.value.agentId),
+    ])
   } catch (error) {
     setFeedback('error', getErrorMessage(error, '发布 Agent 失败。'))
   } finally {
@@ -276,7 +324,9 @@ async function handleDelete() {
     await removeAgent(agentId)
     selectedAgentDetail.value = null
     await loadAgents({ successMessage: `Agent ${agentName} 已删除。` })
-    if (editingAgentId.value === agentId) enterCreateMode()
+    if (editingAgentId.value === agentId) {
+      enterCreateMode()
+    }
   } catch (error) {
     setFeedback('error', getErrorMessage(error, '删除 Agent 失败。'))
   } finally {
@@ -304,7 +354,11 @@ async function handleOpenChat(versionNo?: number) {
     const targetVersionNo = versionNo ?? (selectedAgentDetail.value.agentStatus !== 'PUBLISHED' ? latestVersion.value?.versionNo : undefined)
     const session = await createAgentSession(selectedAgentDetail.value.agentId, targetVersionNo ? { versionNo: targetVersionNo } : {})
     createdSession.value = session
-    await router.push({ name: 'agent-chat', params: { agentId: selectedAgentDetail.value.agentId }, query: { sessionId: session.sessionId, versionNo: String(session.agentVersionNo) } })
+    await router.push({
+      name: 'agent-chat',
+      params: { agentId: selectedAgentDetail.value.agentId },
+      query: { sessionId: session.sessionId, versionNo: String(session.agentVersionNo) },
+    })
   } catch (error) {
     setFeedback('error', getErrorMessage(error, '创建聊天会话失败。'))
   } finally {
@@ -340,36 +394,44 @@ onMounted(() => {
       </header>
 
       <div class="page__grid">
-        <article class="card-section panel-card">
+        <article ref="formPanelRef" class="card-section panel-card">
           <div class="section-head">
             <div>
               <strong>{{ formTitle }}</strong>
               <p class="muted">支持模板提示词、内联提示词和文件路径三种绑定方式。</p>
             </div>
-            <button v-if="formMode === 'edit'" class="app-button app-button--ghost" @click="enterCreateMode">切回创建</button>
+            <button v-if="formMode === 'edit'" class="app-button app-button--ghost" @click="enterCreateMode">
+              切回创建
+            </button>
           </div>
 
           <div class="section-grid">
             <label class="field">
               <span class="field__label">Agent 名称</span>
               <div class="input-shell">
-                <input v-model="form.agentName" class="app-input" type="text" placeholder="例如：客户工单助手" />
+                <input v-model="form.agentName" class="app-input" type="text" placeholder="例如：工单助手" />
               </div>
             </label>
 
             <label class="field section-grid__full">
               <span class="field__label">描述</span>
               <div class="input-shell input-shell--textarea">
-                <textarea v-model="form.description" class="app-textarea" rows="3" placeholder="概述 Agent 的职责边界、目标用户和输出风格。" />
+                <textarea v-model="form.description" class="app-textarea" rows="3" placeholder="描述 Agent 的职责边界、目标用户和输出风格。" />
               </div>
             </label>
 
             <div class="field section-grid__full">
               <span class="field__label">提示词来源</span>
               <div class="mode-grid">
-                <label class="mode-pill" :class="{ 'mode-pill--active': form.promptMode === 'template' }"><input v-model="form.promptMode" type="radio" value="template" />模板</label>
-                <label class="mode-pill" :class="{ 'mode-pill--active': form.promptMode === 'custom-inline' }"><input v-model="form.promptMode" type="radio" value="custom-inline" />自定义文本</label>
-                <label class="mode-pill" :class="{ 'mode-pill--active': form.promptMode === 'custom-file' }"><input v-model="form.promptMode" type="radio" value="custom-file" />文件路径</label>
+                <label class="mode-pill" :class="{ 'mode-pill--active': form.promptMode === 'template' }">
+                  <input v-model="form.promptMode" type="radio" value="template" />模板
+                </label>
+                <label class="mode-pill" :class="{ 'mode-pill--active': form.promptMode === 'custom-inline' }">
+                  <input v-model="form.promptMode" type="radio" value="custom-inline" />自定义文本
+                </label>
+                <label class="mode-pill" :class="{ 'mode-pill--active': form.promptMode === 'custom-file' }">
+                  <input v-model="form.promptMode" type="radio" value="custom-file" />文件路径
+                </label>
               </div>
             </div>
 
@@ -377,14 +439,16 @@ onMounted(() => {
               <span class="field__label">提示词模板</span>
               <select v-model="form.selectedPromptTemplateId" class="app-select" :disabled="promptTemplatesLoading">
                 <option value="">{{ promptTemplatesLoading ? '正在加载模板...' : '请选择模板' }}</option>
-                <option v-for="item in promptTemplates" :key="item.id" :value="String(item.id)">{{ item.templateName }} / {{ item.templateCode }}</option>
+                <option v-for="template in promptTemplates" :key="template.id" :value="String(template.id)">
+                  {{ template.templateName }} / {{ template.templateCode }}
+                </option>
               </select>
             </label>
 
             <label v-else-if="form.promptMode === 'custom-inline'" class="field section-grid__full">
               <span class="field__label">系统提示词文本</span>
               <div class="input-shell input-shell--textarea">
-                <textarea v-model="form.customPromptContent" class="app-textarea" rows="8" placeholder="直接录入系统提示词内容。" />
+                <textarea v-model="form.customPromptContent" class="app-textarea" rows="8" placeholder="直接填写系统提示词内容。" />
               </div>
             </label>
 
@@ -403,15 +467,23 @@ onMounted(() => {
                 </div>
               </div>
               <div class="variable-grid">
-                <label v-for="item in selectedPromptVariables" :key="item.variableName" class="field variable-card">
+                <label v-for="variable in selectedPromptVariables" :key="variable.variableName" class="field variable-card">
                   <div class="variable-card__head">
-                    <strong>{{ item.variableName }}</strong>
-                    <span class="variable-badge">{{ item.required ? '必填' : '可选' }}</span>
+                    <strong>{{ variable.variableName }}</strong>
+                    <span class="variable-badge">{{ variable.required ? '必填' : '可选' }}</span>
                   </div>
                   <div class="input-shell">
-                    <input v-model="form.promptVariableValues[item.variableName]" class="app-input" type="text" :placeholder="item.defaultValue || '请输入变量值'" />
+                    <input
+                      v-model="form.promptVariableValues[variable.variableName]"
+                      class="app-input"
+                      type="text"
+                      :placeholder="variable.defaultValue || '请输入变量值'"
+                    />
                   </div>
-                  <small class="muted">{{ item.description || '未配置业务说明' }}<template v-if="item.defaultValue"> · 默认值：{{ item.defaultValue }}</template></small>
+                  <small class="muted">
+                    {{ variable.description || '未配置业务说明' }}
+                    <template v-if="variable.defaultValue"> · 默认值：{{ variable.defaultValue }}</template>
+                  </small>
                 </label>
               </div>
             </section>
@@ -425,7 +497,7 @@ onMounted(() => {
           </div>
 
           <div class="chip-row">
-            <span v-for="item in capabilityPreview" :key="item" class="chip">{{ item }}</span>
+            <span v-for="capability in capabilityPreview" :key="capability" class="chip">{{ capability }}</span>
           </div>
 
           <button class="app-button full-width" :disabled="submitting" @click="handleSubmit">
@@ -464,13 +536,19 @@ onMounted(() => {
           <div v-if="loading" class="empty">正在加载 Agent 列表...</div>
           <div v-else-if="filteredAgents.length === 0" class="empty">当前筛选条件下没有 Agent。</div>
           <div v-else class="stack">
-            <button v-for="item in filteredAgents" :key="item.agentId" class="list-item" :class="{ 'list-item--active': selectedAgentId === item.agentId }" @click="selectedAgentId = item.agentId">
+            <button
+              v-for="agent in filteredAgents"
+              :key="agent.agentId"
+              class="list-item"
+              :class="{ 'list-item--active': selectedAgentId === agent.agentId }"
+              @click="selectedAgentId = agent.agentId"
+            >
               <div class="list-item__head">
-                <strong>{{ item.agentName }}</strong>
-                <span class="status-pill" :class="`status-pill--${item.agentStatus.toLowerCase()}`">{{ formatStatus(item.agentStatus) }}</span>
+                <strong>{{ agent.agentName }}</strong>
+                <span class="status-pill" :class="`status-pill--${agent.agentStatus.toLowerCase()}`">{{ formatStatus(agent.agentStatus) }}</span>
               </div>
-              <p class="muted">{{ item.description || '暂无描述' }}</p>
-              <small class="muted">当前 v{{ item.currentVersionNo ?? '-' }} / 发布 v{{ item.publishedVersionNo ?? '-' }}</small>
+              <p class="muted">{{ agent.description || '暂无描述' }}</p>
+              <small class="muted">当前 v{{ agent.currentVersionNo ?? '-' }} / 发布 v{{ agent.publishedVersionNo ?? '-' }}</small>
             </button>
           </div>
         </article>
@@ -484,10 +562,18 @@ onMounted(() => {
               <p class="muted">查看版本快照、提示词绑定方式和变量值。</p>
             </div>
             <div v-if="selectedAgentDetail" class="action-row">
-              <button class="app-button app-button--ghost" :disabled="detailLoading || actionPending !== null" @click="enterEditMode">编辑</button>
-              <button class="app-button app-button--ghost" :disabled="!latestVersion || actionPending !== null" @click="handlePublishLatest"><Rocket :size="15" />发布</button>
-              <button class="app-button app-button--ghost" :disabled="selectedAgentDetail.agentStatus === 'DISABLED' || actionPending !== null" @click="handleDisable"><ShieldBan :size="15" />停用</button>
-              <button class="app-button app-button--ghost app-button--danger-ghost" :disabled="actionPending !== null" @click="handleDelete"><Trash2 :size="15" />删除</button>
+              <button class="app-button app-button--secondary" :disabled="!canEditSelectedAgent || detailLoading" @click="enterEditMode">
+                编辑
+              </button>
+              <button class="app-button" :disabled="!canPublishLatest" @click="handlePublishLatest">
+                <Rocket :size="15" />发布
+              </button>
+              <button class="app-button app-button--ghost" :disabled="selectedAgentDetail.agentStatus === 'DISABLED' || actionPending !== null" @click="handleDisable">
+                <ShieldBan :size="15" />停用
+              </button>
+              <button class="app-button app-button--ghost app-button--danger-ghost" :disabled="actionPending !== null" @click="handleDelete">
+                <Trash2 :size="15" />删除
+              </button>
             </div>
           </div>
 
@@ -497,12 +583,14 @@ onMounted(() => {
             <article class="summary-card">
               <div class="list-item__head">
                 <strong>{{ selectedAgentDetail.agentName }}</strong>
-                <span class="status-pill" :class="`status-pill--${selectedAgentDetail.agentStatus.toLowerCase()}`">{{ formatStatus(selectedAgentDetail.agentStatus) }}</span>
+                <span class="status-pill" :class="`status-pill--${selectedAgentDetail.agentStatus.toLowerCase()}`">
+                  {{ formatStatus(selectedAgentDetail.agentStatus) }}
+                </span>
               </div>
               <p class="muted">{{ selectedAgentDetail.description || '暂无描述' }}</p>
             </article>
 
-            <article v-for="version in selectedAgentDetail.versions" :key="version.versionId" class="version-card">
+            <article v-for="version in sortedVersions" :key="version.versionId" class="version-card">
               <div class="list-item__head">
                 <div>
                   <strong>版本 v{{ version.versionNo }}</strong>
@@ -512,22 +600,28 @@ onMounted(() => {
               </div>
               <p class="muted">提示词绑定：{{ formatPromptBinding(version) }}</p>
               <div class="chip-row">
-                <span v-for="item in version.selectedCapabilities" :key="`${version.versionId}-${item}`" class="chip">{{ item }}</span>
+                <span v-for="capability in version.selectedCapabilities" :key="`${version.versionId}-${capability}`" class="chip">
+                  {{ capability }}
+                </span>
               </div>
               <div v-if="version.promptVariableDefinitions?.length" class="variable-grid variable-grid--compact">
-                <article v-for="item in version.promptVariableDefinitions" :key="`${version.versionId}-${item.variableName}`" class="variable-card">
+                <article v-for="variable in version.promptVariableDefinitions" :key="`${version.versionId}-${variable.variableName}`" class="variable-card">
                   <div class="variable-card__head">
-                    <strong>{{ item.variableName }}</strong>
-                    <span class="variable-badge">{{ item.required ? '必填' : '可选' }}</span>
+                    <strong>{{ variable.variableName }}</strong>
+                    <span class="variable-badge">{{ variable.required ? '必填' : '可选' }}</span>
                   </div>
-                  <small class="muted">{{ item.description || '未配置说明' }}</small>
-                  <code class="code-line">{{ version.promptVariables?.[item.variableName] || item.defaultValue || '-' }}</code>
+                  <small class="muted">{{ variable.description || '未配置说明' }}</small>
+                  <code class="code-line">{{ version.promptVariables?.[variable.variableName] || variable.defaultValue || '-' }}</code>
                 </article>
               </div>
               <pre class="prompt-preview">{{ version.systemPrompt || '暂无系统提示词' }}</pre>
               <div class="action-row">
-                <button class="app-button app-button--ghost" :disabled="actionPending !== null" @click="handleCreateSession(version.versionNo)">创建会话</button>
-                <button class="app-button app-button--secondary" :disabled="actionPending !== null" @click="handleOpenChat(version.versionNo)">进入聊天</button>
+                <button class="app-button app-button--ghost" :disabled="actionPending !== null" @click="handleCreateSession(version.versionNo)">
+                  创建会话
+                </button>
+                <button class="app-button app-button--secondary" :disabled="actionPending !== null" @click="handleOpenChat(version.versionNo)">
+                  进入聊天
+                </button>
               </div>
             </article>
           </div>
@@ -547,7 +641,9 @@ onMounted(() => {
               <MessageSquareText :size="16" />
               创建默认会话
             </button>
-            <button class="app-button app-button--secondary full-width" :disabled="actionPending !== null" @click="handleOpenChat()">直接进入聊天页</button>
+            <button class="app-button app-button--secondary full-width" :disabled="actionPending !== null" @click="handleOpenChat()">
+              直接进入聊天页
+            </button>
             <article v-if="createdSession" class="summary-card">
               <strong>{{ createdSession.sessionId }}</strong>
               <p class="muted">绑定 Agent：{{ createdSession.agentId }}</p>
@@ -560,7 +656,6 @@ onMounted(() => {
     </section>
   </MainShell>
 </template>
-
 <style scoped>
 .agent-page {
   display: grid;
@@ -585,9 +680,11 @@ onMounted(() => {
   display: grid;
   grid-template-columns: minmax(0, 1.3fr) minmax(320px, 0.9fr);
   gap: 18px;
+  align-items: start;
 }
 .page__grid--bottom {
   grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.65fr);
+  align-items: start;
 }
 .card-section,
 .list-item,
@@ -598,6 +695,7 @@ onMounted(() => {
 .empty {
   display: grid;
   gap: 14px;
+  align-content: start;
   padding: 18px;
   border-radius: 24px;
   background: rgba(255, 255, 255, 0.04);
