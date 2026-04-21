@@ -115,12 +115,18 @@ public class SimpleAgentApplicationManager {
                 request.getDescription(),
                 request.getSystemPrompt(),
                 request.getSelectedCapabilities(),
+                request.getSelectedHookCodes(),
                 request.getPromptConfig()
         );
         agent.setCurrentVersionId(version.getId());
         agent.setLatestVersionNo(version.getVersionNo());
         agentService.updateById(agent);
-        return SimpleAgentAssembler.toCreateResponse(agent, version, request.getSelectedCapabilities());
+        return SimpleAgentAssembler.toCreateResponse(
+                agent,
+                version,
+                request.getSelectedCapabilities(),
+                request.getSelectedHookCodes()
+        );
     }
 
     /**
@@ -142,6 +148,7 @@ public class SimpleAgentApplicationManager {
                 request.getDescription(),
                 request.getSystemPrompt(),
                 request.getSelectedCapabilities(),
+                request.getSelectedHookCodes(),
                 request.getPromptConfig()
         );
         SimpleAgentAssembler.mergeAgentForUpdate(agent, request);
@@ -151,7 +158,12 @@ public class SimpleAgentApplicationManager {
             agent.setAgentStatus(SimpleAgentConstants.AGENT_STATUS_DRAFT);
         }
         agentService.updateById(agent);
-        return SimpleAgentAssembler.toCreateResponse(agent, version, request.getSelectedCapabilities());
+        return SimpleAgentAssembler.toCreateResponse(
+                agent,
+                version,
+                request.getSelectedCapabilities(),
+                request.getSelectedHookCodes()
+        );
     }
 
     /**
@@ -286,16 +298,19 @@ public class SimpleAgentApplicationManager {
             String description,
             String systemPrompt,
             List<String> selectedCapabilities,
+            List<String> selectedHookCodes,
             SimpleAgentPromptConfigDTO promptConfig
     ) {
         int nextVersionNo = agent.getLatestVersionNo() == null ? 1 : agent.getLatestVersionNo() + 1;
         List<String> capabilities = SimpleAgentAssembler.normalizeCapabilities(selectedCapabilities);
+        List<String> hookCodes = SimpleAgentAssembler.normalizeHookCodes(selectedHookCodes);
         PromptTemplateResolvedDTO promptResolved = resolvePromptConfig(promptConfig, systemPrompt);
         SimpleAgentVersionConfigDTO config = SimpleAgentAssembler.toVersionConfig(
                 agentName,
                 description,
                 promptResolved.getEffectiveSystemPrompt(),
                 capabilities,
+                hookCodes,
                 toAgentPromptConfig(promptResolved, promptConfig)
         );
         AgentVersion version = SimpleAgentAssembler.toCreateVersion(

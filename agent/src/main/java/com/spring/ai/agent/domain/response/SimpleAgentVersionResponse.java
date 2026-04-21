@@ -22,6 +22,8 @@ public class SimpleAgentVersionResponse {
 
     List<String> selectedCapabilities;
 
+    List<String> selectedHookCodes;
+
     String promptTemplateId;
 
     String promptTemplateCode;

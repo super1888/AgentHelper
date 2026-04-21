@@ -27,9 +27,14 @@ public class SimpleAgentCreateResponse {
     String description;
 
     /**
-     * 当前选择的能力项。
+     * 当前选择的能力标签。
      */
     List<String> selectedCapabilities;
+
+    /**
+     * 当前版本快照绑定的 Hook 编码列表。
+     */
+    List<String> selectedHookCodes;
 
     /**
      * 当前版本号。

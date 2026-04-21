@@ -30,6 +30,7 @@ export interface AgentVersion {
   description: string | null
   systemPrompt: string | null
   selectedCapabilities: string[]
+  selectedHookCodes: string[]
   promptTemplateId?: string | null
   promptTemplateCode?: string | null
   promptTemplateName?: string | null
@@ -61,6 +62,7 @@ export interface AgentCreatePayload {
   description: string | null
   systemPrompt: string | null
   selectedCapabilities: string[]
+  selectedHookCodes: string[]
   agentType?: string
   promptConfig?: AgentPromptConfig | null
 }
@@ -70,6 +72,7 @@ export interface AgentCreateResult {
   agentName: string
   description: string | null
   selectedCapabilities: string[]
+  selectedHookCodes: string[]
   currentVersionNo: number | null
   publishedVersionNo: number | null
   websocketEndpoint: string

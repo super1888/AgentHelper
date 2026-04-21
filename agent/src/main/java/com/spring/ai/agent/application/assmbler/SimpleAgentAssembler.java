@@ -68,6 +68,7 @@ public final class SimpleAgentAssembler {
             String description,
             String systemPrompt,
             List<String> selectedCapabilities,
+            List<String> selectedHookCodes,
             SimpleAgentPromptConfigDTO promptConfig
     ) {
         return SimpleAgentVersionConfigDTO.builder()
@@ -75,6 +76,7 @@ public final class SimpleAgentAssembler {
                 .description(trimToNull(description))
                 .systemPrompt(trimToNull(systemPrompt))
                 .selectedCapabilities(normalizeCapabilities(selectedCapabilities))
+                .selectedHookCodes(normalizeHookCodes(selectedHookCodes))
                 .promptConfig(promptConfig)
                 .build();
     }
@@ -162,13 +164,15 @@ public final class SimpleAgentAssembler {
     public static SimpleAgentCreateResponse toCreateResponse(
             Agent agent,
             AgentVersion version,
-            List<String> selectedCapabilities
+            List<String> selectedCapabilities,
+            List<String> selectedHookCodes
     ) {
         return SimpleAgentCreateResponse.builder()
                 .agentId(agent.getAgentCode())
                 .agentName(agent.getAgentName())
                 .description(agent.getDescription())
                 .selectedCapabilities(normalizeCapabilities(selectedCapabilities))
+                .selectedHookCodes(normalizeHookCodes(selectedHookCodes))
                 .currentVersionNo(version.getVersionNo())
                 .publishedVersionNo(agent.getPublishedVersionNo())
                 .websocketEndpoint("/ws")
@@ -213,6 +217,7 @@ public final class SimpleAgentAssembler {
             List<String> selectedCapabilities,
             SimpleAgentVersionConfigDTO config
     ) {
+        SimpleAgentPromptConfigDTO promptConfig = config == null ? null : config.getPromptConfig();
         return SimpleAgentVersionResponse.builder()
                 .versionId(version.getId() == null ? null : String.valueOf(version.getId()))
                 .versionNo(version.getVersionNo())
@@ -220,15 +225,16 @@ public final class SimpleAgentAssembler {
                 .description(version.getDescription())
                 .systemPrompt(version.getSystemPrompt())
                 .selectedCapabilities(normalizeCapabilities(selectedCapabilities))
-                .promptTemplateId(config.getPromptConfig() == null ? null : config.getPromptConfig().getPromptTemplateId())
-                .promptTemplateCode(config.getPromptConfig() == null ? null : config.getPromptConfig().getPromptTemplateCode())
-                .promptTemplateName(config.getPromptConfig() == null ? null : config.getPromptConfig().getPromptTemplateName())
-                .promptBindingType(config.getPromptConfig() == null ? null : config.getPromptConfig().getPromptBindingType())
-                .promptSourceType(config.getPromptConfig() == null ? null : config.getPromptConfig().getPromptSourceType())
-                .promptTemplatePath(config.getPromptConfig() == null ? null : config.getPromptConfig().getPromptTemplatePath())
-                .promptTemplateContent(config.getPromptConfig() == null ? null : config.getPromptConfig().getPromptTemplateContent())
-                .promptVariableDefinitions(config.getPromptConfig() == null ? null : config.getPromptConfig().getPromptVariableDefinitions())
-                .promptVariables(config.getPromptConfig() == null ? null : config.getPromptConfig().getPromptVariables())
+                .selectedHookCodes(normalizeHookCodes(config == null ? null : config.getSelectedHookCodes()))
+                .promptTemplateId(promptConfig == null ? null : promptConfig.getPromptTemplateId())
+                .promptTemplateCode(promptConfig == null ? null : promptConfig.getPromptTemplateCode())
+                .promptTemplateName(promptConfig == null ? null : promptConfig.getPromptTemplateName())
+                .promptBindingType(promptConfig == null ? null : promptConfig.getPromptBindingType())
+                .promptSourceType(promptConfig == null ? null : promptConfig.getPromptSourceType())
+                .promptTemplatePath(promptConfig == null ? null : promptConfig.getPromptTemplatePath())
+                .promptTemplateContent(promptConfig == null ? null : promptConfig.getPromptTemplateContent())
+                .promptVariableDefinitions(promptConfig == null ? null : promptConfig.getPromptVariableDefinitions())
+                .promptVariables(promptConfig == null ? null : promptConfig.getPromptVariables())
                 .published(version.getIsPublished() != null && version.getIsPublished() == 1)
                 .createTime(toEpochMilli(version.getCreateTime()))
                 .build();
@@ -307,6 +313,17 @@ public final class SimpleAgentAssembler {
             return List.of();
         }
         return selectedCapabilities.stream()
+                .filter(StringUtils::hasText)
+                .map(String::trim)
+                .distinct()
+                .toList();
+    }
+
+    public static List<String> normalizeHookCodes(List<String> selectedHookCodes) {
+        if (CollectionUtils.isEmpty(selectedHookCodes)) {
+            return List.of();
+        }
+        return selectedHookCodes.stream()
                 .filter(StringUtils::hasText)
                 .map(String::trim)
                 .distinct()

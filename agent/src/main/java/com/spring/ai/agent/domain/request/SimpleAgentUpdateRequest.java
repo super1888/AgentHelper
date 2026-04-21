@@ -15,5 +15,7 @@ public class SimpleAgentUpdateRequest {
 
     private List<String> selectedCapabilities;
 
+    private List<String> selectedHookCodes;
+
     private SimpleAgentPromptConfigDTO promptConfig;
 }

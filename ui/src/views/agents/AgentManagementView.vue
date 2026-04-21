@@ -5,8 +5,10 @@ import { MessageSquareText, Plus, RefreshCw, Rocket, Search, ShieldBan, Trash2 }
 import AppFeedbackDialog from '@/components/AppFeedbackDialog.vue'
 import MainShell from '@/components/MainShell.vue'
 import { createAgent, createAgentSession, disableAgent, fetchAgentDetail, publishAgent, queryAgents, removeAgent, updateAgent } from '@/api/agent'
+import { queryHooks } from '@/api/hook'
 import { queryPromptTemplates } from '@/api/prompt'
 import type { AgentCreatePayload, AgentDetail, AgentPromptConfig, AgentSessionResult, AgentSummary, AgentVersion } from '@/types/agent'
+import type { HookItem } from '@/types/hook'
 import type { PromptTemplateItem, PromptTemplateVariable } from '@/types/prompt'
 import { getErrorMessage } from '@/utils/errors'
 
@@ -18,12 +20,14 @@ const router = useRouter()
 const loading = ref(false)
 const detailLoading = ref(false)
 const promptTemplatesLoading = ref(false)
+const hooksLoading = ref(false)
 const submitting = ref(false)
 const actionPending = ref<PendingAction>(null)
 const feedback = ref('')
 const feedbackTone = ref<'success' | 'error' | 'info'>('info')
 const agents = ref<AgentSummary[]>([])
 const promptTemplates = ref<PromptTemplateItem[]>([])
+const hooks = ref<HookItem[]>([])
 const selectedAgentId = ref('')
 const selectedAgentDetail = ref<AgentDetail | null>(null)
 const createdSession = ref<AgentSessionResult | null>(null)
@@ -36,6 +40,7 @@ const form = reactive({
   agentName: '',
   description: '',
   selectedCapabilitiesText: 'knowledge_search, session_management, failover_recovery',
+  selectedHookCodes: [] as string[],
   promptMode: 'template' as PromptMode,
   selectedPromptTemplateId: '',
   customPromptContent: '',
@@ -67,6 +72,9 @@ const canPublishLatest = computed(() => Boolean(latestVersion.value) && actionPe
 const selectedPromptTemplate = computed(() => promptTemplates.value.find((item) => String(item.id) === form.selectedPromptTemplateId) ?? null)
 const selectedPromptVariables = computed<PromptTemplateVariable[]>(() => selectedPromptTemplate.value?.variableDefinitions ?? [])
 const capabilityPreview = computed(() => parseCapabilities(form.selectedCapabilitiesText))
+const availableHooks = computed(() =>
+  hooks.value.filter((item) => item.hookStatus === 'ENABLED' && item.publishStatus === 'PUBLISHED'),
+)
 const totalAgentsLabel = computed(() => `共 ${agents.value.length} 个 Agent`)
 const publishedCountLabel = computed(() => `${agents.value.filter((item) => item.agentStatus === 'PUBLISHED').length} 个已发布`)
 const formTitle = computed(() => (formMode.value === 'create' ? '创建新 Agent' : '编辑 Agent'))
@@ -99,6 +107,7 @@ function resetForm() {
   form.agentName = ''
   form.description = ''
   form.selectedCapabilitiesText = 'knowledge_search, session_management, failover_recovery'
+  form.selectedHookCodes = []
   form.promptMode = 'template'
   form.selectedPromptTemplateId = promptTemplates.value[0] ? String(promptTemplates.value[0].id) : ''
   form.customPromptContent = ''
@@ -132,6 +141,7 @@ function enterEditMode() {
   form.agentName = selectedAgentDetail.value.agentName
   form.description = selectedAgentDetail.value.description ?? ''
   form.selectedCapabilitiesText = version.selectedCapabilities.join(', ')
+  form.selectedHookCodes = [...(version.selectedHookCodes ?? [])]
   requestAnimationFrame(() => {
     formPanelRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   })
@@ -178,6 +188,7 @@ function buildPayload(): AgentCreatePayload {
     description: form.description.trim() || null,
     systemPrompt: form.promptMode === 'custom-inline' ? form.customPromptContent.trim() || null : null,
     selectedCapabilities: parseCapabilities(form.selectedCapabilitiesText),
+    selectedHookCodes: [...form.selectedHookCodes],
     agentType: 'REACT',
     promptConfig: buildPromptConfig(),
   }
@@ -193,6 +204,14 @@ function formatPromptBinding(version: AgentVersion) {
   if (version.promptBindingType === 'TEMPLATE') return version.promptTemplateName || version.promptTemplateCode || '模板绑定'
   if (version.promptSourceType === 'FILE_PATH') return version.promptTemplatePath || '文件路径'
   return '自定义文本'
+}
+
+function formatHookStage(stage?: string | null) {
+  if (stage === 'PRE_MODEL') return '模型前'
+  if (stage === 'POST_MODEL') return '模型后'
+  if (stage === 'PRE_TOOL_CALL') return '工具前'
+  if (stage === 'POST_TOOL_CALL') return '工具后'
+  return stage || '未定义阶段'
 }
 
 function formatTime(value: number | null) {
@@ -212,6 +231,17 @@ async function loadPromptTemplates() {
     setFeedback('error', getErrorMessage(error, '提示词模板加载失败。'))
   } finally {
     promptTemplatesLoading.value = false
+  }
+}
+
+async function loadHooks() {
+  hooksLoading.value = true
+  try {
+    hooks.value = await queryHooks()
+  } catch (error) {
+    setFeedback('error', getErrorMessage(error, 'Hook 列表加载失败。'))
+  } finally {
+    hooksLoading.value = false
   }
 }
 
@@ -367,7 +397,7 @@ async function handleOpenChat(versionNo?: number) {
 }
 
 onMounted(() => {
-  void Promise.all([loadAgents(), loadPromptTemplates()])
+  void Promise.all([loadAgents(), loadPromptTemplates(), loadHooks()])
 })
 </script>
 
@@ -494,10 +524,41 @@ onMounted(() => {
                 <textarea v-model="form.selectedCapabilitiesText" class="app-textarea" rows="4" placeholder="使用逗号或换行分隔多个能力标签。" />
               </div>
             </label>
+
+            <section class="section-grid__full hook-panel">
+              <div class="section-head">
+                <div>
+                  <strong>Hook 绑定</strong>
+                  <p class="muted">仅展示已发布且启用的 Hook，版本快照会固化这份选择。</p>
+                </div>
+                <small class="muted">{{ hooksLoading ? '正在加载 Hook...' : `可选 ${availableHooks.length} 个` }}</small>
+              </div>
+              <div v-if="availableHooks.length === 0" class="empty empty--compact">暂无可绑定的 Hook。</div>
+              <div v-else class="hook-grid">
+                <label
+                  v-for="hook in availableHooks"
+                  :key="hook.hookCode"
+                  class="hook-card"
+                  :class="{ 'hook-card--active': form.selectedHookCodes.includes(hook.hookCode) }"
+                >
+                  <input v-model="form.selectedHookCodes" type="checkbox" :value="hook.hookCode" />
+                  <div class="hook-card__head">
+                    <strong>{{ hook.hookName }}</strong>
+                    <span class="version-pill">{{ formatHookStage(hook.hookStage) }}</span>
+                  </div>
+                  <p class="muted">{{ hook.description || hook.hookCode }}</p>
+                  <small class="muted">风险：{{ hook.riskLevel }} · 失败策略：{{ hook.failStrategy }}</small>
+                </label>
+              </div>
+            </section>
           </div>
 
           <div class="chip-row">
             <span v-for="capability in capabilityPreview" :key="capability" class="chip">{{ capability }}</span>
+          </div>
+
+          <div v-if="form.selectedHookCodes.length > 0" class="chip-row">
+            <span v-for="hookCode in form.selectedHookCodes" :key="hookCode" class="chip chip--hook">{{ hookCode }}</span>
           </div>
 
           <button class="app-button full-width" :disabled="submitting" @click="handleSubmit">
@@ -604,6 +665,11 @@ onMounted(() => {
                   {{ capability }}
                 </span>
               </div>
+              <div v-if="version.selectedHookCodes?.length" class="chip-row">
+                <span v-for="hookCode in version.selectedHookCodes" :key="`${version.versionId}-${hookCode}`" class="chip chip--hook">
+                  {{ hookCode }}
+                </span>
+              </div>
               <div v-if="version.promptVariableDefinitions?.length" class="variable-grid variable-grid--compact">
                 <article v-for="variable in version.promptVariableDefinitions" :key="`${version.versionId}-${variable.variableName}`" class="variable-card">
                   <div class="variable-card__head">
@@ -690,6 +756,7 @@ onMounted(() => {
 .list-item,
 .summary-card,
 .version-card,
+.hook-card,
 .variable-panel,
 .variable-card,
 .empty {
@@ -704,7 +771,8 @@ onMounted(() => {
 .section-grid,
 .toolbar,
 .variable-grid,
-.mode-grid {
+.mode-grid,
+.hook-grid {
   display: grid;
   gap: 16px;
 }
@@ -720,6 +788,9 @@ onMounted(() => {
 .mode-grid,
 .variable-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.hook-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 .variable-grid--compact {
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -772,6 +843,10 @@ onMounted(() => {
   color: #d8f2ff;
   background: rgba(77, 179, 255, 0.16);
 }
+.chip--hook {
+  color: #ffe6b8;
+  background: rgba(255, 176, 86, 0.16);
+}
 .status-pill--published,
 .version-pill {
   color: #d7ffef;
@@ -793,6 +868,29 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   gap: 10px;
+}
+.hook-card {
+  position: relative;
+  cursor: pointer;
+}
+.hook-card input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+}
+.hook-card--active {
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 176, 86, 0.38),
+    0 16px 28px rgba(255, 176, 86, 0.12);
+}
+.hook-card__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+}
+.empty--compact {
+  padding: 14px 16px;
 }
 .prompt-preview,
 .code-line {
@@ -830,6 +928,7 @@ onMounted(() => {
   .toolbar,
   .mode-grid,
   .variable-grid,
+  .hook-grid,
   .variable-grid--compact {
     grid-template-columns: 1fr;
   }

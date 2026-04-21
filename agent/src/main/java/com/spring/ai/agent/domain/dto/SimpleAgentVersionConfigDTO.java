@@ -20,5 +20,7 @@ public class SimpleAgentVersionConfigDTO {
 
     private List<String> selectedCapabilities;
 
+    private List<String> selectedHookCodes;
+
     private SimpleAgentPromptConfigDTO promptConfig;
 }

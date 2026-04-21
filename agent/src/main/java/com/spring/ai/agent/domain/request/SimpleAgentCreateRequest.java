@@ -15,6 +15,8 @@ public class SimpleAgentCreateRequest {
 
     private List<String> selectedCapabilities;
 
+    private List<String> selectedHookCodes;
+
     private String agentType;
 
     private SimpleAgentPromptConfigDTO promptConfig;

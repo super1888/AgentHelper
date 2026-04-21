@@ -6,6 +6,7 @@ import com.alibaba.cloud.ai.graph.streaming.OutputType;
 import com.alibaba.cloud.ai.graph.streaming.StreamingOutput;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.spring.ai.agent.application.assmbler.SimpleAgentAssembler;
+import com.spring.ai.agent.domain.dto.SimpleAgentVersionConfigDTO;
 import com.spring.ai.agent.domain.request.SimpleAgentChatRequest;
 import com.spring.ai.agent.domain.request.SimpleAgentRecoverRequest;
 import com.spring.ai.agent.domain.response.SimpleAgentRecoverResponse;
@@ -24,10 +25,13 @@ import com.spring.ai.common.repository.service.AgentSessionEventService;
 import com.spring.ai.common.repository.service.AgentSessionService;
 import com.spring.ai.common.repository.service.AgentTaskService;
 import com.spring.ai.common.repository.service.AgentVersionService;
+import com.spring.ai.hooks.application.manager.HookRuntimeManager;
+import com.spring.ai.hooks.domain.dto.HookRuntimeResultDTO;
 import com.spring.ai.websocket.annotation.WebSocketPush;
 import com.spring.ai.websocket.service.WebSocketPushService;
 import jakarta.annotation.Resource;
 import java.time.ZoneId;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import org.springframework.ai.chat.messages.AssistantMessage;
@@ -71,6 +75,9 @@ public class SimpleAgentChatApplicationManager {
 
     @Resource
     private SimpleAgentChatPersistenceManager simpleAgentChatPersistenceManager;
+
+    @Resource
+    private HookRuntimeManager hookRuntimeManager;
 
     @Resource
     private WebSocketPushService webSocketPushService;
@@ -129,19 +136,63 @@ public class SimpleAgentChatApplicationManager {
         }
 
         ReactAgent reactAgent = simpleAgentRuntimeManager.getOrCreate(agent, version);
+        SimpleAgentVersionConfigDTO versionConfig = simpleAgentSupportManager.parseConfig(version.getConfigSnapshotJson());
+        List<String> selectedHookCodes = versionConfig == null ? null : versionConfig.getSelectedHookCodes();
         StringBuilder fullContent = new StringBuilder();
         try {
-            Flux<NodeOutput> stream = reactAgent.stream(task.getRequestMessage().trim());
+            HookRuntimeResultDTO preHookResult = hookRuntimeManager.applyPreModelHooks(
+                    session.getTenantId(),
+                    agent.getAgentCode(),
+                    session.getSessionCode(),
+                    selectedHookCodes,
+                    task.getRequestMessage().trim()
+            );
+            if (Integer.valueOf(1).equals(preHookResult.getBlocked())) {
+                simpleAgentChatPersistenceManager.handleTaskError(session, task, preHookResult.getFailureReason());
+                return;
+            }
+            String runtimeRequestMessage = preHookResult.getContent();
+            Flux<NodeOutput> stream = reactAgent.stream(runtimeRequestMessage);
             stream.doOnNext(output -> handleStreamingOutput(output, session, task, fullContent))
-                    .doOnComplete(() -> simpleAgentChatPersistenceManager.handleTaskSuccess(
+                    .doOnComplete(() -> handleTaskSuccessWithHooks(
                             session,
                             task,
+                            agent.getAgentCode(),
+                            selectedHookCodes,
+                            runtimeRequestMessage,
                             fullContent.toString()
                     ))
                     .blockLast();
         } catch (Exception e) {
             simpleAgentChatPersistenceManager.handleTaskError(session, task, resolveErrorMessage(e));
         }
+    }
+
+    private void handleTaskSuccessWithHooks(
+            AgentSession session,
+            AgentTask task,
+            String agentCode,
+            List<String> selectedHookCodes,
+            String runtimeRequestMessage,
+            String rawResponseMessage
+    ) {
+        HookRuntimeResultDTO postHookResult = hookRuntimeManager.applyPostModelHooks(
+                session.getTenantId(),
+                agentCode,
+                session.getSessionCode(),
+                selectedHookCodes,
+                runtimeRequestMessage,
+                rawResponseMessage
+        );
+        if (Integer.valueOf(1).equals(postHookResult.getBlocked())) {
+            simpleAgentChatPersistenceManager.handleTaskError(session, task, postHookResult.getFailureReason());
+            return;
+        }
+        simpleAgentChatPersistenceManager.handleTaskSuccess(
+                session,
+                task,
+                postHookResult.getContent()
+        );
     }
 
     private void handleStreamingOutput(
