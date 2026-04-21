@@ -58,6 +58,14 @@ const router = createRouter({
       },
     },
     {
+      path: '/tools',
+      name: 'tools',
+      component: () => import('@/views/tools/ToolManagementView.vue'),
+      meta: {
+        requiresAuth: true,
+      },
+    },
+    {
       path: '/vectors',
       name: 'vectors',
       component: () => import('@/views/vectors/VectorManagementView.vue'),
