@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
-import { Bot, Building2, Database, FileCode2, LogOut, ShieldCheck, Sparkles, Users, Wrench } from 'lucide-vue-next'
+import { Bot, Building2, Database, FileCode2, GitBranch, LogOut, ShieldCheck, Sparkles, Users, Wrench } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
@@ -39,6 +39,13 @@ const navItems = [
     description: 'tool registry, config, debug and risk governance',
     icon: Wrench,
     isActive: () => route.name === 'tools',
+  },
+  {
+    to: '/hooks',
+    label: 'Hooks',
+    description: 'hook orchestration, guardrail, binding and debug',
+    icon: GitBranch,
+    isActive: () => route.name === 'hooks',
   },
   {
     to: '/vectors',

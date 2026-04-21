@@ -16,16 +16,16 @@ public class CommonAsyncProperties {
 
     /**
      * 核心线程池大小。
-     * 表示线程池中保持的核心线程数量，默认值为4。
+     * 表示线程池中保持的核心线程数量，默认值为（默认：CPU核心数）。
      * 即使线程池空闲，这些线程也不会被销毁。
      */
-    private int corePoolSize = 4;
+    private int corePoolSize = Runtime.getRuntime().availableProcessors();
     /**
      * 最大线程池大小。
-     * 表示线程池中允许的最大线程数量，默认值为8。
+     * 表示线程池中允许的最大线程数量，默认值为（默认：CPU核心数 * 2）。
      * 当任务队列满了之后，线程池会创建新线程来处理任务，直到达到最大线程数。
      */
-    private int maxPoolSize = 8;
+    private int maxPoolSize = Runtime.getRuntime().availableProcessors() * 2;
     /**
      * 任务队列容量。
      * 表示线程池中任务队列的最大容量，默认值为200。

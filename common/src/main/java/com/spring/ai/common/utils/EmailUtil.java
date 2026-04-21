@@ -102,13 +102,5 @@ public class EmailUtil {
         });
     }
 
-    // ====================== 测试 ======================
-    public static void main(String[] args) throws Exception {
-        // 发送纯文本
-        sendTextMail("3034378787@qq.com", "测试标题", "这是一封Java发送的测试邮件");
-
-        // 发送HTML + 附件
-        // sendMailWithAttachment("xxx@qq.com", "带附件测试", "<h2>你好</h2><p>这是HTML内容</p>", "C:/test.txt");
-    }
 
 }
