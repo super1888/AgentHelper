@@ -48,6 +48,13 @@ const navItems = [
     isActive: () => route.name === 'hooks',
   },
   {
+    to: '/interceptors',
+    label: 'Interceptors',
+    description: 'interceptor governance, debug, binding and runtime policy',
+    icon: GitBranch,
+    isActive: () => route.name === 'interceptors',
+  },
+  {
     to: '/vectors',
     label: '向量管理',
     description: '知识入库与语义检索',

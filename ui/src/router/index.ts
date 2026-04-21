@@ -74,6 +74,14 @@ const router = createRouter({
       },
     },
     {
+      path: '/interceptors',
+      name: 'interceptors',
+      component: () => import('@/views/interceptors/InterceptorManagementView.vue'),
+      meta: {
+        requiresAuth: true,
+      },
+    },
+    {
       path: '/vectors',
       name: 'vectors',
       component: () => import('@/views/vectors/VectorManagementView.vue'),
