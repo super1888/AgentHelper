@@ -52,41 +52,63 @@ import redis.clients.jedis.JedisPooled;
 import redis.clients.jedis.params.ScanParams;
 import redis.clients.jedis.resps.ScanResult;
 
+/**
+ * 向量存储服务实现类，提供文档上传、检索、删除等功能
+ */
 @Service
 @Slf4j
 public class VectorStoreServiceImpl implements VectorStoreService {
 
+    // 默认内容类型
     private static final String DEFAULT_CONTENT_TYPE = "application/octet-stream";
+    // 存储状态：活跃
     private static final String STORE_STATUS_ACTIVE = "ACTIVE";
+    // 存储状态：已删除
     private static final String STORE_STATUS_DELETED = "DELETED";
+    // 最小自适应分块大小
     private static final int MIN_ADAPTIVE_CHUNK_SIZE = 100;
+    // 最大自适应分割深度
     private static final int MAX_ADAPTIVE_SPLIT_DEPTH = 3;
+    // 文件列表扫描数量
     private static final int FILE_LIST_SCAN_COUNT = 200;
 
+    // 注入向量存储组件
     @Resource
     private VectorStore vectorStore;
 
+    // 注入文本分割器
     @Resource
     private TokenTextSplitter tokenTextSplitter;
 
+    // 注入向量存储配置属性
     @Resource
     private VectorStoreProperties vectorStoreProperties;
 
+    // 注入多文档阅读器注册表
     @Resource
     private MultipartDocumentReaderRegistry readerRegistry;
 
+    // 注入Redis向量存储能力检查器
     @Resource
     private RedisVectorStoreCapabilityChecker capabilityChecker;
 
+    // 注入向量存储文件记录服务
     @Resource
     private VectorStoreFileRecordService vectorStoreFileRecordService;
 
+    // 注入公共异步执行器
     @Resource(name = CommonAsyncConfig.COMMON_ASYNC_EXECUTOR)
     private Executor commonAsyncExecutor;
 
+    // Redis向量存储前缀
     @Value("${spring.ai.vectorstore.redis.prefix:vector:}")
     private String redisVectorPrefix;
 
+    /**
+     * 上传文件到向量存储
+     * @param file 上传的文件
+     * @return 上传响应结果
+     */
     @Override
     public VectorStoreUploadResponse upload(MultipartFile file) {
         validateFile(file);
@@ -102,6 +124,7 @@ public class VectorStoreServiceImpl implements VectorStoreService {
             throw VectorStoreException.badRequest("文档解析后未获取到有效内容");
         }
 
+        // 标准化文档
         List<Document> normalizedDocuments = sourceDocuments.stream()
                 .map(document -> enrichDocument(document, file, fileName, extension, uploadedAt))
                 .filter(this::hasTextContent)
@@ -110,12 +133,15 @@ public class VectorStoreServiceImpl implements VectorStoreService {
             throw VectorStoreException.badRequest("文档标准化后内容为空");
         }
 
+        // 分块处理文档
         List<Document> chunkDocuments = tokenTextSplitter.apply(normalizedDocuments);
         if (chunkDocuments.isEmpty()) {
             throw VectorStoreException.badRequest("文档切分后未生成任何分片");
         }
 
+        // 持久化文档
         persistDocuments(chunkDocuments);
+        // 保存或更新文件记录
         saveOrUpdateFileRecord(file, fileName, extension, uploadedAt, sourceDocuments.size(), chunkDocuments.size());
         log.info("Stored vector document, fileName={}, sourceDocuments={}, chunks={}",
                 fileName, sourceDocuments.size(), chunkDocuments.size());
@@ -131,6 +157,10 @@ public class VectorStoreServiceImpl implements VectorStoreService {
                 .build();
     }
 
+    /**
+     * 列出所有文件
+     * @return 文件列表响应结果
+     */
     @Override
     public VectorStoreFileListResponse listFiles() {
         List<VectorStoreFileResponse> items = vectorStoreFileRecordService.listByModule(MODULE_NAME).stream()
@@ -143,6 +173,11 @@ public class VectorStoreServiceImpl implements VectorStoreService {
                 .build();
     }
 
+    /**
+     * 列出指定文件的所有文档
+     * @param fileName 文件名
+     * @return 文档列表响应结果
+     */
     @Override
     public VectorStoreDocumentListResponse listDocuments(String fileName) {
         capabilityChecker.ensureReady();
@@ -168,6 +203,14 @@ public class VectorStoreServiceImpl implements VectorStoreService {
         }
     }
 
+    /**
+     * 搜索文档
+     * @param query 查询内容
+     * @param fileName 文件名（可选）
+     * @param topK 返回结果数量
+     * @param similarityThreshold 相似度阈值
+     * @return 搜索响应结果
+     */
     @Override
     public VectorStoreSearchResponse search(String query, String fileName, Integer topK, Double similarityThreshold) {
         capabilityChecker.ensureReady();
@@ -204,6 +247,10 @@ public class VectorStoreServiceImpl implements VectorStoreService {
         }
     }
 
+    /**
+     * 获取统计信息
+     * @return 统计响应结果
+     */
     @Override
     public VectorStoreStatisticsResponse statistics() {
         List<VectorStoreFileRecord> records = vectorStoreFileRecordService.listByModule(MODULE_NAME);
@@ -227,6 +274,10 @@ public class VectorStoreServiceImpl implements VectorStoreService {
                 .build();
     }
 
+    /**
+     * 删除所有向量数据
+     * @return 删除响应结果
+     */
     @Override
     public VectorStoreDeleteResponse deleteAll() {
         capabilityChecker.ensureReady();
@@ -243,6 +294,11 @@ public class VectorStoreServiceImpl implements VectorStoreService {
         }
     }
 
+    /**
+     * 根据文件名删除向量数据
+     * @param fileName 文件名
+     * @return 删除响应结果
+     */
     @Override
     public VectorStoreDeleteResponse deleteByFileName(String fileName) {
         capabilityChecker.ensureReady();
@@ -267,6 +323,10 @@ public class VectorStoreServiceImpl implements VectorStoreService {
         }
     }
 
+    /**
+     * 持久化文档列表
+     * @param chunkDocuments 分块后的文档列表
+     */
     private void persistDocuments(List<Document> chunkDocuments) {
         List<List<Document>> batches = ParallelExecutionUtils.partition(chunkDocuments, validateWriteBatchSize());
         try {
@@ -280,6 +340,11 @@ public class VectorStoreServiceImpl implements VectorStoreService {
         }
     }
 
+    /**
+     * 持久化文档批次
+     * @param batch 文档批次
+     * @param splitDepth 分割深度
+     */
     private void persistBatch(List<Document> batch, int splitDepth) {
         try {
             vectorStore.add(batch);
@@ -299,12 +364,22 @@ public class VectorStoreServiceImpl implements VectorStoreService {
         }
     }
 
+    /**
+     * 判断是否使用并行写入
+     * @param chunkCount 分块数量
+     * @param batchCount 批次数量
+     * @return 是否使用并行写入
+     */
     private boolean shouldUseParallelWrite(int chunkCount, int batchCount) {
         return vectorStoreProperties.isParallelWriteEnabled()
                 && chunkCount >= vectorStoreProperties.getParallelWriteThreshold()
                 && batchCount > 1;
     }
 
+    /**
+     * 验证写入批次大小
+     * @return 批次大小
+     */
     private int validateWriteBatchSize() {
         int batchSize = vectorStoreProperties.getWriteBatchSize();
         if (batchSize <= 0) {
@@ -313,6 +388,12 @@ public class VectorStoreServiceImpl implements VectorStoreService {
         return batchSize;
     }
 
+    /**
+     * 自适应分割文档
+     * @param batch 文档批次
+     * @param splitDepth 分割深度
+     * @return 分割后的文档列表
+     */
     private List<Document> adaptiveSplit(List<Document> batch, int splitDepth) {
         int adaptiveChunkSize = Math.max(
                 MIN_ADAPTIVE_CHUNK_SIZE,
@@ -327,16 +408,30 @@ public class VectorStoreServiceImpl implements VectorStoreService {
         return adaptiveSplitter.apply(batch);
     }
 
+    /**
+     * 验证上传文件
+     * @param file 上传的文件
+     */
     private void validateFile(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw VectorStoreException.badRequest("上传文件不能为空");
         }
     }
 
+    /**
+     * 获取文件名
+     * @param file 上传的文件
+     * @return 文件名
+     */
     private String requireFileName(MultipartFile file) {
         return normalizeRequiredText(file.getOriginalFilename(), "无法获取上传文件名");
     }
 
+    /**
+     * 解析文件扩展名
+     * @param fileName 文件名
+     * @return 文件扩展名
+     */
     private String resolveExtension(String fileName) {
         String extension = StringUtils.getFilenameExtension(fileName);
         if (!StringUtils.hasText(extension)) {
@@ -345,6 +440,15 @@ public class VectorStoreServiceImpl implements VectorStoreService {
         return extension.toLowerCase(Locale.ROOT);
     }
 
+    /**
+     * 丰富文档元数据
+     * @param document 原始文档
+     * @param file 上传的文件
+     * @param fileName 文件名
+     * @param extension 文件扩展名
+     * @param uploadedAt 上传时间
+     * @return 丰富后的文档
+     */
     private Document enrichDocument(
             Document document,
             MultipartFile file,
@@ -371,10 +475,20 @@ public class VectorStoreServiceImpl implements VectorStoreService {
                 .build();
     }
 
+    /**
+     * 检查文档是否包含文本内容
+     * @param document 文档
+     * @return 是否包含文本内容
+     */
     private boolean hasTextContent(Document document) {
         return StringUtils.hasText(document.getText());
     }
 
+    /**
+     * 构建搜索过滤器
+     * @param fileName 文件名
+     * @return 过滤表达式
+     */
     private Expression buildSearchFilter(String fileName) {
         FilterExpressionBuilder filterExpressionBuilder = new FilterExpressionBuilder();
         var moduleFilter = filterExpressionBuilder.eq(METADATA_MODULE, MODULE_NAME);
@@ -386,6 +500,11 @@ public class VectorStoreServiceImpl implements VectorStoreService {
                 .build();
     }
 
+    /**
+     * 验证topK参数
+     * @param topK topK值
+     * @return 验证后的topK值
+     */
     private int validateTopK(Integer topK) {
         int resolvedTopK = topK == null ? vectorStoreProperties.getDefaultTopK() : topK;
         if (resolvedTopK <= 0) {
@@ -394,6 +513,11 @@ public class VectorStoreServiceImpl implements VectorStoreService {
         return resolvedTopK;
     }
 
+    /**
+     * 验证相似度阈值
+     * @param similarityThreshold 相似度阈值
+     * @return 验证后的相似度阈值
+     */
     private Double validateSimilarityThreshold(Double similarityThreshold) {
         if (similarityThreshold == null) {
             return null;
@@ -404,10 +528,21 @@ public class VectorStoreServiceImpl implements VectorStoreService {
         return similarityThreshold;
     }
 
+    /**
+     * 解析内容类型
+     * @param file 上传的文件
+     * @return 内容类型
+     */
     private String resolveContentType(MultipartFile file) {
         return StringUtils.hasText(file.getContentType()) ? file.getContentType() : DEFAULT_CONTENT_TYPE;
     }
 
+    /**
+     * 规范化必需的文本
+     * @param value 文本值
+     * @param errorMessage 错误消息
+     * @return 规范化后的文本
+     */
     private String normalizeRequiredText(String value, String errorMessage) {
         if (!StringUtils.hasText(value)) {
             throw VectorStoreException.badRequest(errorMessage);
@@ -415,10 +550,19 @@ public class VectorStoreServiceImpl implements VectorStoreService {
         return value.trim();
     }
 
+    /**
+     * 规范化可选的文本
+     * @param value 文本值
+     * @return 规范化后的文本
+     */
     private String normalizeOptionalText(String value) {
         return StringUtils.hasText(value) ? value.trim() : null;
     }
 
+    /**
+     * 解析Jedis客户端
+     * @return Jedis客户端
+     */
     private JedisPooled resolveJedisClient() {
         return vectorStore.getNativeClient()
                 .filter(JedisPooled.class::isInstance)
@@ -428,6 +572,11 @@ public class VectorStoreServiceImpl implements VectorStoreService {
                         "当前向量存储未提供 Jedis 客户端"));
     }
 
+    /**
+     * 扫描向量键
+     * @param jedis Jedis客户端
+     * @return 向量键列表
+     */
     private List<String> scanVectorKeys(JedisPooled jedis) {
         List<String> keys = new ArrayList<>();
         String cursor = ScanParams.SCAN_POINTER_START;
@@ -444,6 +593,12 @@ public class VectorStoreServiceImpl implements VectorStoreService {
         return keys;
     }
 
+    /**
+     * 读取存储的文档
+     * @param jedis Jedis客户端
+     * @param key 文档键
+     * @return 文档映射
+     */
     @SuppressWarnings("unchecked")
     private Map<String, Object> readStoredDocument(JedisPooled jedis, String key) {
         Object jsonObject = jedis.jsonGet(key);
@@ -453,6 +608,15 @@ public class VectorStoreServiceImpl implements VectorStoreService {
         return Map.of();
     }
 
+    /**
+     * 保存或更新文件记录
+     * @param file 上传的文件
+     * @param fileName 文件名
+     * @param extension 文件扩展名
+     * @param uploadedAt 上传时间
+     * @param sourceDocumentCount 源文档数量
+     * @param chunkCount 分块数量
+     */
     private void saveOrUpdateFileRecord(
             MultipartFile file,
             String fileName,
@@ -478,6 +642,10 @@ public class VectorStoreServiceImpl implements VectorStoreService {
         vectorStoreFileRecordService.saveOrUpdate(record);
     }
 
+    /**
+     * 标记记录为已删除
+     * @param fileName 文件名
+     */
     private void markRecordDeleted(String fileName) {
         VectorStoreFileRecord record = vectorStoreFileRecordService.getByModuleAndFileName(MODULE_NAME, fileName);
         if (record == null) {
@@ -488,6 +656,9 @@ public class VectorStoreServiceImpl implements VectorStoreService {
         vectorStoreFileRecordService.updateById(record);
     }
 
+    /**
+     * 标记所有记录为已删除
+     */
     private void markAllRecordsDeleted() {
         List<VectorStoreFileRecord> records = vectorStoreFileRecordService.listByModule(MODULE_NAME);
         if (records.isEmpty()) {
@@ -500,6 +671,11 @@ public class VectorStoreServiceImpl implements VectorStoreService {
         vectorStoreFileRecordService.updateBatchById(records);
     }
 
+    /**
+     * 转换文件记录为响应对象
+     * @param record 文件记录
+     * @return 文件响应对象
+     */
     private VectorStoreFileResponse toFileResponse(VectorStoreFileRecord record) {
         return VectorStoreFileResponse.builder()
                 .id(record.getId())
@@ -515,11 +691,14 @@ public class VectorStoreServiceImpl implements VectorStoreService {
                 .build();
     }
 
+    /**
+     * 转换文档为响应对象
+     * @param document 文档
+     * @return 文档响应对象
+     */
     private VectorStoreDocumentResponse toDocumentResponse(Document document) {
-        Map<String, Object> metadata = new LinkedHashMap<>();
-        if (document.getMetadata() != null) {
-            metadata.putAll(document.getMetadata());
-        }
+        document.getMetadata();
+        Map<String, Object> metadata = new LinkedHashMap<>(document.getMetadata());
         return VectorStoreDocumentResponse.builder()
                 .id(document.getId())
                 .content(document.getText())
@@ -528,6 +707,11 @@ public class VectorStoreServiceImpl implements VectorStoreService {
                 .build();
     }
 
+    /**
+     * 转换文档映射为响应对象
+     * @param documentMap 文档映射
+     * @return 文档响应对象
+     */
     private VectorStoreDocumentResponse toDocumentResponse(Map<String, Object> documentMap) {
         Object content = documentMap.getOrDefault("content", documentMap.get("text"));
         Map<String, Object> metadata = extractMetadata(documentMap);
@@ -538,6 +722,11 @@ public class VectorStoreServiceImpl implements VectorStoreService {
                 .build();
     }
 
+    /**
+     * 提取文档元数据
+     * @param documentMap 文档映射
+     * @return 元数据映射
+     */
     @SuppressWarnings("unchecked")
     private Map<String, Object> extractMetadata(Map<String, Object> documentMap) {
         Object metadata = documentMap.get("metadata");
@@ -553,10 +742,19 @@ public class VectorStoreServiceImpl implements VectorStoreService {
         return fallbackMetadata;
     }
 
+    /**
+     * 将对象转换为字符串
+     * @param value 对象值
+     * @return 字符串值
+     */
     private String asString(Object value) {
         return value == null ? null : String.valueOf(value);
     }
 
+    /**
+     * 转换向量存储异常
+     * @return 向量存储异常
+     */
     private VectorStoreException translateVectorStoreException(String action, RuntimeException exception) {
         Throwable rootCause = unwrapCause(exception);
         String message = rootCause.getMessage();
@@ -593,6 +791,11 @@ public class VectorStoreServiceImpl implements VectorStoreService {
         return VectorStoreException.internalError("执行" + action + "时向量库操作失败", exception);
     }
 
+    /**
+     * 检查是否为令牌限制异常
+     * @param throwable 异常对象
+     * @return 是否为令牌限制异常
+     */
     private boolean isTokenLimitException(Throwable throwable) {
         String message = throwable == null ? null : throwable.getMessage();
         return message != null && (
@@ -601,6 +804,11 @@ public class VectorStoreServiceImpl implements VectorStoreService {
                         || message.contains("input tokens"));
     }
 
+    /**
+     * 解包异常原因
+     * @param throwable 异常对象
+     * @return 根本原因
+     */
     private Throwable unwrapCause(Throwable throwable) {
         Throwable current = throwable;
         while (current.getCause() != null && current.getCause() != current) {

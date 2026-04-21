@@ -49,27 +49,33 @@ import org.springframework.util.StringUtils;
 @Component
 public class SimpleAgentApplicationManager {
 
+    // 注入所需的Service组件
     @Resource
-    private AgentService agentService;
+    private AgentService agentService; // Agent主档服务
 
     @Resource
-    private AgentVersionService agentVersionService;
+    private AgentVersionService agentVersionService; // Agent版本服务
 
     @Resource
-    private AgentSessionService agentSessionService;
+    private AgentSessionService agentSessionService; // Agent会话服务
 
     @Resource
-    private AgentSessionEventService agentSessionEventService;
+    private AgentSessionEventService agentSessionEventService; // Agent会话事件服务
 
     @Resource
-    private AgentTaskService agentTaskService;
+    private AgentTaskService agentTaskService; // Agent任务服务
 
     @Resource
-    private SimpleAgentSupportManager simpleAgentSupportManager;
+    private SimpleAgentSupportManager simpleAgentSupportManager; // SimpleAgent支持管理器
 
     @Resource
-    private PromptTemplateResolver promptTemplateResolver;
+    private PromptTemplateResolver promptTemplateResolver; // 提示词模板解析器
 
+    /**
+     * 获取当前用户的所有Agent列表
+     *
+     * @return Agent摘要列表
+     */
     public List<SimpleAgentSummaryResponse> listAgents() {
         Long tenantId = simpleAgentSupportManager.getCurrentTenantId();
         Long currentUserId = simpleAgentSupportManager.getCurrentUserId();
@@ -79,6 +85,12 @@ public class SimpleAgentApplicationManager {
                 .toList();
     }
 
+    /**
+     * 创建新的Agent
+     *
+     * @param request 创建Agent请求
+     * @return 创建响应
+     */
     @Transactional(rollbackFor = Exception.class)
     public SimpleAgentCreateResponse createAgent(SimpleAgentCreateRequest request) {
         validateCreateRequest(request);
@@ -86,6 +98,7 @@ public class SimpleAgentApplicationManager {
         Long currentUserId = simpleAgentSupportManager.getCurrentUserId();
         String currentUserName = simpleAgentSupportManager.getCurrentUserName();
 
+        // 转换为Agent实体并保存
         Agent agent = SimpleAgentAssembler.toCreateAgent(
                 request,
                 resolveAgentType(request.getAgentType()),
@@ -95,6 +108,7 @@ public class SimpleAgentApplicationManager {
         );
         agentService.save(agent);
 
+        // 创建初始版本
         AgentVersion version = createVersion(
                 agent,
                 request.getAgentName(),
@@ -109,11 +123,19 @@ public class SimpleAgentApplicationManager {
         return SimpleAgentAssembler.toCreateResponse(agent, version, request.getSelectedCapabilities());
     }
 
+    /**
+     * 更新Agent信息
+     *
+     * @param agentCode Agent编码
+     * @param request 更新请求
+     * @return 更新响应
+     */
     @Transactional(rollbackFor = Exception.class)
     public SimpleAgentCreateResponse updateAgent(String agentCode, SimpleAgentUpdateRequest request) {
         Agent agent = simpleAgentSupportManager.requireAgent(agentCode);
         validateUpdateRequest(request);
 
+        // 创建新版本并更新Agent信息
         AgentVersion version = createVersion(
                 agent,
                 request.getAgentName(),
@@ -132,12 +154,19 @@ public class SimpleAgentApplicationManager {
         return SimpleAgentAssembler.toCreateResponse(agent, version, request.getSelectedCapabilities());
     }
 
+    /**
+     * 发布Agent
+     *
+     * @param agentCode Agent编码
+     * @param versionNo 版本号，为空则使用最新版本
+     */
     @Transactional(rollbackFor = Exception.class)
     public void publishAgent(String agentCode, Integer versionNo) {
         Agent agent = simpleAgentSupportManager.requireAgent(agentCode);
         Integer targetVersionNo = versionNo == null ? agent.getLatestVersionNo() : versionNo;
         AgentVersion version = simpleAgentSupportManager.requireAgentVersion(agent.getId(), targetVersionNo);
 
+        // 取消其他版本的发布状态，设置当前版本为已发布
         agentVersionService.update(Wrappers.lambdaUpdate(AgentVersion.class)
                 .eq(AgentVersion::getAgentId, agent.getId())
                 .eq(AgentVersion::getTenantId, agent.getTenantId())
@@ -145,12 +174,18 @@ public class SimpleAgentApplicationManager {
         version.setIsPublished(1);
         agentVersionService.updateById(version);
 
+        // 更新Agent的发布版本信息
         agent.setPublishedVersionId(version.getId());
         agent.setPublishedVersionNo(version.getVersionNo());
         agent.setAgentStatus(SimpleAgentConstants.AGENT_STATUS_PUBLISHED);
         agentService.updateById(agent);
     }
 
+    /**
+     * 禁用Agent
+     *
+     * @param agentCode Agent编码
+     */
     @Transactional(rollbackFor = Exception.class)
     public void disableAgent(String agentCode) {
         Agent agent = simpleAgentSupportManager.requireAgent(agentCode);
