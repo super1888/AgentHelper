@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spring.ai.common.enums.ErrorCodeEnum;
 import com.spring.ai.common.exception.BusinessException;
+import com.spring.ai.common.exception.BusinessExceptions;
 import com.spring.ai.common.repository.enitiy.ToolRecord;
 import com.spring.ai.common.repository.service.ToolExecutionLogRecordService;
 import com.spring.ai.common.repository.service.ToolRecordService;
@@ -65,7 +66,7 @@ public class ToolSupportManager {
     public ToolRecord requireTool(Long toolId) {
         ToolRecord record = toolRecordService.getById(toolId);
         if (record == null || !getCurrentTenantId().equals(record.getTenantId()) || Integer.valueOf(1).equals(record.getDeletedFlag())) {
-            throw new BusinessException(ErrorCodeEnum.NOT_FOUND, HttpStatus.NOT_FOUND, "未找到工具: " + toolId);
+            throw BusinessExceptions.notFound("未找到工具: " + toolId);
         }
         return record;
     }

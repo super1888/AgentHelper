@@ -1,8 +1,5 @@
 package com.spring.ai.a2a.application.manager;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spring.ai.a2a.config.A2aManagementConstants;
 import com.spring.ai.a2a.domain.request.A2aAgentCardSaveRequest;
 import com.spring.ai.a2a.domain.request.A2aDispatchRequest;
@@ -13,8 +10,7 @@ import com.spring.ai.a2a.domain.response.A2aRouteResponse;
 import com.spring.ai.a2a.domain.response.A2aStatisticsResponse;
 import com.spring.ai.a2a.domain.response.A2aTaskResponse;
 import com.spring.ai.a2a.provider.RemoteAgent;
-import com.spring.ai.common.enums.ErrorCodeEnum;
-import com.spring.ai.common.exception.BusinessException;
+import com.spring.ai.common.exception.BusinessExceptions;
 import com.spring.ai.common.repository.enitiy.A2aAgentCardRecord;
 import com.spring.ai.common.repository.enitiy.A2aExecutionLogRecord;
 import com.spring.ai.common.repository.enitiy.A2aRouteRecord;
@@ -23,10 +19,10 @@ import com.spring.ai.common.repository.service.A2aAgentCardRecordService;
 import com.spring.ai.common.repository.service.A2aExecutionLogRecordService;
 import com.spring.ai.common.repository.service.A2aRouteRecordService;
 import com.spring.ai.common.repository.service.A2aTaskRecordService;
+import com.spring.ai.common.utils.CommonJsonUtils;
+import com.spring.ai.common.utils.CommonTextUtils;
 import com.spring.ai.common.web.CurrentUserContextSupport;
 import jakarta.annotation.Resource;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -35,7 +31,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -46,9 +41,6 @@ import org.springframework.util.StringUtils;
  */
 @Component
 public class A2aApplicationManager {
-
-    private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {
-    };
 
     @Resource
     private A2aAgentCardRecordService agentCardRecordService;
@@ -66,7 +58,7 @@ public class A2aApplicationManager {
     private CurrentUserContextSupport currentUserContextSupport;
 
     @Resource
-    private ObjectMapper objectMapper;
+    private CommonJsonUtils commonJsonUtils;
 
     @Resource
     private RemoteAgent remoteAgent;
@@ -86,19 +78,19 @@ public class A2aApplicationManager {
         A2aAgentCardRecord record = agentCardRecordService.getByAgentCode(tenantId, request.getAgentCode());
         if (record == null) {
             record = new A2aAgentCardRecord();
-            record.setAgentCode(trim(request.getAgentCode()));
+            record.setAgentCode(CommonTextUtils.trim(request.getAgentCode()));
             record.setTenantId(tenantId);
             record.setDeletedFlag(0);
             record.setPublishStatus(A2aManagementConstants.PUBLISH_DRAFT);
         }
         mergeAgentCard(record, request);
-        record.setExt(toJson(Map.of(
-                "capabilities", emptyIfNull(request.getCapabilities()),
-                "inputModes", emptyIfNull(request.getInputModes()),
-                "outputModes", emptyIfNull(request.getOutputModes()),
+        record.setExt(commonJsonUtils.toJson(Map.of(
+                "capabilities", CommonTextUtils.emptyIfNull(request.getCapabilities()),
+                "inputModes", CommonTextUtils.emptyIfNull(request.getInputModes()),
+                "outputModes", CommonTextUtils.emptyIfNull(request.getOutputModes()),
                 "dispatchConfig", Map.of("retryTimes", normalizeRetryTimes(request.getRetryTimes())),
-                "authConfig", safeMap(request.getAuthConfig()),
-                "metadata", safeMap(request.getMetadata())
+                "authConfig", commonJsonUtils.safeMap(request.getAuthConfig()),
+                "metadata", commonJsonUtils.safeMap(request.getMetadata())
         )));
         agentCardRecordService.saveOrUpdate(record);
         return toAgentCardResponse(record);
@@ -125,7 +117,7 @@ public class A2aApplicationManager {
     public A2aAgentCardResponse restoreAgentCard(Long id) {
         A2aAgentCardRecord record = agentCardRecordService.getById(id);
         if (record == null || !Objects.equals(record.getTenantId(), currentTenantId()) || !Integer.valueOf(1).equals(record.getDeletedFlag())) {
-            throw notFound("A2A Agent Card not found: " + id);
+            throw BusinessExceptions.notFound("A2A Agent Card not found: " + id);
         }
         record.setDeletedFlag(0);
         agentCardRecordService.updateById(record);
@@ -143,18 +135,18 @@ public class A2aApplicationManager {
         A2aRouteRecord record = routeRecordService.getByRouteCode(tenantId, request.getRouteCode());
         if (record == null) {
             record = new A2aRouteRecord();
-            record.setRouteCode(trim(request.getRouteCode()));
+            record.setRouteCode(CommonTextUtils.trim(request.getRouteCode()));
             record.setTenantId(tenantId);
         }
-        record.setRouteName(trim(request.getRouteName()));
-        record.setSourceAgentCode(trimToNull(request.getSourceAgentCode()));
-        record.setTargetAgentCode(trim(request.getTargetAgentCode()));
-        record.setTaskType(trim(request.getTaskType()));
-        record.setRouteStatus(defaultText(request.getRouteStatus(), A2aManagementConstants.STATUS_ENABLED));
+        record.setRouteName(CommonTextUtils.trim(request.getRouteName()));
+        record.setSourceAgentCode(CommonTextUtils.trimToNull(request.getSourceAgentCode()));
+        record.setTargetAgentCode(CommonTextUtils.trim(request.getTargetAgentCode()));
+        record.setTaskType(CommonTextUtils.trim(request.getTaskType()));
+        record.setRouteStatus(CommonTextUtils.defaultText(request.getRouteStatus(), A2aManagementConstants.STATUS_ENABLED));
         record.setPriorityNo(request.getPriorityNo() == null ? 100 : request.getPriorityNo());
         record.setFailoverEnabled(request.getFailoverEnabled() == null ? 0 : request.getFailoverEnabled());
-        record.setFallbackAgentCodes(trimToNull(request.getFallbackAgentCodes()));
-        record.setRemark(trimToNull(request.getRemark()));
+        record.setFallbackAgentCodes(CommonTextUtils.trimToNull(request.getFallbackAgentCodes()));
+        record.setRemark(CommonTextUtils.trimToNull(request.getRemark()));
         routeRecordService.saveOrUpdate(record);
         return toRouteResponse(record);
     }
@@ -162,7 +154,7 @@ public class A2aApplicationManager {
     @Transactional(rollbackFor = Exception.class)
     public A2aTaskResponse dispatch(A2aDispatchRequest request) {
         if (request == null || !StringUtils.hasText(request.getTaskType())) {
-            throw badRequest("taskType is required");
+            throw BusinessExceptions.badRequest("taskType is required");
         }
         Long tenantId = currentTenantId();
         long startedAt = System.currentTimeMillis();
@@ -171,23 +163,23 @@ public class A2aApplicationManager {
                 ? request.getTargetAgentCode().trim()
                 : route == null ? null : route.getTargetAgentCode();
         if (!StringUtils.hasText(primaryAgentCode)) {
-            throw badRequest("No target agent matched");
+            throw BusinessExceptions.badRequest("No target agent matched");
         }
 
         A2aTaskRecord task = new A2aTaskRecord();
         task.setTaskCode(UUID.randomUUID().toString());
-        task.setTaskType(trim(request.getTaskType()));
-        task.setSourceAgentCode(trimToNull(request.getSourceAgentCode()));
+        task.setTaskType(CommonTextUtils.trim(request.getTaskType()));
+        task.setSourceAgentCode(CommonTextUtils.trimToNull(request.getSourceAgentCode()));
         task.setTargetAgentCode(primaryAgentCode);
         task.setRouteCode(route == null ? null : route.getRouteCode());
-        task.setRequestPayloadJson(toJson(safeMap(request.getPayload())));
+        task.setRequestPayloadJson(commonJsonUtils.toJson(commonJsonUtils.safeMap(request.getPayload())));
         task.setTenantId(tenantId);
         String traceId = UUID.randomUUID().toString();
         try {
             Map<String, Object> response = invokeWithRetryAndFallback(request, tenantId, route, primaryAgentCode, task, traceId);
             task.setTargetAgentCode(String.valueOf(response.get("targetAgentCode")));
             task.setTaskStatus(A2aManagementConstants.TASK_SUCCESS);
-            task.setResponsePayloadJson(toJson(response));
+            task.setResponsePayloadJson(commonJsonUtils.toJson(response));
             task.setElapsedMs(System.currentTimeMillis() - startedAt);
             taskRecordService.save(task);
         } catch (RuntimeException e) {
@@ -229,20 +221,20 @@ public class A2aApplicationManager {
     }
 
     private void mergeAgentCard(A2aAgentCardRecord record, A2aAgentCardSaveRequest request) {
-        record.setAgentName(trim(request.getAgentName()));
-        record.setDescription(trimToNull(request.getDescription()));
-        record.setEndpointUrl(trim(request.getEndpointUrl()));
-        record.setProtocolVersion(defaultText(request.getProtocolVersion(), "1.0"));
-        record.setTransportType(defaultText(request.getTransportType(), "HTTP"));
-        record.setAuthType(defaultText(request.getAuthType(), "NONE"));
-        record.setAgentStatus(defaultText(request.getAgentStatus(), A2aManagementConstants.STATUS_ENABLED));
-        record.setRiskLevel(defaultText(request.getRiskLevel(), "MEDIUM"));
-        record.setTrustLevel(defaultText(request.getTrustLevel(), "INTERNAL"));
-        record.setOwnerTeam(trimToNull(request.getOwnerTeam()));
+        record.setAgentName(CommonTextUtils.trim(request.getAgentName()));
+        record.setDescription(CommonTextUtils.trimToNull(request.getDescription()));
+        record.setEndpointUrl(CommonTextUtils.trim(request.getEndpointUrl()));
+        record.setProtocolVersion(CommonTextUtils.defaultText(request.getProtocolVersion(), "1.0"));
+        record.setTransportType(CommonTextUtils.defaultText(request.getTransportType(), "HTTP"));
+        record.setAuthType(CommonTextUtils.defaultText(request.getAuthType(), "NONE"));
+        record.setAgentStatus(CommonTextUtils.defaultText(request.getAgentStatus(), A2aManagementConstants.STATUS_ENABLED));
+        record.setRiskLevel(CommonTextUtils.defaultText(request.getRiskLevel(), "MEDIUM"));
+        record.setTrustLevel(CommonTextUtils.defaultText(request.getTrustLevel(), "INTERNAL"));
+        record.setOwnerTeam(CommonTextUtils.trimToNull(request.getOwnerTeam()));
         record.setTimeoutMs(request.getTimeoutMs() == null ? 10000 : request.getTimeoutMs());
         record.setRateLimitQps(request.getRateLimitQps() == null ? 10 : request.getRateLimitQps());
         record.setSuccessRateSlo(request.getSuccessRateSlo() == null ? 99 : request.getSuccessRateSlo());
-        record.setRemark(trimToNull(request.getRemark()));
+        record.setRemark(CommonTextUtils.trimToNull(request.getRemark()));
     }
 
     /**
@@ -298,16 +290,17 @@ public class A2aApplicationManager {
     /**
      * 组装远程 A2A 请求体，补充治理链路所需的上下文信息。
      */
-    private Map<String, Object> buildDispatchPayload(A2aDispatchRequest request, A2aAgentCardRecord target, A2aRouteRecord route, int attemptNo, int retryIndex) {
-        Map<String, Object> payload = new LinkedHashMap<>(safeMap(request.getPayload()));
-        payload.putIfAbsent("taskType", trim(request.getTaskType()));
+    private Map<String, Object> buildDispatchPayload(A2aDispatchRequest request, A2aAgentCardRecord target, A2aRouteRecord route,
+                                                     int attemptNo, int retryIndex) {
+        Map<String, Object> payload = new LinkedHashMap<>(commonJsonUtils.safeMap(request.getPayload()));
+        payload.putIfAbsent("taskType", CommonTextUtils.trim(request.getTaskType()));
         payload.putIfAbsent("targetAgentCode", target.getAgentCode());
         payload.putIfAbsent("targetEndpoint", target.getEndpointUrl());
         payload.putIfAbsent("routeCode", route == null ? null : route.getRouteCode());
         payload.putIfAbsent("tenantId", currentTenantId());
         payload.putIfAbsent("attemptNo", attemptNo);
         payload.putIfAbsent("retryIndex", retryIndex);
-        Map<String, Object> authConfig = objectMap(parseMap(target.getExt()).get("authConfig"));
+        Map<String, Object> authConfig = commonJsonUtils.objectMap(commonJsonUtils.parseMap(target.getExt()).get("authConfig"));
         if (!authConfig.isEmpty()) {
             payload.putIfAbsent("authContext", authConfig);
         }
@@ -340,11 +333,11 @@ public class A2aApplicationManager {
     }
 
     private int resolveRetryTimes(A2aAgentCardRecord target) {
-        Map<String, Object> ext = parseMap(target.getExt());
-        Map<String, Object> dispatchConfig = objectMap(ext.get("dispatchConfig"));
+        Map<String, Object> ext = commonJsonUtils.parseMap(target.getExt());
+        Map<String, Object> dispatchConfig = commonJsonUtils.objectMap(ext.get("dispatchConfig"));
         Object configuredRetryTimes = dispatchConfig.get("retryTimes");
         if (configuredRetryTimes == null) {
-            configuredRetryTimes = objectMap(ext.get("metadata")).get("retryTimes");
+            configuredRetryTimes = commonJsonUtils.objectMap(ext.get("metadata")).get("retryTimes");
         }
         if (configuredRetryTimes instanceof Number number) {
             return Math.max(0, Math.min(number.intValue(), 3));
@@ -389,8 +382,8 @@ public class A2aApplicationManager {
         log.setRetryIndex(retryIndex);
         log.setSuccessFlag(successFlag);
         log.setElapsedMs(elapsedMs);
-        log.setRequestPayloadJson(requestPayload == null ? task.getRequestPayloadJson() : toJson(requestPayload));
-        log.setResponsePayloadJson(responsePayload == null ? null : toJson(responsePayload));
+        log.setRequestPayloadJson(requestPayload == null ? task.getRequestPayloadJson() : commonJsonUtils.toJson(requestPayload));
+        log.setResponsePayloadJson(responsePayload == null ? null : commonJsonUtils.toJson(responsePayload));
         log.setFailureReason(failureReason);
         log.setTenantId(task.getTenantId());
         executionLogRecordService.save(log);
@@ -399,22 +392,22 @@ public class A2aApplicationManager {
     private A2aAgentCardRecord requireAgentCard(Long id) {
         A2aAgentCardRecord record = agentCardRecordService.getById(id);
         if (record == null || !Objects.equals(record.getTenantId(), currentTenantId()) || Integer.valueOf(1).equals(record.getDeletedFlag())) {
-            throw notFound("A2A Agent Card not found: " + id);
+            throw BusinessExceptions.notFound("A2A Agent Card not found: " + id);
         }
         return record;
     }
 
     private A2aAgentCardResponse toAgentCardResponse(A2aAgentCardRecord record) {
-        Map<String, Object> ext = parseMap(record.getExt());
+        Map<String, Object> ext = commonJsonUtils.parseMap(record.getExt());
         return A2aAgentCardResponse.builder()
                 .id(record.getId()).agentCode(record.getAgentCode()).agentName(record.getAgentName()).description(record.getDescription())
                 .endpointUrl(record.getEndpointUrl()).protocolVersion(record.getProtocolVersion()).transportType(record.getTransportType())
                 .authType(record.getAuthType()).agentStatus(record.getAgentStatus()).publishStatus(record.getPublishStatus())
                 .riskLevel(record.getRiskLevel()).trustLevel(record.getTrustLevel()).ownerTeam(record.getOwnerTeam())
                 .timeoutMs(record.getTimeoutMs()).retryTimes(resolveRetryTimes(record)).rateLimitQps(record.getRateLimitQps()).successRateSlo(record.getSuccessRateSlo())
-                .capabilities(stringList(ext.get("capabilities"))).inputModes(stringList(ext.get("inputModes"))).outputModes(stringList(ext.get("outputModes")))
-                .authConfig(objectMap(ext.get("authConfig"))).metadata(objectMap(ext.get("metadata"))).remark(record.getRemark())
-                .createTime(toEpochMilli(record.getCreateTime())).updateTime(toEpochMilli(record.getUpdateTime())).build();
+                .capabilities(CommonTextUtils.stringList(ext.get("capabilities"))).inputModes(CommonTextUtils.stringList(ext.get("inputModes"))).outputModes(CommonTextUtils.stringList(ext.get("outputModes")))
+                .authConfig(commonJsonUtils.objectMap(ext.get("authConfig"))).metadata(commonJsonUtils.objectMap(ext.get("metadata"))).remark(record.getRemark())
+                .createTime(CommonTextUtils.toEpochMilli(record.getCreateTime())).updateTime(CommonTextUtils.toEpochMilli(record.getUpdateTime())).build();
     }
 
     private A2aRouteResponse toRouteResponse(A2aRouteRecord record) {
@@ -422,7 +415,7 @@ public class A2aApplicationManager {
                 .id(record.getId()).routeCode(record.getRouteCode()).routeName(record.getRouteName()).sourceAgentCode(record.getSourceAgentCode())
                 .targetAgentCode(record.getTargetAgentCode()).taskType(record.getTaskType()).routeStatus(record.getRouteStatus())
                 .priorityNo(record.getPriorityNo()).failoverEnabled(record.getFailoverEnabled()).fallbackAgentCodes(record.getFallbackAgentCodes())
-                .remark(record.getRemark()).createTime(toEpochMilli(record.getCreateTime())).build();
+                .remark(record.getRemark()).createTime(CommonTextUtils.toEpochMilli(record.getCreateTime())).build();
     }
 
     private A2aTaskResponse toTaskResponse(A2aTaskRecord record) {
@@ -430,7 +423,7 @@ public class A2aApplicationManager {
                 .id(record.getId()).taskCode(record.getTaskCode()).taskType(record.getTaskType()).sourceAgentCode(record.getSourceAgentCode())
                 .targetAgentCode(record.getTargetAgentCode()).routeCode(record.getRouteCode()).taskStatus(record.getTaskStatus())
                 .requestPayloadJson(record.getRequestPayloadJson()).responsePayloadJson(record.getResponsePayloadJson())
-                .failureReason(record.getFailureReason()).elapsedMs(record.getElapsedMs()).createTime(toEpochMilli(record.getCreateTime())).build();
+                .failureReason(record.getFailureReason()).elapsedMs(record.getElapsedMs()).createTime(CommonTextUtils.toEpochMilli(record.getCreateTime())).build();
     }
 
     private A2aLogResponse toLogResponse(A2aExecutionLogRecord record) {
@@ -438,18 +431,18 @@ public class A2aApplicationManager {
                 .id(record.getId()).taskCode(record.getTaskCode()).traceId(record.getTraceId()).sourceAgentCode(record.getSourceAgentCode())
                 .targetAgentCode(record.getTargetAgentCode()).routeCode(record.getRouteCode()).eventType(record.getEventType())
                 .executeStatus(record.getExecuteStatus()).attemptNo(record.getAttemptNo()).retryIndex(record.getRetryIndex()).successFlag(record.getSuccessFlag())
-                .elapsedMs(record.getElapsedMs()).failureReason(record.getFailureReason()).createTime(toEpochMilli(record.getCreateTime())).build();
+                .elapsedMs(record.getElapsedMs()).failureReason(record.getFailureReason()).createTime(CommonTextUtils.toEpochMilli(record.getCreateTime())).build();
     }
 
     private void validateAgentCard(A2aAgentCardSaveRequest request) {
         if (request == null || !StringUtils.hasText(request.getAgentCode()) || !StringUtils.hasText(request.getAgentName()) || !StringUtils.hasText(request.getEndpointUrl())) {
-            throw badRequest("agentCode, agentName and endpointUrl are required");
+            throw BusinessExceptions.badRequest("agentCode, agentName and endpointUrl are required");
         }
     }
 
     private void validateRoute(A2aRouteSaveRequest request) {
         if (request == null || !StringUtils.hasText(request.getRouteCode()) || !StringUtils.hasText(request.getTargetAgentCode()) || !StringUtils.hasText(request.getTaskType())) {
-            throw badRequest("routeCode, targetAgentCode and taskType are required");
+            throw BusinessExceptions.badRequest("routeCode, targetAgentCode and taskType are required");
         }
     }
 
@@ -457,69 +450,4 @@ public class A2aApplicationManager {
         return currentUserContextSupport.getCurrentTenantIdWithAutoInit();
     }
 
-    private Map<String, Object> parseMap(String json) {
-        if (!StringUtils.hasText(json)) {
-            return Map.of();
-        }
-        try {
-            return objectMapper.readValue(json, MAP_TYPE);
-        } catch (JsonProcessingException e) {
-            throw new BusinessException(ErrorCodeEnum.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR, "JSON parse failed", e);
-        }
-    }
-
-    private String toJson(Object value) {
-        try {
-            return objectMapper.writeValueAsString(value);
-        } catch (JsonProcessingException e) {
-            throw new BusinessException(ErrorCodeEnum.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR, "JSON serialize failed", e);
-        }
-    }
-
-    private Map<String, Object> safeMap(Map<String, Object> value) {
-        return value == null ? Map.of() : value;
-    }
-
-    private Map<String, Object> objectMap(Object value) {
-        if (value instanceof Map<?, ?> map) {
-            return map.entrySet().stream().collect(java.util.stream.Collectors.toMap(item -> String.valueOf(item.getKey()), Map.Entry::getValue));
-        }
-        return Map.of();
-    }
-
-    private List<String> stringList(Object value) {
-        if (value instanceof List<?> list) {
-            return list.stream().map(String::valueOf).filter(StringUtils::hasText).map(String::trim).toList();
-        }
-        return List.of();
-    }
-
-    private List<String> emptyIfNull(List<String> value) {
-        return value == null ? List.of() : value.stream().filter(StringUtils::hasText).map(String::trim).distinct().toList();
-    }
-
-    private String defaultText(String value, String defaultValue) {
-        return StringUtils.hasText(value) ? value.trim() : defaultValue;
-    }
-
-    private String trim(String value) {
-        return value == null ? null : value.trim();
-    }
-
-    private String trimToNull(String value) {
-        String trimmed = trim(value);
-        return StringUtils.hasText(trimmed) ? trimmed : null;
-    }
-
-    private Long toEpochMilli(LocalDateTime time) {
-        return time == null ? null : time.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
-    }
-
-    private BusinessException badRequest(String message) {
-        return new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, message);
-    }
-
-    private BusinessException notFound(String message) {
-        return new BusinessException(ErrorCodeEnum.NOT_FOUND, HttpStatus.NOT_FOUND, message);
-    }
 }

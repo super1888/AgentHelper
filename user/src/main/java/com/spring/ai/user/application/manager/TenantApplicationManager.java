@@ -5,6 +5,7 @@ import com.github.pagehelper.PageInfo;
 import com.spring.ai.common.enums.ErrorCodeEnum;
 import com.spring.ai.common.enums.user.UserStatusEnum;
 import com.spring.ai.common.exception.BusinessException;
+import com.spring.ai.common.exception.BusinessExceptions;
 import com.spring.ai.common.repository.service.AgentService;
 import com.spring.ai.common.repository.enitiy.SyTenant;
 import com.spring.ai.common.repository.enitiy.SyUser;
@@ -78,14 +79,14 @@ public class TenantApplicationManager {
     public void deleteTenant(Long tenantId) {
         SyTenant tenant = requireTenant(tenantId);
         if (tenant.getIsDefault() != null && tenant.getIsDefault() == 1) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "默认租户不允许删除");
+            throw BusinessExceptions.badRequest("默认租户不允许删除");
         }
         // 租户仍被业务数据占用时禁止删除，避免留下用户或 Agent 的悬挂归属。
         if (syUserService.countByTenantId(tenantId) > 0) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "当前租户下仍存在用户，不能删除");
+            throw BusinessExceptions.badRequest("当前租户下仍存在用户，不能删除");
         }
         if (agentService.countByTenantId(tenantId) > 0) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "当前租户下仍存在智能体，不能删除");
+            throw BusinessExceptions.badRequest("当前租户下仍存在智能体，不能删除");
         }
         syTenantService.removeById(tenantId);
     }
@@ -159,7 +160,7 @@ public class TenantApplicationManager {
     public SyTenant requireTenant(Long tenantId) {
         SyTenant tenant = syTenantService.getDetailById(tenantId);
         if (tenant == null) {
-            throw new BusinessException(ErrorCodeEnum.NOT_FOUND, HttpStatus.NOT_FOUND, "租户不存在");
+            throw BusinessExceptions.notFound("租户不存在");
         }
         return tenant;
     }
@@ -176,7 +177,7 @@ public class TenantApplicationManager {
     @Transactional(rollbackFor = Exception.class)
     public SyTenant initializeDefaultTenant(SyUser user) {
         if (user == null) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "用户不能为空");
+            throw BusinessExceptions.badRequest("用户不能为空");
         }
 
         if (user.getTenantId() != null) {
@@ -205,13 +206,13 @@ public class TenantApplicationManager {
 
     private void validateTenantRequest(String tenantCode, String tenantName, Integer status) {
         if (!StringUtils.hasText(tenantCode)) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "租户编码不能为空");
+            throw BusinessExceptions.badRequest("租户编码不能为空");
         }
         if (!StringUtils.hasText(tenantName)) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "租户名称不能为空");
+            throw BusinessExceptions.badRequest("租户名称不能为空");
         }
         if (status == null) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "租户状态不能为空");
+            throw BusinessExceptions.badRequest("租户状态不能为空");
         }
         UserStatusEnum.fromVal(status);
     }

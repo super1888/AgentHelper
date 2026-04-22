@@ -5,6 +5,7 @@ import com.github.pagehelper.PageInfo;
 import com.spring.ai.common.enums.ErrorCodeEnum;
 import com.spring.ai.common.enums.user.UserStatusEnum;
 import com.spring.ai.common.exception.BusinessException;
+import com.spring.ai.common.exception.BusinessExceptions;
 import com.spring.ai.common.repository.enitiy.SyTenant;
 import com.spring.ai.common.repository.enitiy.SyUser;
 import com.spring.ai.common.repository.service.SyTenantService;
@@ -19,7 +20,6 @@ import com.spring.ai.user.domain.vo.UserStatisticsVO;
 import jakarta.annotation.Resource;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.beans.BeanUtils;
 import org.springframework.http.HttpStatus;
@@ -232,7 +232,7 @@ public class UserApplicationManager {
             return;
         }
         if (syTenantService.getDetailById(tenantId) == null) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "租户不存在");
+            throw BusinessExceptions.notFound("租户不存在");
         }
     }
 

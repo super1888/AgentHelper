@@ -2,6 +2,7 @@ package com.spring.ai.prompt.application.manager;
 
 import com.spring.ai.common.enums.ErrorCodeEnum;
 import com.spring.ai.common.exception.BusinessException;
+import com.spring.ai.common.exception.BusinessExceptions;
 import com.spring.ai.common.repository.enitiy.PromptTemplateRecord;
 import com.spring.ai.prompt.config.PromptTemplateConstants;
 import com.spring.ai.prompt.domain.dto.PromptTemplateBindDTO;
@@ -51,7 +52,7 @@ public class PromptTemplateResolver {
     public PromptTemplateResolvedDTO resolveTemplateById(Long promptTemplateId, Map<String, String> promptVariables) {
         PromptTemplateRecord record = promptTemplateSupportManager.requirePromptTemplate(promptTemplateId);
         if (!PromptTemplateConstants.TEMPLATE_STATUS_ENABLED.equals(record.getTemplateStatus())) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "prompt template is disabled");
+            throw BusinessExceptions.badRequest("prompt template is disabled");
         }
         String promptContent = resolveContent(record.getSourceType(), record.getTemplateContent(), record.getSourcePath());
         List<PromptTemplateVariableDTO> variableDefinitions = promptTemplateSupportManager.parseVariableDefinitions(record.getExt());
@@ -65,7 +66,10 @@ public class PromptTemplateResolver {
                 .promptTemplatePath(record.getSourcePath())
                 .variableDefinitions(variableDefinitions)
                 .promptVariables(normalizedVariables)
-                .effectiveSystemPrompt(renderEnterpriseTemplate(promptContent, new LinkedHashMap<>(normalizedVariables), variableDefinitions)
+                .effectiveSystemPrompt(renderEnterpriseTemplate(
+                        promptContent,
+                        new LinkedHashMap<>(normalizedVariables),
+                        variableDefinitions)
                         .getRenderedContent())
                 .build();
     }
@@ -104,12 +108,12 @@ public class PromptTemplateResolver {
      */
     public String normalizeSourceType(String sourceType) {
         if (!StringUtils.hasText(sourceType)) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "来源类型不能为空");
+            throw BusinessExceptions.badRequest("来源类型不能为空");
         }
         String normalizedSourceType = sourceType.trim().toUpperCase(Locale.ROOT);
         if (!PromptTemplateConstants.SOURCE_TYPE_INLINE.equals(normalizedSourceType)
                 && !PromptTemplateConstants.SOURCE_TYPE_FILE.equals(normalizedSourceType)) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST,
+            throw BusinessExceptions.badRequest(
                     "unsupported prompt sourceType: " + sourceType);
         }
         return normalizedSourceType;
@@ -120,11 +124,11 @@ public class PromptTemplateResolver {
      */
     public String validateInlineContent(String templateContent) {
         if (!StringUtils.hasText(templateContent)) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "templateContent must not be blank");
+            throw BusinessExceptions.badRequest("templateContent must not be blank");
         }
         String normalizedContent = templateContent.trim();
         if (normalizedContent.length() > PromptTemplateConstants.MAX_TEMPLATE_LENGTH) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST,
+            throw BusinessExceptions.badRequest(
                     "templateContent exceeds max length");
         }
         return normalizedContent;
@@ -135,40 +139,40 @@ public class PromptTemplateResolver {
      */
     public String readPromptFile(String sourcePath) {
         if (!StringUtils.hasText(sourcePath)) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "sourcePath must not be blank");
+            throw BusinessExceptions.badRequest("sourcePath must not be blank");
         }
         Path promptFilePath = Paths.get(sourcePath.trim()).normalize();
         if (!promptFilePath.isAbsolute()) {
             promptFilePath = Paths.get("").toAbsolutePath().resolve(promptFilePath).normalize();
         }
         if (!Files.exists(promptFilePath) || !Files.isRegularFile(promptFilePath)) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST,
+            throw BusinessExceptions.badRequest(
                     "prompt template file not found: " + promptFilePath);
         }
         if (!Files.isReadable(promptFilePath)) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST,
+            throw BusinessExceptions.badRequest(
                     "prompt template file is not readable: " + promptFilePath);
         }
         String fileName = promptFilePath.getFileName().toString().toLowerCase(Locale.ROOT);
         boolean validExtension = PromptTemplateConstants.ALLOWED_FILE_EXTENSIONS.stream()
                 .anyMatch(fileName::endsWith);
         if (!validExtension) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST,
+            throw BusinessExceptions.badRequest(
                     "prompt template file extension is not allowed");
         }
         try {
             long fileSize = Files.size(promptFilePath);
             if (fileSize > PromptTemplateConstants.MAX_FILE_SIZE) {
-                throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST,
+                throw BusinessExceptions.badRequest(
                         "prompt template file exceeds max size");
             }
             String content = Files.readString(promptFilePath, StandardCharsets.UTF_8).trim();
             if (!StringUtils.hasText(content)) {
-                throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST,
+                throw BusinessExceptions.badRequest(
                         "prompt template file content is blank");
             }
             if (content.length() > PromptTemplateConstants.MAX_TEMPLATE_LENGTH) {
-                throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST,
+                throw BusinessExceptions.badRequest(
                         "prompt template content exceeds max length");
             }
             return content;
@@ -257,7 +261,7 @@ public class PromptTemplateResolver {
             return variableDefinition.getDefaultValue().trim();
         }
         if (Boolean.TRUE.equals(variableDefinition.getRequired())) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST,
+            throw BusinessExceptions.badRequest(
                     "prompt variable is required: " + variableDefinition.getVariableName());
         }
         return "";

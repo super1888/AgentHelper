@@ -6,6 +6,7 @@ import com.spring.ai.common.repository.enitiy.HookRecord;
 import com.spring.ai.common.repository.service.HookAgentBindingRecordService;
 import com.spring.ai.common.repository.service.HookExecutionLogRecordService;
 import com.spring.ai.common.repository.service.HookRecordService;
+import com.spring.ai.common.utils.CommonTextUtils;
 import com.spring.ai.hooks.config.HookManagementConstants;
 import com.spring.ai.hooks.domain.dto.HookRuntimeResultDTO;
 import com.spring.ai.hooks.domain.dto.HookSnapshotDTO;
@@ -79,7 +80,7 @@ public class HookRuntimeManager {
             String content,
             String requestMessage
     ) {
-        String finalContent = defaultText(content);
+        String finalContent = CommonTextUtils.defaultText(content, "");
         int matchedCount = 0;
         for (HookRecord record : hookRecordService.listByTenantId(tenantId)) {
             if (!isRuntimeEnabled(record, stage)) {
@@ -140,7 +141,7 @@ public class HookRuntimeManager {
     }
 
     private RuntimeHandleResult handleContent(HookRecord record, HookSnapshotDTO snapshot, String stage, String originalContent) {
-        String content = defaultText(originalContent);
+        String content = CommonTextUtils.defaultText(originalContent, "");
         if ("PRE_MODEL".equals(stage)) {
             content = prependPrompt(snapshot, content);
             content = maskBySecurity(snapshot, content);
@@ -265,10 +266,6 @@ public class HookRuntimeManager {
 
     private boolean isBlocked(RuntimeHandleResult handleResult) {
         return handleResult != null && Integer.valueOf(1).equals(handleResult.blocked());
-    }
-
-    private String defaultText(String value) {
-        return value == null ? "" : value;
     }
 
     private record RuntimeHandleResult(String content, Integer blocked, String failureReason) {

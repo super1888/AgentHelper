@@ -1,7 +1,7 @@
 package com.spring.ai.tools.application.manager;
 
-import com.spring.ai.common.enums.ErrorCodeEnum;
 import com.spring.ai.common.exception.BusinessException;
+import com.spring.ai.common.exception.BusinessExceptions;
 import com.spring.ai.common.repository.enitiy.ToolExecutionLogRecord;
 import com.spring.ai.common.repository.enitiy.ToolRecord;
 import com.spring.ai.common.repository.service.ToolExecutionLogRecordService;
@@ -22,7 +22,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -160,8 +159,12 @@ public class ToolApplicationManager {
                 .count();
         return ToolStatisticsResponse.builder()
                 .totalCount(records.size())
-                .enabledCount((int) records.stream().filter(record -> ToolManagementConstants.TOOL_STATUS_ENABLED.equals(record.getToolStatus())).count())
-                .publishedCount((int) records.stream().filter(record -> ToolManagementConstants.PUBLISH_STATUS_PUBLISHED.equals(record.getPublishStatus())).count())
+                .enabledCount((int) records.stream()
+                        .filter(record -> ToolManagementConstants.TOOL_STATUS_ENABLED.equals(record.getToolStatus()))
+                        .count())
+                .publishedCount((int) records.stream()
+                        .filter(record -> ToolManagementConstants.PUBLISH_STATUS_PUBLISHED.equals(record.getPublishStatus()))
+                        .count())
                 .builtinCount(builtinCount)
                 .externalCount(records.size() - builtinCount)
                 .highRiskCount(highRiskCount)
@@ -193,7 +196,7 @@ public class ToolApplicationManager {
     @Transactional(rollbackFor = Exception.class)
     public ToolDebugResponse debugTool(ToolDebugRequest request) {
         if (request == null || request.getToolId() == null) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "toolId 不能为空");
+            throw BusinessExceptions.badRequest("toolId 不能为空");
         }
         ToolRecord record = toolSupportManager.requireTool(request.getToolId());
         String requestPayloadJson = StringUtils.hasText(request.getRequestPayloadJson())
@@ -236,34 +239,34 @@ public class ToolApplicationManager {
 
     private void validateSaveRequest(ToolSaveRequest request, Long currentToolId) {
         if (request == null) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "工具请求不能为空");
+            throw BusinessExceptions.badRequest("工具请求不能为空");
         }
         if (!StringUtils.hasText(request.getToolCode())) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "toolCode 不能为空");
+            throw BusinessExceptions.badRequest("toolCode 不能为空");
         }
         if (!StringUtils.hasText(request.getToolName())) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "toolName 不能为空");
+            throw BusinessExceptions.badRequest("toolName 不能为空");
         }
         if (!StringUtils.hasText(request.getToolType())) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "toolType 不能为空");
+            throw BusinessExceptions.badRequest("toolType 不能为空");
         }
         if (!StringUtils.hasText(request.getToolCategory())) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "toolCategory 不能为空");
+            throw BusinessExceptions.badRequest("toolCategory 不能为空");
         }
         if (!StringUtils.hasText(request.getSourceType())) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "sourceType 不能为空");
+            throw BusinessExceptions.badRequest("sourceType 不能为空");
         }
         if (!StringUtils.hasText(request.getToolStatus())) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "toolStatus 不能为空");
+            throw BusinessExceptions.badRequest("toolStatus 不能为空");
         }
         if (!StringUtils.hasText(request.getRiskLevel())) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "riskLevel 不能为空");
+            throw BusinessExceptions.badRequest("riskLevel 不能为空");
         }
         if (!StringUtils.hasText(request.getExecutionMode())) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "executionMode 不能为空");
+            throw BusinessExceptions.badRequest("executionMode 不能为空");
         }
         if (request.getTimeoutMs() == null || request.getTimeoutMs() <= 0) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "timeoutMs 必须大于 0");
+            throw BusinessExceptions.badRequest("timeoutMs 必须大于 0");
         }
         toolSupportManager.validateJsonText(request.getRequestSchemaJson(), "requestSchemaJson");
         toolSupportManager.validateJsonText(request.getAuthConfigJson(), "authConfigJson");
@@ -271,7 +274,7 @@ public class ToolApplicationManager {
         toolSupportManager.validateJsonText(request.getTestPayloadJson(), "testPayloadJson");
         ToolRecord existing = toolRecordService.getByToolCode(toolSupportManager.getCurrentTenantId(), request.getToolCode());
         if (existing != null && !existing.getId().equals(currentToolId)) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "toolCode 已存在: " + request.getToolCode());
+            throw BusinessExceptions.badRequest("toolCode 已存在: " + request.getToolCode());
         }
     }
 

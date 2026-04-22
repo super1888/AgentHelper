@@ -1,7 +1,7 @@
 package com.spring.ai.hooks.application.manager;
 
-import com.spring.ai.common.enums.ErrorCodeEnum;
 import com.spring.ai.common.exception.BusinessException;
+import com.spring.ai.common.exception.BusinessExceptions;
 import com.spring.ai.common.repository.enitiy.HookAgentBindingRecord;
 import com.spring.ai.common.repository.enitiy.HookExecutionLogRecord;
 import com.spring.ai.common.repository.enitiy.HookRecord;
@@ -12,6 +12,7 @@ import com.spring.ai.common.repository.service.HookExecutionLogRecordService;
 import com.spring.ai.common.repository.service.HookRecordService;
 import com.spring.ai.common.repository.service.HookTestCaseRecordService;
 import com.spring.ai.common.repository.service.HookVersionRecordService;
+import com.spring.ai.common.utils.CommonTextUtils;
 import com.spring.ai.hooks.application.assmbler.HookAssembler;
 import com.spring.ai.hooks.config.HookManagementConstants;
 import com.spring.ai.hooks.domain.dto.HookSnapshotDTO;
@@ -39,7 +40,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -114,7 +114,7 @@ public class HookApplicationManager {
         validateSaveRequest(request, true);
         Long tenantId = hookSupportManager.getCurrentTenantId();
         if (hookRecordService.getByHookCode(tenantId, request.getHookCode()) != null) {
-            throw badRequest("Hook 编码已存在：" + request.getHookCode());
+            throw BusinessExceptions.badRequest("Hook 编码已存在：" + request.getHookCode());
         }
         HookRecord record = new HookRecord();
         HookAssembler.mergeRecord(record, request);
@@ -140,7 +140,7 @@ public class HookApplicationManager {
         validateSaveRequest(request, false);
         HookRecord existed = hookRecordService.getByHookCode(record.getTenantId(), request.getHookCode());
         if (existed != null && !Objects.equals(existed.getId(), hookId)) {
-            throw badRequest("Hook 编码已存在：" + request.getHookCode());
+            throw BusinessExceptions.badRequest("Hook 编码已存在：" + request.getHookCode());
         }
         markCurrentVersionAsHistory(record);
         HookAssembler.mergeRecord(record, request);
@@ -222,7 +222,7 @@ public class HookApplicationManager {
     public HookResponse rollbackHook(Long hookId, HookVersionRollbackRequest request) {
         HookRecord record = hookSupportManager.requireHook(hookId);
         if (request == null || request.getTargetVersionNo() == null) {
-            throw badRequest("目标版本号不能为空");
+            throw BusinessExceptions.badRequest("目标版本号不能为空");
         }
         HookVersionRecord targetVersion = requireVersion(record, request.getTargetVersionNo());
         HookSnapshotDTO snapshot = hookSupportManager.parseSnapshot(targetVersion.getSnapshotJson());
@@ -247,7 +247,7 @@ public class HookApplicationManager {
     public HookVersionCompareResponse compareVersions(Long hookId, HookVersionCompareRequest request) {
         HookRecord record = hookSupportManager.requireHook(hookId);
         if (request == null || request.getSourceVersionNo() == null || request.getTargetVersionNo() == null) {
-            throw badRequest("版本号不能为空");
+            throw BusinessExceptions.badRequest("版本号不能为空");
         }
         HookVersionRecord source = requireVersion(record, request.getSourceVersionNo());
         HookVersionRecord target = requireVersion(record, request.getTargetVersionNo());
@@ -303,7 +303,7 @@ public class HookApplicationManager {
     public List<HookResponse> batchUpdateStatus(HookBatchActionRequest request) {
         validateBatchRequest(request);
         if (!StringUtils.hasText(request.getHookStatus())) {
-            throw badRequest("目标状态不能为空");
+            throw BusinessExceptions.badRequest("目标状态不能为空");
         }
         request.getHookIds().forEach(hookId -> {
             HookRecord record = hookSupportManager.requireHook(hookId);
@@ -323,7 +323,7 @@ public class HookApplicationManager {
     public List<HookResponse> batchUpdateStage(HookBatchActionRequest request) {
         validateBatchRequest(request);
         if (!StringUtils.hasText(request.getHookStage())) {
-            throw badRequest("目标阶段不能为空");
+            throw BusinessExceptions.badRequest("目标阶段不能为空");
         }
         request.getHookIds().forEach(hookId -> {
             HookRecord record = hookSupportManager.requireHook(hookId);
@@ -343,7 +343,7 @@ public class HookApplicationManager {
     public List<HookResponse> batchUpdateRisk(HookBatchActionRequest request) {
         validateBatchRequest(request);
         if (!StringUtils.hasText(request.getRiskLevel())) {
-            throw badRequest("目标风险等级不能为空");
+            throw BusinessExceptions.badRequest("目标风险等级不能为空");
         }
         request.getHookIds().forEach(hookId -> {
             HookRecord record = hookSupportManager.requireHook(hookId);
@@ -426,12 +426,12 @@ public class HookApplicationManager {
     @Transactional(rollbackFor = Exception.class)
     public HookDebugResponse debugHook(HookDebugRequest request) {
         if (request == null || request.getHookId() == null) {
-            throw badRequest("hookId 不能为空");
+            throw BusinessExceptions.badRequest("hookId 不能为空");
         }
         HookRecord record = hookSupportManager.requireHook(request.getHookId());
         String requestPayloadJson = StringUtils.hasText(request.getRequestPayloadJson())
                 ? request.getRequestPayloadJson().trim()
-                : defaultText(hookSupportManager.parseSnapshot(record.getExt()).getTestPayloadJson(), "{}");
+                : CommonTextUtils.defaultText(hookSupportManager.parseSnapshot(record.getExt()).getTestPayloadJson(), "{}");
         long start = System.currentTimeMillis();
         try {
             Map<String, Object> tracePayload = buildTracePayload(record, requestPayloadJson, request.getContextPayload());
@@ -596,23 +596,23 @@ public class HookApplicationManager {
 
     private HookSnapshotDTO toSnapshot(HookSaveRequest request, String publishStatus) {
         return HookSnapshotDTO.builder()
-                .hookCode(trimToNull(request.getHookCode()))
-                .hookName(trimToNull(request.getHookName()))
-                .description(trimToNull(request.getDescription()))
-                .hookType(defaultText(request.getHookType(), "AGENT"))
-                .hookStage(defaultText(request.getHookStage(), "PRE_MODEL"))
-                .hookStatus(defaultText(request.getHookStatus(), HookManagementConstants.HOOK_STATUS_ENABLED))
-                .publishStatus(defaultText(publishStatus, HookManagementConstants.PUBLISH_STATUS_DRAFT))
-                .riskLevel(defaultText(request.getRiskLevel(), HookManagementConstants.RISK_LEVEL_LOW))
-                .triggerMode(defaultText(request.getTriggerMode(), "SYNC"))
-                .failStrategy(defaultText(request.getFailStrategy(), "CONTINUE"))
+                .hookCode(CommonTextUtils.trimToNull(request.getHookCode()))
+                .hookName(CommonTextUtils.trimToNull(request.getHookName()))
+                .description(CommonTextUtils.trimToNull(request.getDescription()))
+                .hookType(CommonTextUtils.defaultText(request.getHookType(), "AGENT"))
+                .hookStage(CommonTextUtils.defaultText(request.getHookStage(), "PRE_MODEL"))
+                .hookStatus(CommonTextUtils.defaultText(request.getHookStatus(), HookManagementConstants.HOOK_STATUS_ENABLED))
+                .publishStatus(CommonTextUtils.defaultText(publishStatus, HookManagementConstants.PUBLISH_STATUS_DRAFT))
+                .riskLevel(CommonTextUtils.defaultText(request.getRiskLevel(), HookManagementConstants.RISK_LEVEL_LOW))
+                .triggerMode(CommonTextUtils.defaultText(request.getTriggerMode(), "SYNC"))
+                .failStrategy(CommonTextUtils.defaultText(request.getFailStrategy(), "CONTINUE"))
                 .sortWeight(request.getSortWeight() == null ? 100 : request.getSortWeight())
                 .timeoutMs(request.getTimeoutMs() == null ? 10000 : request.getTimeoutMs())
                 .hotUpdateEnabled(defaultFlag(request.getHotUpdateEnabled()))
-                .versionCode(trimToNull(request.getVersionCode()))
-                .versionDescription(trimToNull(request.getVersionDescription()))
-                .builtinHookKey(trimToNull(request.getBuiltinHookKey()))
-                .scriptLanguage(defaultText(request.getScriptLanguage(), "JAVA"))
+                .versionCode(CommonTextUtils.trimToNull(request.getVersionCode()))
+                .versionDescription(CommonTextUtils.trimToNull(request.getVersionDescription()))
+                .builtinHookKey(CommonTextUtils.trimToNull(request.getBuiltinHookKey()))
+                .scriptLanguage(CommonTextUtils.defaultText(request.getScriptLanguage(), "JAVA"))
                 .tags(request.getTags() == null ? List.of() : request.getTags().stream().map(this::toTag).toList())
                 .targetChannels(defaultList(request.getTargetChannels()))
                 .targetEnvironments(defaultList(request.getTargetEnvironments()))
@@ -623,9 +623,9 @@ public class HookApplicationManager {
                 .securityConfig(defaultMap(request.getSecurityConfig()))
                 .observabilityConfig(defaultMap(request.getObservabilityConfig()))
                 .degradationConfig(defaultMap(request.getDegradationConfig()))
-                .scriptContent(trimToNull(request.getScriptContent()))
-                .testPayloadJson(trimToNull(request.getTestPayloadJson()))
-                .remark(trimToNull(request.getRemark()))
+                .scriptContent(CommonTextUtils.trimToNull(request.getScriptContent()))
+                .testPayloadJson(CommonTextUtils.trimToNull(request.getTestPayloadJson()))
+                .remark(CommonTextUtils.trimToNull(request.getRemark()))
                 .build();
     }
 
@@ -672,7 +672,7 @@ public class HookApplicationManager {
     private HookVersionRecord requireVersion(HookRecord record, Integer versionNo) {
         HookVersionRecord version = hookVersionRecordService.getByHookIdAndVersionNo(record.getId(), record.getTenantId(), versionNo);
         if (version == null) {
-            throw new BusinessException(ErrorCodeEnum.NOT_FOUND, HttpStatus.NOT_FOUND, "未找到 Hook 版本：" + versionNo);
+            throw BusinessExceptions.notFound("未找到 Hook 版本：" + versionNo);
         }
         return version;
     }
@@ -680,7 +680,7 @@ public class HookApplicationManager {
     private HookRecord requireDeletedHook(Long hookId) {
         HookRecord record = hookRecordService.getById(hookId);
         if (record == null || !Objects.equals(record.getTenantId(), hookSupportManager.getCurrentTenantId()) || !Integer.valueOf(1).equals(record.getDeletedFlag())) {
-            throw new BusinessException(ErrorCodeEnum.NOT_FOUND, HttpStatus.NOT_FOUND, "未找到已删除 Hook：" + hookId);
+            throw BusinessExceptions.notFound("未找到已删除 Hook：" + hookId);
         }
         return record;
     }
@@ -688,7 +688,7 @@ public class HookApplicationManager {
     private HookTestCaseRecord requireTestCase(Long testCaseId) {
         HookTestCaseRecord record = hookTestCaseRecordService.getById(testCaseId);
         if (record == null || !Objects.equals(record.getTenantId(), hookSupportManager.getCurrentTenantId())) {
-            throw new BusinessException(ErrorCodeEnum.NOT_FOUND, HttpStatus.NOT_FOUND, "未找到 Hook 测试用例：" + testCaseId);
+            throw BusinessExceptions.notFound("未找到 Hook 测试用例：" + testCaseId);
         }
         return record;
     }
@@ -696,53 +696,53 @@ public class HookApplicationManager {
     private HookAgentBindingRecord requireBinding(Long bindingId) {
         HookAgentBindingRecord record = hookAgentBindingRecordService.getById(bindingId);
         if (record == null || !Objects.equals(record.getTenantId(), hookSupportManager.getCurrentTenantId())) {
-            throw new BusinessException(ErrorCodeEnum.NOT_FOUND, HttpStatus.NOT_FOUND, "未找到 Hook 绑定：" + bindingId);
+            throw BusinessExceptions.notFound("未找到 Hook 绑定：" + bindingId);
         }
         return record;
     }
 
     private void validateSaveRequest(HookSaveRequest request, boolean createMode) {
-        if (request == null) throw badRequest("Hook 请求不能为空");
-        if (createMode && !StringUtils.hasText(request.getHookCode())) throw badRequest("hookCode 不能为空");
-        if (!StringUtils.hasText(request.getHookName())) throw badRequest("hookName 不能为空");
-        if (!StringUtils.hasText(request.getHookType())) throw badRequest("hookType 不能为空");
-        if (!StringUtils.hasText(request.getHookStage())) throw badRequest("hookStage 不能为空");
-        if (!StringUtils.hasText(request.getHookStatus())) throw badRequest("hookStatus 不能为空");
-        if (!StringUtils.hasText(request.getRiskLevel())) throw badRequest("riskLevel 不能为空");
-        if (!StringUtils.hasText(request.getTriggerMode())) throw badRequest("triggerMode 不能为空");
-        if (!StringUtils.hasText(request.getFailStrategy())) throw badRequest("failStrategy 不能为空");
-        if (request.getTimeoutMs() == null || request.getTimeoutMs() <= 0) throw badRequest("timeoutMs 必须大于 0");
+        if (request == null) throw BusinessExceptions.badRequest("Hook 请求不能为空");
+        if (createMode && !StringUtils.hasText(request.getHookCode())) throw BusinessExceptions.badRequest("hookCode 不能为空");
+        if (!StringUtils.hasText(request.getHookName())) throw BusinessExceptions.badRequest("hookName 不能为空");
+        if (!StringUtils.hasText(request.getHookType())) throw BusinessExceptions.badRequest("hookType 不能为空");
+        if (!StringUtils.hasText(request.getHookStage())) throw BusinessExceptions.badRequest("hookStage 不能为空");
+        if (!StringUtils.hasText(request.getHookStatus())) throw BusinessExceptions.badRequest("hookStatus 不能为空");
+        if (!StringUtils.hasText(request.getRiskLevel())) throw BusinessExceptions.badRequest("riskLevel 不能为空");
+        if (!StringUtils.hasText(request.getTriggerMode())) throw BusinessExceptions.badRequest("triggerMode 不能为空");
+        if (!StringUtils.hasText(request.getFailStrategy())) throw BusinessExceptions.badRequest("failStrategy 不能为空");
+        if (request.getTimeoutMs() == null || request.getTimeoutMs() <= 0) throw BusinessExceptions.badRequest("timeoutMs 必须大于 0");
     }
 
     private void validateBatchRequest(HookBatchActionRequest request) {
-        if (request == null || request.getHookIds() == null || request.getHookIds().isEmpty()) throw badRequest("请选择要操作的 Hook");
+        if (request == null || request.getHookIds() == null || request.getHookIds().isEmpty()) throw BusinessExceptions.badRequest("请选择要操作的 Hook");
     }
 
     private void validateTestCaseRequest(HookTestCaseSaveRequest request) {
-        if (request == null || !StringUtils.hasText(request.getCaseName())) throw badRequest("测试用例名称不能为空");
+        if (request == null || !StringUtils.hasText(request.getCaseName())) throw BusinessExceptions.badRequest("测试用例名称不能为空");
     }
 
     private void validateBindingRequest(HookBindingSaveRequest request) {
         if (request == null || !StringUtils.hasText(request.getBindingName()) || !StringUtils.hasText(request.getBindingScope())) {
-            throw badRequest("绑定名称和绑定范围不能为空");
+            throw BusinessExceptions.badRequest("绑定名称和绑定范围不能为空");
         }
     }
 
     private void fillRecordBySnapshot(HookRecord record, HookSnapshotDTO snapshot) {
-        record.setHookName(defaultText(snapshot.getHookName(), record.getHookName()));
-        record.setDescription(trimToNull(snapshot.getDescription()));
-        record.setHookType(defaultText(snapshot.getHookType(), record.getHookType()));
-        record.setHookStage(defaultText(snapshot.getHookStage(), record.getHookStage()));
-        record.setHookStatus(defaultText(snapshot.getHookStatus(), record.getHookStatus()));
-        record.setRiskLevel(defaultText(snapshot.getRiskLevel(), record.getRiskLevel()));
-        record.setTriggerMode(defaultText(snapshot.getTriggerMode(), record.getTriggerMode()));
-        record.setFailStrategy(defaultText(snapshot.getFailStrategy(), record.getFailStrategy()));
+        record.setHookName(CommonTextUtils.defaultText(snapshot.getHookName(), record.getHookName()));
+        record.setDescription(CommonTextUtils.trimToNull(snapshot.getDescription()));
+        record.setHookType(CommonTextUtils.defaultText(snapshot.getHookType(), record.getHookType()));
+        record.setHookStage(CommonTextUtils.defaultText(snapshot.getHookStage(), record.getHookStage()));
+        record.setHookStatus(CommonTextUtils.defaultText(snapshot.getHookStatus(), record.getHookStatus()));
+        record.setRiskLevel(CommonTextUtils.defaultText(snapshot.getRiskLevel(), record.getRiskLevel()));
+        record.setTriggerMode(CommonTextUtils.defaultText(snapshot.getTriggerMode(), record.getTriggerMode()));
+        record.setFailStrategy(CommonTextUtils.defaultText(snapshot.getFailStrategy(), record.getFailStrategy()));
         record.setSortWeight(snapshot.getSortWeight());
         record.setTimeoutMs(snapshot.getTimeoutMs());
         record.setHotUpdateEnabled(defaultFlag(snapshot.getHotUpdateEnabled()));
-        record.setBuiltinHookKey(trimToNull(snapshot.getBuiltinHookKey()));
-        record.setScriptLanguage(defaultText(snapshot.getScriptLanguage(), record.getScriptLanguage()));
-        record.setRemark(trimToNull(snapshot.getRemark()));
+        record.setBuiltinHookKey(CommonTextUtils.trimToNull(snapshot.getBuiltinHookKey()));
+        record.setScriptLanguage(CommonTextUtils.defaultText(snapshot.getScriptLanguage(), record.getScriptLanguage()));
+        record.setRemark(CommonTextUtils.trimToNull(snapshot.getRemark()));
     }
 
     private HookTagDTO toTag(String tagName) {
@@ -759,11 +759,11 @@ public class HookApplicationManager {
         log.setHookCode(record.getHookCode());
         log.setHookName(record.getHookName());
         log.setTenantId(record.getTenantId());
-        log.setSourceType(defaultText(sourceType, HookManagementConstants.SOURCE_TYPE_DEBUG));
+        log.setSourceType(CommonTextUtils.defaultText(sourceType, HookManagementConstants.SOURCE_TYPE_DEBUG));
         log.setSourceId(sourceId);
         log.setTraceId(UUID.randomUUID().toString());
-        log.setAgentCode(trimToNull(request == null ? null : request.getAgentCode()));
-        log.setSessionCode(trimToNull(request == null ? null : request.getSessionCode()));
+        log.setAgentCode(CommonTextUtils.trimToNull(request == null ? null : request.getAgentCode()));
+        log.setSessionCode(CommonTextUtils.trimToNull(request == null ? null : request.getSessionCode()));
         log.setRequestPayloadJson(requestPayloadJson);
         log.setContextPayloadJson(hookSupportManager.toJson(request == null ? Map.of() : defaultMap(request.getContextPayload())));
         log.setResponsePayloadJson(responsePayloadJson);
@@ -796,18 +796,6 @@ public class HookApplicationManager {
         tracePayload.put("decision", Integer.valueOf(1).equals(record.getHotUpdateEnabled()) ? "HOT_UPDATE_READY" : "EXECUTED");
         tracePayload.put("message", "Hook 配置校验通过并生成调试结果");
         return tracePayload;
-    }
-
-    private BusinessException badRequest(String message) {
-        return new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, message);
-    }
-
-    private String trimToNull(String value) {
-        return StringUtils.hasText(value) ? value.trim() : null;
-    }
-
-    private String defaultText(String value, String defaultValue) {
-        return StringUtils.hasText(value) ? value.trim() : defaultValue;
     }
 
     private Integer defaultFlag(Integer value) {

@@ -1,7 +1,6 @@
 package com.spring.ai.skills.application.manager;
 
-import com.spring.ai.common.enums.ErrorCodeEnum;
-import com.spring.ai.common.exception.BusinessException;
+import com.spring.ai.common.exception.BusinessExceptions;
 import com.spring.ai.common.repository.enitiy.SkillExecutionLogRecord;
 import com.spring.ai.common.repository.enitiy.SkillRecord;
 import com.spring.ai.common.repository.enitiy.SkillTestCaseRecord;
@@ -10,6 +9,7 @@ import com.spring.ai.common.repository.service.SkillExecutionLogRecordService;
 import com.spring.ai.common.repository.service.SkillRecordService;
 import com.spring.ai.common.repository.service.SkillTestCaseRecordService;
 import com.spring.ai.common.repository.service.SkillVersionRecordService;
+import com.spring.ai.common.utils.CommonTextUtils;
 import com.spring.ai.skills.application.assmbler.SkillAssembler;
 import com.spring.ai.skills.config.SkillManagementConstants;
 import com.spring.ai.skills.domain.dto.SkillCategoryDTO;
@@ -38,7 +38,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -106,7 +105,7 @@ public class SkillApplicationManager {
         Long tenantId = skillSupportManager.getCurrentTenantId();
         String skillCode = request.getSkillCode().trim();
         if (skillRecordService.getBySkillCode(tenantId, skillCode) != null) {
-            throw badRequest("技能编码已存在：" + skillCode);
+            throw BusinessExceptions.badRequest("技能编码已存在：" + skillCode);
         }
 
         SkillRecord record = new SkillRecord();
@@ -210,7 +209,7 @@ public class SkillApplicationManager {
     public SkillResponse rollbackSkill(Long skillId, SkillVersionRollbackRequest request) {
         SkillRecord record = skillSupportManager.requireSkill(skillId);
         if (request == null || request.getTargetVersionNo() == null) {
-            throw badRequest("目标版本号不能为空");
+            throw BusinessExceptions.badRequest("目标版本号不能为空");
         }
         SkillVersionRecord targetVersion = requireVersion(record, request.getTargetVersionNo());
         SkillSnapshotDTO snapshot = skillSupportManager.parseSnapshot(targetVersion.getSnapshotJson());
@@ -221,15 +220,15 @@ public class SkillApplicationManager {
 
         int nextVersionNo = record.getLatestVersionNo() == null ? 1 : record.getLatestVersionNo() + 1;
         markCurrentVersionAsHistory(record);
-        record.setSkillName(defaultText(snapshot.getSkillName(), record.getSkillName()));
-        record.setDescription(trimToNull(snapshot.getDescription()));
-        record.setSkillType(defaultText(snapshot.getSkillType(), record.getSkillType()));
-        record.setSkillCategory(defaultText(snapshot.getSkillCategory(), record.getSkillCategory()));
-        record.setSkillStatus(defaultText(snapshot.getSkillStatus(), record.getSkillStatus()));
-        record.setVersionMode(defaultText(snapshot.getVersionMode(), record.getVersionMode()));
+        record.setSkillName(CommonTextUtils.defaultText(snapshot.getSkillName(), record.getSkillName()));
+        record.setDescription(CommonTextUtils.trimToNull(snapshot.getDescription()));
+        record.setSkillType(CommonTextUtils.defaultText(snapshot.getSkillType(), record.getSkillType()));
+        record.setSkillCategory(CommonTextUtils.defaultText(snapshot.getSkillCategory(), record.getSkillCategory()));
+        record.setSkillStatus(CommonTextUtils.defaultText(snapshot.getSkillStatus(), record.getSkillStatus()));
+        record.setVersionMode(CommonTextUtils.defaultText(snapshot.getVersionMode(), record.getVersionMode()));
         record.setSortWeight(snapshot.getSortWeight() == null ? record.getSortWeight() : snapshot.getSortWeight());
         record.setHotUpdateEnabled(defaultFlag(snapshot.getHotUpdateEnabled()));
-        record.setRemark(trimToNull(snapshot.getRemark()));
+        record.setRemark(CommonTextUtils.trimToNull(snapshot.getRemark()));
         record.setCurrentVersionNo(nextVersionNo);
         record.setLatestVersionNo(nextVersionNo);
         record.setExt(skillSupportManager.toJson(snapshot));
@@ -244,7 +243,7 @@ public class SkillApplicationManager {
     public SkillVersionCompareResponse compareVersions(Long skillId, SkillVersionCompareRequest request) {
         SkillRecord record = skillSupportManager.requireSkill(skillId);
         if (request == null || request.getSourceVersionNo() == null || request.getTargetVersionNo() == null) {
-            throw badRequest("源版本号和目标版本号不能为空");
+            throw BusinessExceptions.badRequest("源版本号和目标版本号不能为空");
         }
         SkillVersionRecord source = requireVersion(record, request.getSourceVersionNo());
         SkillVersionRecord target = requireVersion(record, request.getTargetVersionNo());
@@ -264,7 +263,7 @@ public class SkillApplicationManager {
     public SkillResponse copySkill(Long skillId, SkillCopyRequest request) {
         SkillRecord source = skillSupportManager.requireSkill(skillId);
         if (request == null || !StringUtils.hasText(request.getNewSkillCode()) || !StringUtils.hasText(request.getNewSkillName())) {
-            throw badRequest("新技能编码和名称不能为空");
+            throw BusinessExceptions.badRequest("新技能编码和名称不能为空");
         }
         SkillSnapshotDTO snapshot = skillSupportManager.parseSnapshot(source.getExt());
         SkillSaveRequest saveRequest = new SkillSaveRequest();
@@ -298,7 +297,7 @@ public class SkillApplicationManager {
     @Transactional(rollbackFor = Exception.class)
     public SkillResponse importSkill(SkillImportRequest request) {
         if (request == null || !StringUtils.hasText(request.getImportPayload())) {
-            throw badRequest("导入内容不能为空");
+            throw BusinessExceptions.badRequest("导入内容不能为空");
         }
         SkillSnapshotDTO snapshot = skillSupportManager.parseSnapshot(request.getImportPayload());
         SkillSaveRequest saveRequest = new SkillSaveRequest();
@@ -354,7 +353,7 @@ public class SkillApplicationManager {
     public List<SkillResponse> batchUpdateStatus(SkillBatchActionRequest request) {
         validateBatchRequest(request);
         if (!StringUtils.hasText(request.getSkillStatus())) {
-            throw badRequest("目标技能状态不能为空");
+            throw BusinessExceptions.badRequest("目标技能状态不能为空");
         }
         request.getSkillIds().forEach(skillId -> {
             SkillRecord record = skillSupportManager.requireSkill(skillId);
@@ -394,7 +393,7 @@ public class SkillApplicationManager {
     public List<SkillResponse> batchMoveCategory(SkillBatchActionRequest request) {
         validateBatchRequest(request);
         if (!StringUtils.hasText(request.getTargetCategoryCode())) {
-            throw badRequest("目标分类不能为空");
+            throw BusinessExceptions.badRequest("目标分类不能为空");
         }
         request.getSkillIds().forEach(skillId -> {
             SkillRecord record = skillSupportManager.requireSkill(skillId);
@@ -484,8 +483,8 @@ public class SkillApplicationManager {
         request.setInputText(testCase.getInputText());
         request.setForcedIntent(testCase.getExpectedIntent());
         request.setSlotPayload(skillSupportManager.parseMap(testCase.getSlotPayloadJson()));
-        request.setChannelCode(defaultText(testCase.getChannelCode(), DEFAULT_CHANNEL_CODE));
-        request.setLocale(defaultText(testCase.getLocale(), DEFAULT_LOCALE));
+        request.setChannelCode(CommonTextUtils.defaultText(testCase.getChannelCode(), DEFAULT_CHANNEL_CODE));
+        request.setLocale(CommonTextUtils.defaultText(testCase.getLocale(), DEFAULT_LOCALE));
         SkillDebugResponse response = executeDebug(request, SkillManagementConstants.LOG_SOURCE_TEST, testCase.getId());
         testCase.setLastRunStatus(Integer.valueOf(1).equals(response.getSuccessFlag()) ? "SUCCESS" : "FAILED");
         testCase.setLastRunDurationMs(response.getElapsedMs());
@@ -536,15 +535,15 @@ public class SkillApplicationManager {
      */
     private void fillRecord(SkillRecord record, SkillSaveRequest request, String publishStatus) {
         record.setSkillName(request.getSkillName().trim());
-        record.setDescription(trimToNull(request.getDescription()));
-        record.setSkillType(defaultText(request.getSkillType(), DEFAULT_SKILL_TYPE));
-        record.setSkillCategory(defaultText(request.getSkillCategory(), DEFAULT_SKILL_CATEGORY));
-        record.setSkillStatus(defaultText(request.getSkillStatus(), SkillManagementConstants.SKILL_STATUS_ENABLED));
-        record.setPublishStatus(defaultText(publishStatus, SkillManagementConstants.PUBLISH_STATUS_DRAFT));
-        record.setVersionMode(defaultText(request.getVersionMode(), SkillManagementConstants.VERSION_MODE_MANUAL));
+        record.setDescription(CommonTextUtils.trimToNull(request.getDescription()));
+        record.setSkillType(CommonTextUtils.defaultText(request.getSkillType(), DEFAULT_SKILL_TYPE));
+        record.setSkillCategory(CommonTextUtils.defaultText(request.getSkillCategory(), DEFAULT_SKILL_CATEGORY));
+        record.setSkillStatus(CommonTextUtils.defaultText(request.getSkillStatus(), SkillManagementConstants.SKILL_STATUS_ENABLED));
+        record.setPublishStatus(CommonTextUtils.defaultText(publishStatus, SkillManagementConstants.PUBLISH_STATUS_DRAFT));
+        record.setVersionMode(CommonTextUtils.defaultText(request.getVersionMode(), SkillManagementConstants.VERSION_MODE_MANUAL));
         record.setSortWeight(request.getSortWeight() == null ? 100 : request.getSortWeight());
         record.setHotUpdateEnabled(defaultFlag(request.getHotUpdateEnabled()));
-        record.setRemark(trimToNull(request.getRemark()));
+        record.setRemark(CommonTextUtils.trimToNull(request.getRemark()));
     }
 
     /**
@@ -552,20 +551,20 @@ public class SkillApplicationManager {
      */
     private SkillSnapshotDTO toSnapshot(SkillSaveRequest request, String publishStatus) {
         return SkillSnapshotDTO.builder()
-                .skillCode(trimToNull(request.getSkillCode()))
-                .skillName(trimToNull(request.getSkillName()))
-                .description(trimToNull(request.getDescription()))
-                .skillType(defaultText(request.getSkillType(), DEFAULT_SKILL_TYPE))
-                .skillCategory(defaultText(request.getSkillCategory(), DEFAULT_SKILL_CATEGORY))
+                .skillCode(CommonTextUtils.trimToNull(request.getSkillCode()))
+                .skillName(CommonTextUtils.trimToNull(request.getSkillName()))
+                .description(CommonTextUtils.trimToNull(request.getDescription()))
+                .skillType(CommonTextUtils.defaultText(request.getSkillType(), DEFAULT_SKILL_TYPE))
+                .skillCategory(CommonTextUtils.defaultText(request.getSkillCategory(), DEFAULT_SKILL_CATEGORY))
                 .categoryChain(request.getCategoryChain() == null || request.getCategoryChain().isEmpty()
-                        ? List.of(toCategory(defaultText(request.getSkillCategory(), DEFAULT_SKILL_CATEGORY)))
+                        ? List.of(toCategory(CommonTextUtils.defaultText(request.getSkillCategory(), DEFAULT_SKILL_CATEGORY)))
                         : request.getCategoryChain())
                 .tags(request.getTags() == null ? List.of() : request.getTags())
-                .skillStatus(defaultText(request.getSkillStatus(), SkillManagementConstants.SKILL_STATUS_ENABLED))
-                .publishStatus(defaultText(publishStatus, SkillManagementConstants.PUBLISH_STATUS_DRAFT))
-                .versionCode(trimToNull(request.getVersionCode()))
-                .versionDescription(trimToNull(request.getVersionDescription()))
-                .versionMode(defaultText(request.getVersionMode(), SkillManagementConstants.VERSION_MODE_MANUAL))
+                .skillStatus(CommonTextUtils.defaultText(request.getSkillStatus(), SkillManagementConstants.SKILL_STATUS_ENABLED))
+                .publishStatus(CommonTextUtils.defaultText(publishStatus, SkillManagementConstants.PUBLISH_STATUS_DRAFT))
+                .versionCode(CommonTextUtils.trimToNull(request.getVersionCode()))
+                .versionDescription(CommonTextUtils.trimToNull(request.getVersionDescription()))
+                .versionMode(CommonTextUtils.defaultText(request.getVersionMode(), SkillManagementConstants.VERSION_MODE_MANUAL))
                 .sortWeight(request.getSortWeight() == null ? 100 : request.getSortWeight())
                 .hotUpdateEnabled(defaultFlag(request.getHotUpdateEnabled()))
                 .observabilityConfig(request.getObservabilityConfig())
@@ -574,7 +573,7 @@ public class SkillApplicationManager {
                 .workflowConfig(request.getWorkflowConfig())
                 .channelAdaptations(request.getChannelAdaptations() == null ? List.of() : request.getChannelAdaptations())
                 .marketplaceConfig(request.getMarketplaceConfig())
-                .remark(trimToNull(request.getRemark()))
+                .remark(CommonTextUtils.trimToNull(request.getRemark()))
                 .build();
     }
 
@@ -637,7 +636,7 @@ public class SkillApplicationManager {
      */
     private SkillDebugResponse executeDebug(SkillDebugRequest request, String sourceType, Long sourceId) {
         if (request == null || !StringUtils.hasText(request.getInputText())) {
-            throw badRequest("调试输入不能为空");
+            throw BusinessExceptions.badRequest("调试输入不能为空");
         }
         long startAt = System.currentTimeMillis();
         SkillRecord record = request.getSkillId() == null ? null : skillSupportManager.requireSkill(request.getSkillId());
@@ -686,8 +685,8 @@ public class SkillApplicationManager {
         logRecord.setSourceId(sourceId);
         logRecord.setTraceId(UUID.randomUUID().toString());
         logRecord.setSessionCode("skill-debug");
-        logRecord.setChannelCode(defaultText(request.getChannelCode(), DEFAULT_CHANNEL_CODE));
-        logRecord.setLocale(defaultText(request.getLocale(), DEFAULT_LOCALE));
+        logRecord.setChannelCode(CommonTextUtils.defaultText(request.getChannelCode(), DEFAULT_CHANNEL_CODE));
+        logRecord.setLocale(CommonTextUtils.defaultText(request.getLocale(), DEFAULT_LOCALE));
         logRecord.setInputText(request.getInputText());
         logRecord.setMatchedIntent(response.getMatchedIntent());
         logRecord.setConfidenceScore(response.getConfidenceScore());
@@ -714,11 +713,11 @@ public class SkillApplicationManager {
         testCase.setCaseName(request.getCaseName().trim());
         testCase.setInputText(request.getInputText().trim());
         testCase.setSlotPayloadJson(skillSupportManager.toJson(request.getSlotPayload() == null ? Map.of() : request.getSlotPayload()));
-        testCase.setExpectedIntent(trimToNull(request.getExpectedIntent()));
+        testCase.setExpectedIntent(CommonTextUtils.trimToNull(request.getExpectedIntent()));
         testCase.setExpectedSuccess(request.getExpectedSuccess() == null ? 1 : defaultFlag(request.getExpectedSuccess()));
-        testCase.setExpectedResponseContains(trimToNull(request.getExpectedResponseContains()));
-        testCase.setChannelCode(defaultText(request.getChannelCode(), DEFAULT_CHANNEL_CODE));
-        testCase.setLocale(defaultText(request.getLocale(), DEFAULT_LOCALE));
+        testCase.setExpectedResponseContains(CommonTextUtils.trimToNull(request.getExpectedResponseContains()));
+        testCase.setChannelCode(CommonTextUtils.defaultText(request.getChannelCode(), DEFAULT_CHANNEL_CODE));
+        testCase.setLocale(CommonTextUtils.defaultText(request.getLocale(), DEFAULT_LOCALE));
         testCase.setEnabled(request.getEnabled() == null ? 1 : defaultFlag(request.getEnabled()));
         testCase.setTenantId(skill.getTenantId());
     }
@@ -778,7 +777,7 @@ public class SkillApplicationManager {
     private SkillVersionRecord requireVersion(SkillRecord record, Integer versionNo) {
         SkillVersionRecord version = skillVersionRecordService.getBySkillIdAndVersionNo(record.getId(), record.getTenantId(), versionNo);
         if (version == null) {
-            throw new BusinessException(ErrorCodeEnum.NOT_FOUND, HttpStatus.NOT_FOUND, "未找到技能版本：" + versionNo);
+            throw BusinessExceptions.notFound("未找到技能版本：" + versionNo);
         }
         return version;
     }
@@ -789,7 +788,7 @@ public class SkillApplicationManager {
     private SkillTestCaseRecord requireTestCase(Long testCaseId) {
         SkillTestCaseRecord testCase = skillTestCaseRecordService.getById(testCaseId);
         if (testCase == null || !Objects.equals(testCase.getTenantId(), skillSupportManager.getCurrentTenantId())) {
-            throw new BusinessException(ErrorCodeEnum.NOT_FOUND, HttpStatus.NOT_FOUND, "未找到测试用例：" + testCaseId);
+            throw BusinessExceptions.notFound("未找到测试用例：" + testCaseId);
         }
         return testCase;
     }
@@ -800,7 +799,7 @@ public class SkillApplicationManager {
     private SkillRecord requireDeletedSkill(Long skillId) {
         SkillRecord record = skillRecordService.getById(skillId);
         if (record == null || !Objects.equals(record.getTenantId(), skillSupportManager.getCurrentTenantId()) || !Integer.valueOf(1).equals(record.getDeletedFlag())) {
-            throw new BusinessException(ErrorCodeEnum.NOT_FOUND, HttpStatus.NOT_FOUND, "未找到已删除技能：" + skillId);
+            throw BusinessExceptions.notFound("未找到已删除技能：" + skillId);
         }
         return record;
     }
@@ -810,13 +809,13 @@ public class SkillApplicationManager {
      */
     private void validateSaveRequest(SkillSaveRequest request, boolean createMode) {
         if (request == null) {
-            throw badRequest("技能参数不能为空");
+            throw BusinessExceptions.badRequest("技能参数不能为空");
         }
         if (createMode && !StringUtils.hasText(request.getSkillCode())) {
-            throw badRequest("技能编码不能为空");
+            throw BusinessExceptions.badRequest("技能编码不能为空");
         }
         if (!StringUtils.hasText(request.getSkillName())) {
-            throw badRequest("技能名称不能为空");
+            throw BusinessExceptions.badRequest("技能名称不能为空");
         }
     }
 
@@ -825,7 +824,7 @@ public class SkillApplicationManager {
      */
     private void validateBatchRequest(SkillBatchActionRequest request) {
         if (request == null || request.getSkillIds() == null || request.getSkillIds().isEmpty()) {
-            throw badRequest("请选择要操作的技能");
+            throw BusinessExceptions.badRequest("请选择要操作的技能");
         }
     }
 
@@ -834,7 +833,7 @@ public class SkillApplicationManager {
      */
     private void validateTestCaseRequest(SkillTestCaseSaveRequest request) {
         if (request == null || !StringUtils.hasText(request.getCaseName()) || !StringUtils.hasText(request.getInputText())) {
-            throw badRequest("测试用例名称和输入不能为空");
+            throw BusinessExceptions.badRequest("测试用例名称和输入不能为空");
         }
     }
 
@@ -869,27 +868,6 @@ public class SkillApplicationManager {
         category.setCategoryName(categoryCode);
         category.setCategoryLevel(1);
         return category;
-    }
-
-    /**
-     * 构造业务参数错误。
-     */
-    private BusinessException badRequest(String message) {
-        return new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, message);
-    }
-
-    /**
-     * 字符串去空，空值返回 null。
-     */
-    private String trimToNull(String value) {
-        return StringUtils.hasText(value) ? value.trim() : null;
-    }
-
-    /**
-     * 字符串默认值处理。
-     */
-    private String defaultText(String value, String defaultValue) {
-        return StringUtils.hasText(value) ? value.trim() : defaultValue;
     }
 
     /**

@@ -1,8 +1,7 @@
 package com.spring.ai.interceptors.application.manager;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.spring.ai.common.enums.ErrorCodeEnum;
-import com.spring.ai.common.exception.BusinessException;
+import com.spring.ai.common.exception.BusinessExceptions;
 import com.spring.ai.common.repository.enitiy.InterceptorAgentBindingRecord;
 import com.spring.ai.common.repository.enitiy.InterceptorExecutionLogRecord;
 import com.spring.ai.common.repository.enitiy.InterceptorRecord;
@@ -13,6 +12,8 @@ import com.spring.ai.common.repository.service.InterceptorExecutionLogRecordServ
 import com.spring.ai.common.repository.service.InterceptorRecordService;
 import com.spring.ai.common.repository.service.InterceptorTestCaseRecordService;
 import com.spring.ai.common.repository.service.InterceptorVersionRecordService;
+import com.spring.ai.common.utils.CommonJsonUtils;
+import com.spring.ai.common.utils.CommonTextUtils;
 import com.spring.ai.interceptors.application.assmbler.InterceptorAssembler;
 import com.spring.ai.interceptors.config.InterceptorManagementConstants;
 import com.spring.ai.interceptors.domain.dto.InterceptorSnapshotDTO;
@@ -36,7 +37,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -68,6 +68,10 @@ public class InterceptorApplicationManager {
 
     @Resource
     private InterceptorCatalogRegistry interceptorCatalogRegistry;
+
+    @Resource
+    private CommonJsonUtils commonJsonUtils;
+
 
     /**
      * 查询拦截器列表。
@@ -111,7 +115,7 @@ public class InterceptorApplicationManager {
         validateSaveRequest(request, true);
         Long tenantId = interceptorSupportManager.getCurrentTenantId();
         if (interceptorRecordService.getByInterceptorCode(tenantId, request.getInterceptorCode()) != null) {
-            throw badRequest("Interceptor 编码已存在：" + request.getInterceptorCode());
+            throw BusinessExceptions.badRequest("Interceptor 编码已存在：" + request.getInterceptorCode());
         }
 
         InterceptorRecord record = new InterceptorRecord();
@@ -138,7 +142,7 @@ public class InterceptorApplicationManager {
         validateSaveRequest(request, false);
         InterceptorRecord existed = interceptorRecordService.getByInterceptorCode(record.getTenantId(), request.getInterceptorCode());
         if (existed != null && !Objects.equals(existed.getId(), interceptorId)) {
-            throw badRequest("Interceptor 编码已存在：" + request.getInterceptorCode());
+            throw BusinessExceptions.badRequest("Interceptor 编码已存在：" + request.getInterceptorCode());
         }
 
         markCurrentVersionAsHistory(record);
@@ -254,7 +258,7 @@ public class InterceptorApplicationManager {
     @Transactional(rollbackFor = Exception.class)
     public InterceptorDebugResponse debugInterceptor(InterceptorDebugRequest request) {
         if (request == null || request.getInterceptorId() == null) {
-            throw badRequest("interceptorId 不能为空");
+            throw BusinessExceptions.badRequest("interceptorId 不能为空");
         }
         InterceptorRecord record = interceptorSupportManager.requireInterceptor(request.getInterceptorId());
         InterceptorSnapshotDTO snapshot = interceptorSupportManager.parseSnapshot(record.getExt());
@@ -267,7 +271,7 @@ public class InterceptorApplicationManager {
         long startedAt = System.currentTimeMillis();
         try {
             Map<String, Object> requestPayload = interceptorSupportManager.parseMap(requestPayloadJson);
-            SimulatedResult result = simulateInterceptor(record, snapshot, requestPayload, safeMap(request.getContextPayload()));
+            SimulatedResult result = simulateInterceptor(record, snapshot, requestPayload, commonJsonUtils.safeMap(request.getContextPayload()));
             Long elapsedMs = System.currentTimeMillis() - startedAt;
             InterceptorDebugResponse response = InterceptorAssembler.toDebugResponse(
                     record,
@@ -335,7 +339,7 @@ public class InterceptorApplicationManager {
                 record,
                 request,
                 interceptorSupportManager.toJson(request.getInputPayload()),
-                interceptorSupportManager.toJson(safeMap(request.getContextPayload()))
+                interceptorSupportManager.toJson(commonJsonUtils.safeMap(request.getContextPayload()))
         );
         interceptorTestCaseRecordService.save(testCase);
         return InterceptorAssembler.toTestCaseResponse(testCase);
@@ -348,7 +352,7 @@ public class InterceptorApplicationManager {
     public InterceptorDebugResponse runTestCase(Long testCaseId) {
         InterceptorTestCaseRecord testCase = interceptorTestCaseRecordService.getById(testCaseId);
         if (testCase == null || !Objects.equals(testCase.getTenantId(), interceptorSupportManager.getCurrentTenantId())) {
-            throw new BusinessException(ErrorCodeEnum.NOT_FOUND, HttpStatus.NOT_FOUND, "未找到 Interceptor 测试用例：" + testCaseId);
+            throw BusinessExceptions.notFound("未找到 Interceptor 测试用例：" + testCaseId);
         }
         InterceptorDebugRequest request = new InterceptorDebugRequest();
         request.setInterceptorId(testCase.getInterceptorId());
@@ -440,36 +444,36 @@ public class InterceptorApplicationManager {
 
     private InterceptorSnapshotDTO toSnapshot(InterceptorSaveRequest request, String publishStatus) {
         return InterceptorSnapshotDTO.builder()
-                .interceptorCode(trim(request.getInterceptorCode()))
-                .interceptorName(trim(request.getInterceptorName()))
-                .description(trimToNull(request.getDescription()))
-                .interceptorType(trim(request.getInterceptorType()))
-                .interceptorStage(trim(request.getInterceptorStage()))
-                .interceptorStatus(trim(request.getInterceptorStatus()))
+                .interceptorCode(CommonTextUtils.trim(request.getInterceptorCode()))
+                .interceptorName(CommonTextUtils.trim(request.getInterceptorName()))
+                .description(CommonTextUtils.trimToNull(request.getDescription()))
+                .interceptorType(CommonTextUtils.trim(request.getInterceptorType()))
+                .interceptorStage(CommonTextUtils.trim(request.getInterceptorStage()))
+                .interceptorStatus(CommonTextUtils.trim(request.getInterceptorStatus()))
                 .publishStatus(publishStatus)
-                .riskLevel(trim(request.getRiskLevel()))
-                .triggerMode(trim(request.getTriggerMode()))
-                .failStrategy(trim(request.getFailStrategy()))
+                .riskLevel(CommonTextUtils.trim(request.getRiskLevel()))
+                .triggerMode(CommonTextUtils.trim(request.getTriggerMode()))
+                .failStrategy(CommonTextUtils.trim(request.getFailStrategy()))
                 .sortWeight(request.getSortWeight())
                 .timeoutMs(request.getTimeoutMs())
                 .hotUpdateEnabled(request.getHotUpdateEnabled())
-                .versionCode(trimToNull(request.getVersionCode()))
-                .versionDescription(trimToNull(request.getVersionDescription()))
-                .builtinInterceptorKey(trimToNull(request.getBuiltinInterceptorKey()))
-                .scriptLanguage(trimToNull(request.getScriptLanguage()))
-                .tags(emptyIfNull(request.getTags()))
-                .targetChannels(emptyIfNull(request.getTargetChannels()))
-                .targetEnvironments(emptyIfNull(request.getTargetEnvironments()))
-                .targetAgentCodes(emptyIfNull(request.getTargetAgentCodes()))
-                .targetModelCodes(emptyIfNull(request.getTargetModelCodes()))
-                .conditionConfig(safeMap(request.getConditionConfig()))
-                .runtimeConfig(safeMap(request.getRuntimeConfig()))
-                .securityConfig(safeMap(request.getSecurityConfig()))
-                .observabilityConfig(safeMap(request.getObservabilityConfig()))
-                .degradationConfig(safeMap(request.getDegradationConfig()))
-                .interceptorConfig(safeMap(request.getInterceptorConfig()))
-                .scriptContent(trimToNull(request.getScriptContent()))
-                .testPayloadJson(trimToNull(request.getTestPayloadJson()))
+                .versionCode(CommonTextUtils.trimToNull(request.getVersionCode()))
+                .versionDescription(CommonTextUtils.trimToNull(request.getVersionDescription()))
+                .builtinInterceptorKey(CommonTextUtils.trimToNull(request.getBuiltinInterceptorKey()))
+                .scriptLanguage(CommonTextUtils.trimToNull(request.getScriptLanguage()))
+                .tags(CommonTextUtils.emptyIfNull(request.getTags()))
+                .targetChannels(CommonTextUtils.emptyIfNull(request.getTargetChannels()))
+                .targetEnvironments(CommonTextUtils.emptyIfNull(request.getTargetEnvironments()))
+                .targetAgentCodes(CommonTextUtils.emptyIfNull(request.getTargetAgentCodes()))
+                .targetModelCodes(CommonTextUtils.emptyIfNull(request.getTargetModelCodes()))
+                .conditionConfig(commonJsonUtils.safeMap(request.getConditionConfig()))
+                .runtimeConfig(commonJsonUtils.safeMap(request.getRuntimeConfig()))
+                .securityConfig(commonJsonUtils.safeMap(request.getSecurityConfig()))
+                .observabilityConfig(commonJsonUtils.safeMap(request.getObservabilityConfig()))
+                .degradationConfig(commonJsonUtils.safeMap(request.getDegradationConfig()))
+                .interceptorConfig(commonJsonUtils.safeMap(request.getInterceptorConfig()))
+                .scriptContent(CommonTextUtils.trimToNull(request.getScriptContent()))
+                .testPayloadJson(CommonTextUtils.trimToNull(request.getTestPayloadJson()))
                 .build();
     }
 
@@ -482,7 +486,7 @@ public class InterceptorApplicationManager {
         String key = StringUtils.hasText(record.getBuiltinInterceptorKey())
                 ? record.getBuiltinInterceptorKey()
                 : record.getInterceptorType();
-        Map<String, Object> config = safeMap(snapshot.getInterceptorConfig());
+        Map<String, Object> config = commonJsonUtils.safeMap(snapshot.getInterceptorConfig());
         Map<String, Object> trace = new LinkedHashMap<>();
         trace.put("interceptorStage", record.getInterceptorStage());
         trace.put("builtinInterceptorKey", key);
@@ -536,8 +540,8 @@ public class InterceptorApplicationManager {
             Map<String, Object> contextPayload,
             Map<String, Object> trace
     ) {
-        List<String> candidates = stringList(firstNonNull(requestPayload.get("toolCandidates"), contextPayload.get("toolCandidates")));
-        List<String> alwaysInclude = stringList(config.get("alwaysInclude"));
+        List<String> candidates = CommonTextUtils.stringList(firstNonNull(requestPayload.get("toolCandidates"), contextPayload.get("toolCandidates")));
+        List<String> alwaysInclude = CommonTextUtils.stringList(config.get("alwaysInclude"));
         int maxTools = numberValue(config.get("maxTools"), 3);
         List<String> selected = new ArrayList<>();
         alwaysInclude.forEach(item -> addIfAbsent(selected, item));
@@ -548,10 +552,10 @@ public class InterceptorApplicationManager {
     }
 
     private Map<String, Object> simulateToolEmulator(Map<String, Object> config, Map<String, Object> requestPayload, Map<String, Object> trace) {
-        Map<String, Object> mockResponses = objectMap(config.get("mockResponses"));
+        Map<String, Object> mockResponses = commonJsonUtils.objectMap(config.get("mockResponses"));
         List<Map<String, Object>> responses = new ArrayList<>();
         for (Object item : objectList(requestPayload.get("toolCalls"))) {
-            Map<String, Object> call = objectMap(item);
+            Map<String, Object> call = commonJsonUtils.objectMap(item);
             String toolName = String.valueOf(call.getOrDefault("name", ""));
             responses.add(orderedMap("toolName", toolName, "response", mockResponses.getOrDefault(toolName, Map.of("mocked", true))));
         }
@@ -596,7 +600,7 @@ public class InterceptorApplicationManager {
         log.setAgentCode(request == null ? null : request.getAgentCode());
         log.setSessionCode(request == null ? null : request.getSessionCode());
         log.setRequestPayloadJson(response.getRequestPayloadJson());
-        log.setContextPayloadJson(request == null ? null : interceptorSupportManager.toJson(safeMap(request.getContextPayload())));
+        log.setContextPayloadJson(request == null ? null : interceptorSupportManager.toJson(commonJsonUtils.safeMap(request.getContextPayload())));
         log.setResponsePayloadJson(response.getResponsePayloadJson());
         log.setExecuteStatus(response.getExecuteStatus());
         log.setSuccessFlag(response.getSuccessFlag());
@@ -611,80 +615,56 @@ public class InterceptorApplicationManager {
         InterceptorRecord record = interceptorRecordService.getById(interceptorId);
         if (record == null || !Objects.equals(record.getTenantId(), interceptorSupportManager.getCurrentTenantId())
                 || !Integer.valueOf(1).equals(record.getDeletedFlag())) {
-            throw new BusinessException(ErrorCodeEnum.NOT_FOUND, HttpStatus.NOT_FOUND, "未找到已删除 Interceptor：" + interceptorId);
+            throw BusinessExceptions.notFound("未找到已删除 Interceptor：" + interceptorId);
         }
         return record;
     }
 
     private void validateSaveRequest(InterceptorSaveRequest request, boolean create) {
         if (request == null) {
-            throw badRequest("Interceptor 配置不能为空");
+            throw BusinessExceptions.badRequest("Interceptor 配置不能为空");
         }
         if (!StringUtils.hasText(request.getInterceptorCode())) {
-            throw badRequest("Interceptor 编码不能为空");
+            throw BusinessExceptions.badRequest("Interceptor 编码不能为空");
         }
         if (!StringUtils.hasText(request.getInterceptorName())) {
-            throw badRequest("Interceptor 名称不能为空");
+            throw BusinessExceptions.badRequest("Interceptor 名称不能为空");
         }
         if (!StringUtils.hasText(request.getInterceptorType())) {
-            throw badRequest("Interceptor 类型不能为空");
+            throw BusinessExceptions.badRequest("Interceptor 类型不能为空");
         }
         if (!StringUtils.hasText(request.getInterceptorStage())) {
-            throw badRequest("Interceptor 阶段不能为空");
+            throw BusinessExceptions.badRequest("Interceptor 阶段不能为空");
         }
         if (request.getTimeoutMs() != null && request.getTimeoutMs() < 100) {
-            throw badRequest("超时时间不能小于 100ms");
+            throw BusinessExceptions.badRequest("超时时间不能小于 100ms");
         }
         if (create && request.getInterceptorCode().length() > 128) {
-            throw badRequest("Interceptor 编码长度不能超过 128");
+            throw BusinessExceptions.badRequest("Interceptor 编码长度不能超过 128");
         }
     }
 
     private void validateTestCaseRequest(InterceptorTestCaseSaveRequest request) {
         if (request == null || !StringUtils.hasText(request.getCaseName())) {
-            throw badRequest("测试用例名称不能为空");
+            throw BusinessExceptions.badRequest("测试用例名称不能为空");
         }
         if (request.getInputPayload() == null) {
-            throw badRequest("测试输入不能为空");
+            throw BusinessExceptions.badRequest("测试输入不能为空");
         }
     }
 
     private void validateBindingRequest(InterceptorBindingSaveRequest request) {
         if (request == null || !StringUtils.hasText(request.getBindingName())) {
-            throw badRequest("绑定名称不能为空");
+            throw BusinessExceptions.badRequest("绑定名称不能为空");
         }
         if (!StringUtils.hasText(request.getBindingScope())) {
-            throw badRequest("绑定范围不能为空");
+            throw BusinessExceptions.badRequest("绑定范围不能为空");
         }
-    }
-
-    private BusinessException badRequest(String message) {
-        return new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, message);
-    }
-
-    private Map<String, Object> safeMap(Map<String, Object> value) {
-        return value == null ? Map.of() : value;
-    }
-
-    private Map<String, Object> objectMap(Object value) {
-        if (value instanceof Map<?, ?> map) {
-            Map<String, Object> result = new LinkedHashMap<>();
-            map.forEach((key, item) -> result.put(String.valueOf(key), item));
-            return result;
-        }
-        return Map.of();
     }
 
     private List<Object> objectList(Object value) {
         if (value instanceof List<?> list) {
             return new ArrayList<>(list);
-        }
-        return List.of();
-    }
-
-    private List<String> stringList(Object value) {
-        if (value instanceof List<?> list) {
-            return list.stream().map(String::valueOf).filter(StringUtils::hasText).map(String::trim).toList();
         }
         return List.of();
     }
@@ -713,25 +693,12 @@ public class InterceptorApplicationManager {
         }
     }
 
-    private List<String> emptyIfNull(List<String> values) {
-        return values == null ? List.of() : values.stream().filter(StringUtils::hasText).map(String::trim).distinct().toList();
-    }
-
     private Map<String, Object> orderedMap(Object... values) {
         Map<String, Object> result = new LinkedHashMap<>();
         for (int i = 0; i + 1 < values.length; i += 2) {
             result.put(String.valueOf(values[i]), values[i + 1]);
         }
         return result;
-    }
-
-    private String trim(String value) {
-        return value == null ? null : value.trim();
-    }
-
-    private String trimToNull(String value) {
-        String trimmed = trim(value);
-        return StringUtils.hasText(trimmed) ? trimmed : null;
     }
 
     private record SimulatedResult(

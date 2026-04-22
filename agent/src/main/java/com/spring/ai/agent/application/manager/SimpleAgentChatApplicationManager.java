@@ -15,6 +15,7 @@ import com.spring.ai.common.config.async.CommonAsyncConfig;
 import com.spring.ai.common.constants.SimpleAgentConstants;
 import com.spring.ai.common.enums.ErrorCodeEnum;
 import com.spring.ai.common.exception.BusinessException;
+import com.spring.ai.common.exception.BusinessExceptions;
 import com.spring.ai.common.repository.enitiy.Agent;
 import com.spring.ai.common.repository.enitiy.AgentSession;
 import com.spring.ai.common.repository.enitiy.AgentSessionEvent;
@@ -125,7 +126,7 @@ public class SimpleAgentChatApplicationManager {
                 .eq(AgentTask::getTaskCode, taskCode)
                 .last("limit 1"));
         if (session == null || task == null) {
-            throw new BusinessException(ErrorCodeEnum.NOT_FOUND, HttpStatus.NOT_FOUND, "未找到会话或任务");
+            throw BusinessExceptions.notFound("未找到会话或任务");
         }
 
         Agent agent = agentService.getById(session.getAgentId());
@@ -256,10 +257,10 @@ public class SimpleAgentChatApplicationManager {
 
     private void validateSessionForChat(AgentSession session, String agentCode) {
         if (SimpleAgentConstants.SESSION_STATUS_CLOSED.equals(session.getSessionStatus())) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "当前会话已关闭");
+            throw BusinessExceptions.badRequest("当前会话已关闭");
         }
         if (StringUtils.hasText(agentCode) && !agentCode.equals(session.getAgentCode())) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST,
+            throw BusinessExceptions.badRequest(
                     "当前会话与指定智能体不匹配");
         }
     }
@@ -268,11 +269,11 @@ public class SimpleAgentChatApplicationManager {
         if (request != null && StringUtils.hasText(request.getTaskId())) {
             AgentTask task = simpleAgentSupportManager.requireTask(request.getTaskId());
             if (!task.getSessionId().equals(session.getId())) {
-                throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST,
+                throw BusinessExceptions.badRequest(
                         "任务不属于当前会话");
             }
             if (!SimpleAgentConstants.TASK_STATUS_FAILED.equals(task.getTaskStatus())) {
-                throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST,
+                throw BusinessExceptions.badRequest(
                         "仅允许恢复失败状态的任务");
             }
             return task;
@@ -280,7 +281,7 @@ public class SimpleAgentChatApplicationManager {
 
         AgentTask failedTask = agentTaskService.getLatestFailedTask(session.getId(), session.getTenantId());
         if (failedTask == null) {
-            throw new BusinessException(ErrorCodeEnum.NOT_FOUND, HttpStatus.NOT_FOUND, "未找到失败任务");
+            throw BusinessExceptions.notFound("未找到失败任务");
         }
         return failedTask;
     }

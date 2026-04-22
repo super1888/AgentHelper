@@ -1,8 +1,5 @@
 package com.spring.ai.interceptors.application.manager;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spring.ai.common.enums.ErrorCodeEnum;
 import com.spring.ai.common.exception.BusinessException;
 import com.spring.ai.common.repository.enitiy.InterceptorRecord;
@@ -10,6 +7,7 @@ import com.spring.ai.common.repository.service.InterceptorAgentBindingRecordServ
 import com.spring.ai.common.repository.service.InterceptorExecutionLogRecordService;
 import com.spring.ai.common.repository.service.InterceptorRecordService;
 import com.spring.ai.common.repository.service.InterceptorTestCaseRecordService;
+import com.spring.ai.common.utils.CommonJsonUtils;
 import com.spring.ai.common.web.CurrentUserContextSupport;
 import com.spring.ai.interceptors.domain.dto.InterceptorSnapshotDTO;
 import jakarta.annotation.Resource;
@@ -23,9 +21,6 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class InterceptorSupportManager {
-
-    private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {
-    };
 
     @Resource
     private CurrentUserContextSupport currentUserContextSupport;
@@ -43,7 +38,7 @@ public class InterceptorSupportManager {
     private InterceptorExecutionLogRecordService interceptorExecutionLogRecordService;
 
     @Resource
-    private ObjectMapper objectMapper;
+    private CommonJsonUtils commonJsonUtils;
 
     public Long getCurrentUserId() {
         return currentUserContextSupport.getCurrentUserId();
@@ -66,56 +61,20 @@ public class InterceptorSupportManager {
     }
 
     public InterceptorSnapshotDTO parseSnapshot(String json) {
-        if (json == null || json.isBlank()) {
-            return InterceptorSnapshotDTO.builder().build();
-        }
-        try {
-            return objectMapper.readValue(json, InterceptorSnapshotDTO.class);
-        } catch (JsonProcessingException e) {
-            throw new BusinessException(
-                    ErrorCodeEnum.INTERNAL_SERVER_ERROR,
-                    HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Interceptor snapshot parse failed",
-                    e
-            );
-        }
+        InterceptorSnapshotDTO snapshot = commonJsonUtils.parseObject(json, InterceptorSnapshotDTO.class);
+        return snapshot == null ? InterceptorSnapshotDTO.builder().build() : snapshot;
     }
 
     public Map<String, Object> parseMap(String json) {
-        if (json == null || json.isBlank()) {
-            return Map.of();
-        }
-        try {
-            return objectMapper.readValue(json, MAP_TYPE);
-        } catch (JsonProcessingException e) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, "JSON parse failed", e);
-        }
+        return commonJsonUtils.parseMap(json);
     }
 
     public String toJson(Object value) {
-        try {
-            return objectMapper.writeValueAsString(value);
-        } catch (JsonProcessingException e) {
-            throw new BusinessException(
-                    ErrorCodeEnum.INTERNAL_SERVER_ERROR,
-                    HttpStatus.INTERNAL_SERVER_ERROR,
-                    "JSON serialize failed",
-                    e
-            );
-        }
+        return commonJsonUtils.toJson(value);
     }
 
     public String prettyJson(Object value) {
-        try {
-            return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(value);
-        } catch (JsonProcessingException e) {
-            throw new BusinessException(
-                    ErrorCodeEnum.INTERNAL_SERVER_ERROR,
-                    HttpStatus.INTERNAL_SERVER_ERROR,
-                    "JSON pretty print failed",
-                    e
-            );
-        }
+        return commonJsonUtils.prettyJson(value);
     }
 
     public Integer countBindings(Long interceptorId) {

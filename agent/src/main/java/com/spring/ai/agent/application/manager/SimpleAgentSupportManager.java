@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spring.ai.agent.domain.dto.SimpleAgentVersionConfigDTO;
 import com.spring.ai.common.enums.ErrorCodeEnum;
 import com.spring.ai.common.exception.BusinessException;
+import com.spring.ai.common.exception.BusinessExceptions;
 import com.spring.ai.common.repository.enitiy.Agent;
 import com.spring.ai.common.repository.enitiy.AgentSession;
 import com.spring.ai.common.repository.enitiy.AgentTask;
@@ -58,7 +59,7 @@ public class SimpleAgentSupportManager {
     public Agent requireAgent(String agentCode) {
         Agent agent = agentService.getByAgentCode(agentCode, currentUserContextSupport.getCurrentTenantIdWithAutoInit());
         if (agent == null) {
-            throw new BusinessException(ErrorCodeEnum.NOT_FOUND, HttpStatus.NOT_FOUND, "未找到智能体: " + agentCode);
+            throw BusinessExceptions.notFound("未找到智能体: " + agentCode);
         }
         validateOwner(agent.getOwnerUserId());
         return agent;
@@ -70,7 +71,7 @@ public class SimpleAgentSupportManager {
     public AgentVersion requireAgentVersion(Long agentId, Integer versionNo) {
         AgentVersion version = agentVersionService.getByAgentIdAndVersionNo(agentId, currentUserContextSupport.getCurrentTenantIdWithAutoInit(), versionNo);
         if (version == null) {
-            throw new BusinessException(ErrorCodeEnum.NOT_FOUND, HttpStatus.NOT_FOUND, "未找到智能体版本: " + versionNo);
+            throw BusinessExceptions.notFound("未找到智能体版本: " + versionNo);
         }
         return version;
     }
@@ -81,7 +82,7 @@ public class SimpleAgentSupportManager {
     public AgentVersion requireAgentVersionById(Long versionId) {
         AgentVersion version = agentVersionService.getById(versionId);
         if (version == null || !sameTenant(version.getTenantId(), currentUserContextSupport.getCurrentTenantIdWithAutoInit())) {
-            throw new BusinessException(ErrorCodeEnum.NOT_FOUND, HttpStatus.NOT_FOUND, "未找到智能体版本: " + versionId);
+            throw BusinessExceptions.notFound("未找到智能体版本: " + versionId);
         }
         return version;
     }
@@ -92,7 +93,7 @@ public class SimpleAgentSupportManager {
     public AgentSession requireSession(String sessionCode) {
         AgentSession session = agentSessionService.getBySessionCode(sessionCode, currentUserContextSupport.getCurrentTenantIdWithAutoInit());
         if (session == null) {
-            throw new BusinessException(ErrorCodeEnum.NOT_FOUND, HttpStatus.NOT_FOUND, "未找到会话: " + sessionCode);
+            throw BusinessExceptions.notFound("未找到会话: " + sessionCode);
         }
         validateOwner(session.getOwnerUserId());
         return session;
@@ -104,7 +105,7 @@ public class SimpleAgentSupportManager {
     public AgentTask requireTask(String taskCode) {
         AgentTask task = agentTaskService.getByTaskCode(taskCode, currentUserContextSupport.getCurrentTenantIdWithAutoInit());
         if (task == null) {
-            throw new BusinessException(ErrorCodeEnum.NOT_FOUND, HttpStatus.NOT_FOUND, "未找到任务: " + taskCode);
+            throw BusinessExceptions.notFound("未找到任务: " + taskCode);
         }
         validateOwner(task.getOwnerUserId());
         return task;

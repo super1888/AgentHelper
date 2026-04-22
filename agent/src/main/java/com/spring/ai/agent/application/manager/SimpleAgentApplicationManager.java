@@ -2,9 +2,8 @@ package com.spring.ai.agent.application.manager;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.spring.ai.agent.application.assmbler.SimpleAgentAssembler;
-import com.spring.ai.agent.domain.dto.AgentPromptTemplateVariableDTO;
-import com.spring.ai.agent.domain.dto.SimpleAgentVersionConfigDTO;
 import com.spring.ai.agent.domain.dto.SimpleAgentPromptConfigDTO;
+import com.spring.ai.agent.domain.dto.SimpleAgentVersionConfigDTO;
 import com.spring.ai.agent.domain.request.SimpleAgentCreateRequest;
 import com.spring.ai.agent.domain.request.SimpleAgentReconnectRequest;
 import com.spring.ai.agent.domain.request.SimpleAgentSessionCreateRequest;
