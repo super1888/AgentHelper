@@ -373,7 +373,7 @@ onMounted(async () => {
       <article class="panel-card hero-panel">
         <div class="hero-panel__head">
           <div>
-            <p class="section-kicker">Tool Registry</p>
+            <p class="section-kicker">工具注册中心</p>
             <h2>工具管理台</h2>
             <p class="hero-panel__summary">统一管理 Agent 可用工具的目录、来源、风险、调试和日志。</p>
           </div>
@@ -547,7 +547,7 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.tool-page { display: grid; gap: 24px; }
+.tool-page { display: grid; gap: 24px; min-width: 0; min-height: 100%; }
 .hero-panel, .section-panel, .metric-card, .catalog-chip, .tool-list__item, .log-card, .empty-state, .result-box { border: 1px solid rgba(255,255,255,.08); }
 .hero-panel, .section-panel {
   padding: 28px;
@@ -555,14 +555,14 @@ onMounted(async () => {
   background: linear-gradient(180deg, rgba(255,255,255,.034), rgba(255,255,255,.012)), rgba(7,14,26,.82);
   box-shadow: 0 24px 56px rgba(0,0,0,.22);
 }
-.hero-panel__head, .section-panel__head, .section-panel__sub, .toolbar-actions { display: flex; justify-content: space-between; gap: 14px; align-items: flex-start; }
+.hero-panel__head, .section-panel__head, .section-panel__sub, .toolbar-actions { display: flex; justify-content: space-between; gap: 14px; align-items: flex-start; flex-wrap: wrap; }
 .hero-panel__head h2, .section-panel__head h3, .section-panel__sub h4 { margin: 0; color: var(--color-ink-strong); }
 .hero-panel__summary, .section-panel__head p, .section-panel__sub p { color: var(--color-ink-soft); line-height: 1.7; }
 .stats-strip { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; margin-top: 22px; }
 .metric-card { padding: 18px 20px; border-radius: 18px; background: linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.02)); }
 .metric-card span { color: var(--color-ink-soft); }
 .metric-card strong { display: block; margin-top: 10px; color: var(--color-ink-strong); font-size: 1.6rem; }
-.tool-layout { display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 20px; }
+.tool-layout { display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 20px; align-items: start; min-width: 0; }
 .section-panel--sidebar { display: grid; gap: 16px; align-content: start; }
 .filter-grid, .form-grid { display: grid; gap: 14px; }
 .form-grid--double { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -573,7 +573,7 @@ onMounted(async () => {
   color: var(--color-ink-soft);
 }
 .catalog-chip { padding: 10px 14px; cursor: pointer; }
-.tool-list { display: grid; gap: 10px; max-height: 760px; overflow: auto; }
+.tool-list { display: grid; gap: 10px; overflow: auto; min-height: 0; padding-right: 4px; scrollbar-gutter: stable; }
 .tool-list__item { display: grid; gap: 6px; padding: 14px 16px; text-align: left; cursor: pointer; }
 .tool-list__item strong, .field__label, .field--meta strong, .log-card__head strong { color: var(--color-ink-strong); }
 .tool-list__item--active { background: rgba(76,162,255,.08); border-color: rgba(108,201,255,.22); }
@@ -598,9 +598,9 @@ onMounted(async () => {
   white-space: pre-wrap;
   word-break: break-word;
 }
-.log-list { display: grid; gap: 12px; }
-.log-card { padding: 16px 18px; border-radius: 18px; background: rgba(255,255,255,.018); }
-.log-card__head { display: flex; justify-content: space-between; gap: 12px; }
+.log-list { display: grid; gap: 12px; min-width: 0; }
+.log-card { padding: 16px 18px; border-radius: 18px; background: rgba(255,255,255,.018); min-width: 0; }
+.log-card__head { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .empty-state {
   display: grid;
   place-items: center;

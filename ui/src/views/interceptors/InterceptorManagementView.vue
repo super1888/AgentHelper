@@ -411,7 +411,7 @@ onMounted(() => {
     <section class="page">
       <header class="panel-card hero">
         <div>
-          <p class="section-kicker">Interceptor Governance</p>
+          <p class="section-kicker">拦截器治理</p>
           <h2>拦截器工作台</h2>
           <p class="muted">围绕 Agent 的工具调用、上下文治理和调试模拟做统一配置。</p>
         </div>
@@ -526,8 +526,8 @@ onMounted(() => {
           </div>
           <div class="form">
             <input v-model="bindingForm.bindingName" class="app-input" type="text" placeholder="绑定名称" />
-            <input v-model="bindingForm.targetAgentCode" class="app-input" type="text" placeholder="targetAgentCode" />
-            <input v-model="bindingForm.targetModelCode" class="app-input full" type="text" placeholder="targetModelCode" />
+            <input v-model="bindingForm.targetAgentCode" class="app-input" type="text" placeholder="目标 Agent 编码" />
+            <input v-model="bindingForm.targetModelCode" class="app-input full" type="text" placeholder="目标模型编码" />
           </div>
           <button class="app-button app-button--secondary" :disabled="acting || !selectedId" @click="handleCreateBinding">新增绑定</button>
           <div class="stack">
@@ -584,6 +584,11 @@ onMounted(() => {
   gap: 16px;
 }
 
+.page {
+  min-height: 100%;
+  min-width: 0;
+}
+
 .hero,
 .head,
 .actions {
@@ -594,6 +599,13 @@ onMounted(() => {
 
 .grid {
   grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+  align-items: start;
+}
+
+.stack {
+  overflow: auto;
+  padding-right: 4px;
+  scrollbar-gutter: stable;
 }
 
 .stats {
@@ -616,10 +628,22 @@ onMounted(() => {
   display: grid;
   gap: 12px;
   align-content: start;
+  min-width: 0;
   padding: 18px;
   border-radius: 24px;
   background: rgba(255, 255, 255, 0.04);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+.hero,
+.head,
+.actions {
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.section {
+  min-height: 0;
 }
 
 .list-item {

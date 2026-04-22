@@ -41,6 +41,8 @@
 html {
   min-height: 100%;
   background: #050b15;
+  scrollbar-color: rgba(137, 228, 255, 0.36) rgba(255, 255, 255, 0.045);
+  scrollbar-width: thin;
 }
 
 body {
@@ -48,6 +50,28 @@ body {
   min-height: 100vh;
   min-height: 100dvh;
   margin: 0;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+*::-webkit-scrollbar-thumb {
+  border: 2px solid rgba(7, 16, 30, 0.88);
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgba(154, 234, 255, 0.68), rgba(77, 179, 255, 0.34));
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background:
+    linear-gradient(180deg, rgba(186, 244, 255, 0.86), rgba(77, 179, 255, 0.52));
 }
 
 body::before {

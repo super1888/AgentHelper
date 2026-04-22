@@ -250,11 +250,11 @@ async function submitAgent() {
   savingAgent.value = true
   try {
     const result = await saveA2aAgent(buildAgentPayload())
-    notice('success', `Agent Card 已保存：${result.agentName}`)
+    notice('success', `智能体卡片已保存：${result.agentName}`)
     await loadDashboard()
     fillAgentForm(result)
   } catch (error) {
-    notice('error', getErrorMessage(error, '保存 Agent Card 失败'))
+    notice('error', getErrorMessage(error, '保存智能体卡片失败'))
   } finally {
     savingAgent.value = false
   }
@@ -277,10 +277,10 @@ async function handlePublish(agentId: number) {
   actioning.value = true
   try {
     await publishA2aAgent(agentId)
-    notice('success', 'Agent 已发布，可参与跨 Agent 调度')
+    notice('success', '智能体已发布，可参与跨智能体调度')
     await loadDashboard()
   } catch (error) {
-    notice('error', getErrorMessage(error, '发布 Agent 失败'))
+    notice('error', getErrorMessage(error, '发布智能体失败'))
   } finally {
     actioning.value = false
   }
@@ -290,11 +290,11 @@ async function handleDelete(agentId: number) {
   actioning.value = true
   try {
     await removeA2aAgent(agentId)
-    notice('success', 'Agent Card 已下线并移入回收区')
+    notice('success', '智能体卡片已下线并移入回收区')
     await loadDashboard()
     if (selectedAgentId.value === agentId) resetAgentForm()
   } catch (error) {
-    notice('error', getErrorMessage(error, '删除 Agent Card 失败'))
+    notice('error', getErrorMessage(error, '删除智能体卡片失败'))
   } finally {
     actioning.value = false
   }
@@ -304,10 +304,10 @@ async function handleRestore(agentId: number) {
   actioning.value = true
   try {
     await restoreA2aAgent(agentId)
-    notice('success', 'Agent Card 已恢复')
+    notice('success', '智能体卡片已恢复')
     await loadDashboard()
   } catch (error) {
-    notice('error', getErrorMessage(error, '恢复 Agent Card 失败'))
+    notice('error', getErrorMessage(error, '恢复智能体卡片失败'))
   } finally {
     actioning.value = false
   }
@@ -346,18 +346,18 @@ onMounted(() => {
     <section class="a2a-page">
       <header class="hero panel-card">
         <div>
-          <p class="section-kicker">Agent To Agent Control Plane</p>
-          <h2>A2A 跨 Agent 协同与商业治理台</h2>
-          <p>统一管理远程 Agent Card、任务路由、实时派发和链路审计，覆盖注册、发布、限流、回收和可观测需求。</p>
+          <p class="section-kicker">跨智能体控制面</p>
+          <h2>A2A 跨智能体协同与治理台</h2>
+          <p>统一管理远程智能体卡片、任务路由、实时派发和链路审计，覆盖注册、发布、限流、回收和可观测需求。</p>
         </div>
         <div class="actions">
           <button type="button" class="app-button app-button--secondary" :disabled="loading" @click="loadDashboard"><RefreshCw :size="16" />刷新</button>
-          <button type="button" class="app-button" @click="resetAgentForm"><Rocket :size="16" />新建 Agent</button>
+          <button type="button" class="app-button" @click="resetAgentForm"><Rocket :size="16" />新建智能体</button>
         </div>
       </header>
 
       <section class="stats">
-        <article class="panel-card"><span>Agent 总数</span><strong>{{ stats.agentCount }}</strong><small>已发布 {{ stats.publishedAgentCount }}</small></article>
+        <article class="panel-card"><span>智能体总数</span><strong>{{ stats.agentCount }}</strong><small>已发布 {{ stats.publishedAgentCount }}</small></article>
         <article class="panel-card"><span>路由策略</span><strong>{{ stats.routeCount }}</strong><small>任务类型与备用链路</small></article>
         <article class="panel-card"><span>调度任务</span><strong>{{ stats.taskCount }}</strong><small>成功 {{ stats.successTaskCount }} / 失败 {{ stats.failedTaskCount }}</small></article>
         <article class="panel-card"><span>审计日志</span><strong>{{ stats.logCount }}</strong><small>按 taskCode 追踪</small></article>
@@ -366,12 +366,12 @@ onMounted(() => {
       <section class="grid grid--main">
         <article class="panel-card">
           <div class="panel-head">
-            <div><p class="section-kicker">Agent Card</p><h3>{{ selectedAgent ? '编辑已选 Agent' : '注册新 Agent' }}</h3></div>
+            <div><p class="section-kicker">智能体卡片</p><h3>{{ selectedAgent ? '编辑已选智能体' : '注册新智能体' }}</h3></div>
             <button type="button" class="app-button app-button--ghost" @click="resetAgentForm"><Undo2 :size="15" />重置</button>
           </div>
           <div class="form-grid">
-            <label><span>Agent Code</span><input v-model="agentForm.agentCode" type="text" /></label>
-            <label><span>Agent 名称</span><input v-model="agentForm.agentName" type="text" /></label>
+            <label><span>智能体编码</span><input v-model="agentForm.agentCode" type="text" /></label>
+            <label><span>智能体名称</span><input v-model="agentForm.agentName" type="text" /></label>
             <label class="wide"><span>服务地址</span><input v-model="agentForm.endpointUrl" type="text" /></label>
             <label><span>协议版本</span><input v-model="agentForm.protocolVersion" type="text" /></label>
             <label><span>传输协议</span><select v-model="agentForm.transportType"><option>HTTP</option><option>GRPC</option><option>MQ</option></select></label>
@@ -392,12 +392,12 @@ onMounted(() => {
             <label class="wide"><span>扩展元数据 JSON</span><textarea v-model="agentForm.metadataText" rows="5"></textarea></label>
             <label class="wide"><span>备注</span><textarea v-model="agentForm.remark" rows="2"></textarea></label>
           </div>
-          <button type="button" class="app-button submit" :disabled="savingAgent" @click="submitAgent"><Save :size="16" />{{ savingAgent ? '保存中...' : '保存 Agent Card' }}</button>
+          <button type="button" class="app-button submit" :disabled="savingAgent" @click="submitAgent"><Save :size="16" />{{ savingAgent ? '保存中...' : '保存智能体卡片' }}</button>
         </article>
 
         <article class="panel-card">
           <div class="panel-head">
-            <div><p class="section-kicker">Registry</p><h3>Agent Card 列表</h3></div>
+            <div><p class="section-kicker">注册中心</p><h3>智能体卡片列表</h3></div>
             <div class="actions"><input v-model="filters.keyword" type="search" placeholder="搜索" /><select v-model="filters.publishStatus"><option value="ALL">全部</option><option>DRAFT</option><option>PUBLISHED</option><option>OFFLINE</option></select></div>
           </div>
           <div class="cards">
@@ -409,46 +409,46 @@ onMounted(() => {
               <div class="actions"><button type="button" class="mini" :disabled="actioning" @click.stop="handlePublish(item.id)">发布</button><button type="button" class="mini danger" :disabled="actioning" @click.stop="handleDelete(item.id)">下线</button></div>
             </button>
           </div>
-          <h4>已删除 Agent</h4>
+          <h4>已删除智能体</h4>
           <div v-if="deletedAgents.length" class="cards">
             <div v-for="item in deletedAgents" :key="item.id" class="deleted"><span>{{ item.agentName }} / {{ item.agentCode }}</span><button type="button" class="mini" :disabled="actioning" @click="handleRestore(item.id)">恢复</button></div>
           </div>
-          <p v-else class="empty">当前没有回收中的 Agent Card。</p>
+          <p v-else class="empty">当前没有回收中的智能体卡片。</p>
         </article>
       </section>
 
       <section class="grid grid--three">
         <article class="panel-card">
-          <div class="panel-head"><div><p class="section-kicker">Routing</p><h3>路由策略</h3></div></div>
+          <div class="panel-head"><div><p class="section-kicker">路由治理</p><h3>路由策略</h3></div></div>
           <div class="form-grid">
-            <label><span>Route Code</span><input v-model="routeForm.routeCode" type="text" /></label>
+            <label><span>路由编码</span><input v-model="routeForm.routeCode" type="text" /></label>
             <label><span>策略名称</span><input v-model="routeForm.routeName" type="text" /></label>
-            <label><span>源 Agent</span><input v-model="routeForm.sourceAgentCode" type="text" placeholder="可留空" /></label>
-            <label><span>目标 Agent</span><input v-model="routeForm.targetAgentCode" type="text" /></label>
+            <label><span>源智能体</span><input v-model="routeForm.sourceAgentCode" type="text" placeholder="可留空" /></label>
+            <label><span>目标智能体</span><input v-model="routeForm.targetAgentCode" type="text" /></label>
             <label><span>任务类型</span><input v-model="routeForm.taskType" type="text" /></label>
             <label><span>状态</span><select v-model="routeForm.routeStatus"><option>ENABLED</option><option>DISABLED</option></select></label>
             <label><span>优先级</span><input v-model.number="routeForm.priorityNo" type="number" min="1" /></label>
             <label><span>故障转移</span><select v-model.number="routeForm.failoverEnabled"><option :value="1">开启</option><option :value="0">关闭</option></select></label>
-            <label class="wide"><span>备用 Agent</span><input v-model="routeForm.fallbackAgentCodes" type="text" /></label>
+            <label class="wide"><span>备用智能体</span><input v-model="routeForm.fallbackAgentCodes" type="text" /></label>
             <label class="wide"><span>备注</span><textarea v-model="routeForm.remark" rows="3"></textarea></label>
           </div>
           <button type="button" class="app-button submit" :disabled="savingRoute" @click="submitRoute"><Save :size="16" />{{ savingRoute ? '保存中...' : '保存路由策略' }}</button>
         </article>
 
         <article class="panel-card">
-          <div class="panel-head"><div><p class="section-kicker">Dispatch</p><h3>调度演练</h3></div></div>
+          <div class="panel-head"><div><p class="section-kicker">调度演练</p><h3>任务派发</h3></div></div>
           <div class="form-grid">
-            <label><span>源 Agent</span><input v-model="dispatchForm.sourceAgentCode" type="text" placeholder="可留空" /></label>
+            <label><span>源智能体</span><input v-model="dispatchForm.sourceAgentCode" type="text" placeholder="可留空" /></label>
             <label><span>指定目标</span><input v-model="dispatchForm.targetAgentCode" type="text" placeholder="可留空" /></label>
             <label class="wide"><span>任务类型</span><input v-model="dispatchForm.taskType" type="text" /></label>
             <label class="wide"><span>请求载荷 JSON</span><textarea v-model="dispatchForm.payloadText" rows="10"></textarea></label>
           </div>
           <button type="button" class="app-button submit" :disabled="dispatching" @click="handleDispatch"><Send :size="16" />{{ dispatching ? '派发中...' : '执行派发' }}</button>
-          <div v-if="lastTask" class="preview"><strong>{{ lastTask.taskCode }}</strong><span class="chip" :data-status="lastTask.taskStatus">{{ lastTask.taskStatus }}</span><p>目标：{{ lastTask.targetAgentCode }}，耗时：{{ lastTask.elapsedMs ?? 0 }}ms</p></div>
+          <div v-if="lastTask" class="preview"><strong>{{ lastTask.taskCode }}</strong><span class="chip" :data-status="lastTask.taskStatus">{{ lastTask.taskStatus }}</span><p>目标智能体：{{ lastTask.targetAgentCode }}，耗时：{{ lastTask.elapsedMs ?? 0 }}ms</p></div>
         </article>
 
         <article class="panel-card">
-          <div class="panel-head"><div><p class="section-kicker">Policies</p><h3>已生效路由</h3></div></div>
+          <div class="panel-head"><div><p class="section-kicker">生效策略</p><h3>已生效路由</h3></div></div>
           <div class="rows">
             <div v-for="item in routes" :key="item.id" class="row"><span>{{ item.routeName }}</span><span>{{ item.taskType }}</span><span>{{ item.targetAgentCode }}</span><span>{{ item.priorityNo ?? 100 }}</span></div>
             <p v-if="!routes.length" class="empty">当前还没有路由策略。</p>
@@ -458,16 +458,16 @@ onMounted(() => {
 
       <section class="grid grid--tasks">
         <article class="panel-card">
-          <div class="panel-head"><div><p class="section-kicker">Tasks</p><h3>最近任务</h3></div></div>
+          <div class="panel-head"><div><p class="section-kicker">任务记录</p><h3>最近任务</h3></div></div>
           <div class="rows">
             <div v-for="item in tasks" :key="item.id" class="row clickable" @click="logTaskCode = item.taskCode"><span>{{ item.taskCode }}</span><span>{{ item.taskStatus }}</span><span>{{ item.targetAgentCode }}</span><span>{{ item.elapsedMs ?? 0 }}ms</span></div>
             <p v-if="!tasks.length" class="empty">暂无派发任务记录。</p>
           </div>
         </article>
         <article class="panel-card">
-          <div class="panel-head"><div><p class="section-kicker">Audit</p><h3>执行日志</h3></div><div class="actions"><input v-model="logTaskCode" type="search" placeholder="taskCode" /><button type="button" class="app-button app-button--secondary" @click="loadLogs"><Play :size="16" />查询</button></div></div>
+            <div class="panel-head"><div><p class="section-kicker">审计日志</p><h3>执行日志</h3></div><div class="actions"><input v-model="logTaskCode" type="search" placeholder="任务编码" /><button type="button" class="app-button app-button--secondary" @click="loadLogs"><Play :size="16" />查询</button></div></div>
           <div class="rows">
-            <div v-for="item in logs" :key="item.id" class="row row--log"><span>{{ item.taskCode }}</span><span>{{ item.targetAgentCode }} / #{{ item.attemptNo ?? 0 }}</span><span>{{ item.executeStatus || item.eventType }}</span><span>{{ item.retryIndex ?? 0 }}</span><span>{{ item.successFlag === 1 ? 'YES' : 'NO' }}</span><span>{{ formatTime(item.createTime) }}</span></div>
+            <div v-for="item in logs" :key="item.id" class="row row--log"><span>{{ item.taskCode }}</span><span>{{ item.targetAgentCode }} / #{{ item.attemptNo ?? 0 }}</span><span>{{ item.executeStatus || item.eventType }}</span><span>{{ item.retryIndex ?? 0 }}</span><span>{{ item.successFlag === 1 ? '成功' : '失败' }}</span><span>{{ formatTime(item.createTime) }}</span></div>
             <p v-if="!logs.length" class="empty">暂无审计日志。</p>
           </div>
         </article>
@@ -485,6 +485,18 @@ onMounted(() => {
   gap: 18px;
 }
 
+.a2a-page {
+  min-height: 100%;
+  min-width: 0;
+}
+
+.cards,
+.rows {
+  overflow: auto;
+  padding-right: 4px;
+  scrollbar-gutter: stable;
+}
+
 .hero,
 .panel-head,
 .actions,
@@ -494,6 +506,14 @@ onMounted(() => {
   gap: 12px;
   align-items: center;
   justify-content: space-between;
+  min-width: 0;
+}
+
+.hero,
+.panel-head,
+.actions {
+  align-items: flex-start;
+  flex-wrap: wrap;
 }
 
 .hero {
@@ -519,6 +539,8 @@ onMounted(() => {
 .grid {
   display: grid;
   gap: 18px;
+  align-items: start;
+  min-width: 0;
 }
 
 .stats {
@@ -594,6 +616,7 @@ textarea {
   border: 1px solid rgba(148, 163, 184, 0.18);
   border-radius: 20px;
   background: rgba(15, 23, 42, 0.62);
+  min-width: 0;
 }
 
 .agent-card {
@@ -663,6 +686,7 @@ textarea {
   .grid--tasks {
     grid-template-columns: 1fr;
   }
+
 }
 
 @media (max-width: 760px) {

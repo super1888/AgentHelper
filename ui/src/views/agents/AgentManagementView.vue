@@ -75,9 +75,9 @@ const capabilityPreview = computed(() => parseCapabilities(form.selectedCapabili
 const availableHooks = computed(() =>
   hooks.value.filter((item) => item.hookStatus === 'ENABLED' && item.publishStatus === 'PUBLISHED'),
 )
-const totalAgentsLabel = computed(() => `共 ${agents.value.length} 个 Agent`)
-const publishedCountLabel = computed(() => `${agents.value.filter((item) => item.agentStatus === 'PUBLISHED').length} 个已发布`)
-const formTitle = computed(() => (formMode.value === 'create' ? '创建新 Agent' : '编辑 Agent'))
+const totalAgentsLabel = computed(() => `共 ${agents.value.length} 个智能体`)
+const publishedCountLabel = computed(() => `已发布 ${agents.value.filter((item) => item.agentStatus === 'PUBLISHED').length} 个`)
+const formTitle = computed(() => (formMode.value === 'create' ? '创建智能体' : '编辑智能体'))
 
 watch(selectedAgentId, (value) => {
   createdSession.value = null
@@ -132,7 +132,7 @@ function enterCreateMode() {
 
 function enterEditMode() {
   if (!selectedAgentDetail.value || !latestVersion.value) {
-    setFeedback('error', '当前 Agent 缺少可编辑的版本快照。')
+    setFeedback('error', '当前智能体缺少可编辑的版本快照。')
     return
   }
   const version = latestVersion.value
@@ -239,7 +239,7 @@ async function loadHooks() {
   try {
     hooks.value = await queryHooks()
   } catch (error) {
-    setFeedback('error', getErrorMessage(error, 'Hook 列表加载失败。'))
+    setFeedback('error', getErrorMessage(error, '钩子列表加载失败。'))
   } finally {
     hooksLoading.value = false
   }
@@ -260,7 +260,7 @@ async function loadAgents(options?: { keepSelection?: boolean; successMessage?: 
       setFeedback('success', options.successMessage)
     }
   } catch (error) {
-    setFeedback('error', getErrorMessage(error, 'Agent 列表加载失败。'))
+    setFeedback('error', getErrorMessage(error, '智能体列表加载失败。'))
   } finally {
     loading.value = false
   }
@@ -276,7 +276,7 @@ async function loadAgentDetail(agentId: string) {
     }
   } catch (error) {
     selectedAgentDetail.value = null
-    setFeedback('error', getErrorMessage(error, 'Agent 详情加载失败。'))
+    setFeedback('error', getErrorMessage(error, '智能体详情加载失败。'))
   } finally {
     detailLoading.value = false
   }
@@ -284,7 +284,7 @@ async function loadAgentDetail(agentId: string) {
 
 async function handleSubmit() {
   if (!form.agentName.trim()) {
-    setFeedback('error', '请输入 Agent 名称。')
+    setFeedback('error', '请输入智能体名称。')
     return
   }
   if (!buildPromptConfig()) {
@@ -297,18 +297,18 @@ async function handleSubmit() {
       const result = await createAgent(buildPayload())
       selectedAgentId.value = result.agentId
       enterCreateMode()
-      await loadAgents({ keepSelection: true, successMessage: `Agent ${result.agentName} 已创建。` })
+      await loadAgents({ keepSelection: true, successMessage: `智能体 ${result.agentName} 已创建。` })
     } else {
       if (!editingAgentId.value) {
-        throw new Error('缺少待编辑的 Agent 编码。')
+        throw new Error('缺少待编辑的智能体编码。')
       }
       const result = await updateAgent(editingAgentId.value, buildPayload())
       selectedAgentId.value = result.agentId
-      await loadAgents({ keepSelection: true, successMessage: `Agent ${result.agentName} 已更新并生成新版本。` })
+      await loadAgents({ keepSelection: true, successMessage: `智能体 ${result.agentName} 已更新并生成新版本。` })
       enterCreateMode()
     }
   } catch (error) {
-    setFeedback('error', getErrorMessage(error, formMode.value === 'create' ? '创建 Agent 失败。' : '更新 Agent 失败。'))
+    setFeedback('error', getErrorMessage(error, formMode.value === 'create' ? '创建智能体失败。' : '更新智能体失败。'))
   } finally {
     submitting.value = false
   }
@@ -316,7 +316,7 @@ async function handleSubmit() {
 
 async function handlePublishLatest() {
   if (!selectedAgentDetail.value || !latestVersion.value) {
-    setFeedback('error', '当前 Agent 没有可发布的版本。')
+    setFeedback('error', '当前智能体没有可发布的版本。')
     return
   }
   actionPending.value = 'publish'
@@ -327,7 +327,7 @@ async function handlePublishLatest() {
       loadAgentDetail(selectedAgentDetail.value.agentId),
     ])
   } catch (error) {
-    setFeedback('error', getErrorMessage(error, '发布 Agent 失败。'))
+    setFeedback('error', getErrorMessage(error, '发布智能体失败。'))
   } finally {
     actionPending.value = null
   }
@@ -338,9 +338,9 @@ async function handleDisable() {
   actionPending.value = 'disable'
   try {
     await disableAgent(selectedAgentDetail.value.agentId)
-    await loadAgents({ keepSelection: true, successMessage: 'Agent 已停用。' })
+    await loadAgents({ keepSelection: true, successMessage: '智能体已停用。' })
   } catch (error) {
-    setFeedback('error', getErrorMessage(error, '停用 Agent 失败。'))
+    setFeedback('error', getErrorMessage(error, '停用智能体失败。'))
   } finally {
     actionPending.value = null
   }
@@ -353,12 +353,12 @@ async function handleDelete() {
     const { agentId, agentName } = selectedAgentDetail.value
     await removeAgent(agentId)
     selectedAgentDetail.value = null
-    await loadAgents({ successMessage: `Agent ${agentName} 已删除。` })
+    await loadAgents({ successMessage: `智能体 ${agentName} 已删除。` })
     if (editingAgentId.value === agentId) {
       enterCreateMode()
     }
   } catch (error) {
-    setFeedback('error', getErrorMessage(error, '删除 Agent 失败。'))
+    setFeedback('error', getErrorMessage(error, '删除智能体失败。'))
   } finally {
     actionPending.value = null
   }
@@ -413,8 +413,8 @@ onMounted(() => {
     <section class="management-page agent-page">
       <header class="page__hero panel-card management-hero">
         <div>
-          <p class="section-kicker">Agent Studio</p>
-          <h2>Agent 配置工作台</h2>
+          <p class="section-kicker">智能体工作台</p>
+          <h2>智能体配置台</h2>
           <p class="page__meta">{{ totalAgentsLabel }}，{{ publishedCountLabel }}</p>
         </div>
         <button class="app-button app-button--secondary" :disabled="loading || detailLoading" @click="loadAgents({ keepSelection: true })">
@@ -437,7 +437,7 @@ onMounted(() => {
 
           <div class="section-grid">
             <label class="field">
-              <span class="field__label">Agent 名称</span>
+              <span class="field__label">智能体名称</span>
               <div class="input-shell">
                 <input v-model="form.agentName" class="app-input" type="text" placeholder="例如：工单助手" />
               </div>
@@ -446,7 +446,7 @@ onMounted(() => {
             <label class="field section-grid__full">
               <span class="field__label">描述</span>
               <div class="input-shell input-shell--textarea">
-                <textarea v-model="form.description" class="app-textarea" rows="3" placeholder="描述 Agent 的职责边界、目标用户和输出风格。" />
+                <textarea v-model="form.description" class="app-textarea" rows="3" placeholder="描述智能体的职责边界、目标用户和输出风格。" />
               </div>
             </label>
 
@@ -528,12 +528,12 @@ onMounted(() => {
             <section class="section-grid__full hook-panel">
               <div class="section-head">
                 <div>
-                  <strong>Hook 绑定</strong>
-                  <p class="muted">仅展示已发布且启用的 Hook，版本快照会固化这份选择。</p>
+                  <strong>钩子绑定</strong>
+                  <p class="muted">仅展示已发布且启用的钩子，版本快照会固化这份选择。</p>
                 </div>
-                <small class="muted">{{ hooksLoading ? '正在加载 Hook...' : `可选 ${availableHooks.length} 个` }}</small>
+                <small class="muted">{{ hooksLoading ? '正在加载钩子...' : `可选 ${availableHooks.length} 个` }}</small>
               </div>
-              <div v-if="availableHooks.length === 0" class="empty empty--compact">暂无可绑定的 Hook。</div>
+              <div v-if="availableHooks.length === 0" class="empty empty--compact">暂无可绑定的钩子。</div>
               <div v-else class="hook-grid">
                 <label
                   v-for="hook in availableHooks"
@@ -563,14 +563,14 @@ onMounted(() => {
 
           <button class="app-button full-width" :disabled="submitting" @click="handleSubmit">
             <Plus v-if="!submitting && formMode === 'create'" :size="16" />
-            {{ submitting ? '提交中...' : formMode === 'create' ? '创建 Agent' : '保存并生成新版本' }}
+            {{ submitting ? '提交中...' : formMode === 'create' ? '创建智能体' : '保存并生成新版本' }}
           </button>
         </article>
 
         <article class="card-section panel-card">
           <div class="section-head">
             <div>
-              <strong>Agent 列表</strong>
+              <strong>智能体列表</strong>
               <p class="muted">按名称、描述和状态搜索。</p>
             </div>
           </div>
@@ -580,7 +580,7 @@ onMounted(() => {
               <span class="field__label">搜索</span>
               <div class="input-shell">
                 <span class="input-shell__icon"><Search :size="16" /></span>
-                <input v-model="filters.keyword" class="app-input" type="text" placeholder="搜索 Agent 名称或描述" />
+                <input v-model="filters.keyword" class="app-input" type="text" placeholder="搜索智能体名称或描述" />
               </div>
             </label>
             <label class="field">
@@ -594,8 +594,8 @@ onMounted(() => {
             </label>
           </div>
 
-          <div v-if="loading" class="empty">正在加载 Agent 列表...</div>
-          <div v-else-if="filteredAgents.length === 0" class="empty">当前筛选条件下没有 Agent。</div>
+          <div v-if="loading" class="empty">正在加载智能体列表...</div>
+          <div v-else-if="filteredAgents.length === 0" class="empty">当前筛选条件下没有智能体。</div>
           <div v-else class="stack">
             <button
               v-for="agent in filteredAgents"
@@ -619,8 +619,8 @@ onMounted(() => {
         <article class="card-section panel-card">
           <div class="section-head">
             <div>
-              <strong>Agent 详情</strong>
-              <p class="muted">查看版本快照、提示词绑定方式和变量值。</p>
+              <strong>智能体详情</strong>
+              <p class="muted">查看版本快照、提示词绑定方式与变量值。</p>
             </div>
             <div v-if="selectedAgentDetail" class="action-row">
               <button class="app-button app-button--secondary" :disabled="!canEditSelectedAgent || detailLoading" @click="enterEditMode">
@@ -638,8 +638,8 @@ onMounted(() => {
             </div>
           </div>
 
-          <div v-if="detailLoading" class="empty">正在加载 Agent 详情...</div>
-          <div v-else-if="!selectedAgentDetail" class="empty">请选择一个 Agent 查看详情。</div>
+          <div v-if="detailLoading" class="empty">正在加载智能体详情...</div>
+          <div v-else-if="!selectedAgentDetail" class="empty">请选择一个智能体查看详情。</div>
           <div v-else class="stack">
             <article class="summary-card">
               <div class="list-item__head">
@@ -697,11 +697,11 @@ onMounted(() => {
           <div class="section-head">
             <div>
               <strong>会话入口</strong>
-              <p class="muted">从当前 Agent 直接进入联调聊天流程。</p>
+              <p class="muted">从当前智能体直接进入联调聊天流程。</p>
             </div>
           </div>
 
-          <div v-if="!selectedAgentDetail" class="empty">选择 Agent 后即可创建会话。</div>
+          <div v-if="!selectedAgentDetail" class="empty">选择智能体后即可创建会话。</div>
           <div v-else class="stack">
             <button class="app-button full-width" :disabled="actionPending !== null" @click="handleCreateSession()">
               <MessageSquareText :size="16" />
@@ -712,7 +712,7 @@ onMounted(() => {
             </button>
             <article v-if="createdSession" class="summary-card">
               <strong>{{ createdSession.sessionId }}</strong>
-              <p class="muted">绑定 Agent：{{ createdSession.agentId }}</p>
+              <p class="muted">绑定智能体：{{ createdSession.agentId }}</p>
               <p class="muted">版本号：v{{ createdSession.agentVersionNo }}</p>
               <p class="muted">连接状态：{{ createdSession.connectionStatus }}</p>
             </article>
@@ -726,6 +726,8 @@ onMounted(() => {
 .agent-page {
   display: grid;
   gap: 22px;
+  min-width: 0;
+  min-height: 100%;
 }
 .page__hero,
 .section-head,
@@ -737,6 +739,8 @@ onMounted(() => {
 }
 .page__hero {
   align-items: flex-start;
+  padding: 24px 26px;
+  min-width: 0;
 }
 .page__meta,
 .muted {
@@ -744,13 +748,17 @@ onMounted(() => {
 }
 .page__grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.3fr) minmax(320px, 0.9fr);
-  gap: 18px;
+  grid-template-columns: minmax(0, 1.35fr) minmax(360px, 0.78fr);
+  gap: 22px;
   align-items: start;
+  min-width: 0;
 }
 .page__grid--bottom {
-  grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.65fr);
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(360px, 0.78fr);
+  gap: 22px;
   align-items: start;
+  min-width: 0;
 }
 .card-section,
 .list-item,
@@ -763,10 +771,14 @@ onMounted(() => {
   display: grid;
   gap: 14px;
   align-content: start;
+  min-width: 0;
   padding: 18px;
   border-radius: 24px;
   background: rgba(255, 255, 255, 0.04);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+.card-section {
+  min-height: 0;
 }
 .section-grid,
 .toolbar,
@@ -821,10 +833,14 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  min-width: 0;
 }
 .chip-row {
   flex-direction: row;
   flex-wrap: wrap;
+}
+.stack {
+  min-height: 0;
 }
 .chip,
 .status-pill,

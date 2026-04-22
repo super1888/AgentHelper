@@ -304,7 +304,7 @@ async function refreshAll(keepSelection = true) {
       else resetForm()
     }
   } catch (error) {
-    showFeedback('error', getErrorMessage(error, 'Hook 数据加载失败'))
+    showFeedback('error', getErrorMessage(error, '钩子数据加载失败'))
   } finally {
     loading.value = false
   }
@@ -316,17 +316,17 @@ async function handleSave() {
     const payload = buildPayload()
     if (selectedHookId.value) {
       await updateHook(selectedHookId.value, payload)
-      showFeedback('success', 'Hook 已更新')
+      showFeedback('success', '钩子已更新')
     } else {
       const created = await createHook(payload)
-      showFeedback('success', 'Hook 已创建')
+      showFeedback('success', '钩子已创建')
       await refreshAll(false)
       await selectHook(created.id)
       return
     }
     await refreshAll()
   } catch (error) {
-    showFeedback('error', getErrorMessage(error, 'Hook 保存失败'))
+    showFeedback('error', getErrorMessage(error, '钩子保存失败'))
   } finally {
     saving.value = false
   }
@@ -373,7 +373,7 @@ async function handleHotUpdate() {
 
 async function handleDelete() {
   if (!selectedHookId.value) return
-  if (!window.confirm('确认删除当前 Hook 吗？')) return
+  if (!window.confirm('确认删除当前钩子吗？')) return
   await removeHook(selectedHookId.value)
   resetForm()
   await refreshAll(false)
@@ -442,17 +442,17 @@ onMounted(async () => {
       <article class="panel-card hero-panel">
         <div class="hero-panel__head">
           <div>
-            <p class="section-kicker">Hook Console</p>
-            <h2>Hook 管理台</h2>
-            <p class="hero-panel__summary">管理 Agent Hook 编排、风险治理、绑定策略、测试回归和调试日志。</p>
+            <p class="section-kicker">钩子控制台</p>
+            <h2>钩子管理台</h2>
+            <p class="hero-panel__summary">管理智能体钩子编排、风险治理、绑定策略、测试回归和调试日志。</p>
           </div>
           <div class="toolbar-actions">
-            <button class="app-button app-button--secondary" type="button" @click="resetForm">新建 Hook</button>
-            <button class="app-button" type="button" :disabled="saving" @click="handleSave">{{ saving ? '保存中...' : '保存 Hook' }}</button>
+            <button class="app-button app-button--secondary" type="button" @click="resetForm">新建钩子</button>
+            <button class="app-button" type="button" :disabled="saving" @click="handleSave">{{ saving ? '保存中...' : '保存钩子' }}</button>
           </div>
         </div>
         <div class="stats-strip">
-          <div class="metric-card"><span>Hook 总数</span><strong>{{ stats.totalCount }}</strong></div>
+          <div class="metric-card"><span>钩子总数</span><strong>{{ stats.totalCount }}</strong></div>
           <div class="metric-card"><span>已启用</span><strong>{{ stats.enabledCount }}</strong></div>
           <div class="metric-card"><span>已发布</span><strong>{{ stats.publishedCount }}</strong></div>
           <div class="metric-card"><span>高风险</span><strong>{{ stats.highRiskCount }}</strong></div>
@@ -480,15 +480,15 @@ onMounted(async () => {
           </div>
           <div class="deleted-box">
             <h4>回收站</h4>
-            <p>{{ deletedHooks.length }} 个已删除 Hook</p>
+            <p>{{ deletedHooks.length }} 个已删除钩子</p>
           </div>
         </article>
 
         <article class="panel-card section-panel">
           <div class="section-panel__head">
             <div>
-              <h3>{{ selectedHookId ? 'Hook 配置' : '新建 Hook' }}</h3>
-              <p>{{ selectedHookId ? `当前 Hook：${form.hookName} / ${form.hookCode}` : '未选择 Hook' }}</p>
+              <h3>{{ selectedHookId ? '钩子配置' : '新建钩子' }}</h3>
+              <p>{{ selectedHookId ? `当前钩子：${form.hookName} / ${form.hookCode}` : '未选择钩子' }}</p>
             </div>
             <div class="toolbar-actions">
               <button class="app-button app-button--secondary" type="button" :disabled="!selectedHookId" @click="handlePublish">发布</button>
@@ -499,9 +499,9 @@ onMounted(async () => {
           </div>
 
           <div class="form-grid form-grid--double">
-            <label class="field"><span class="field__label">Hook 编码</span><input v-model="form.hookCode" class="app-input" type="text" /></label>
-            <label class="field"><span class="field__label">Hook 名称</span><input v-model="form.hookName" class="app-input" type="text" /></label>
-            <label class="field"><span class="field__label">Hook 类型</span><input v-model="form.hookType" class="app-input" type="text" /></label>
+            <label class="field"><span class="field__label">钩子编码</span><input v-model="form.hookCode" class="app-input" type="text" /></label>
+            <label class="field"><span class="field__label">钩子名称</span><input v-model="form.hookName" class="app-input" type="text" /></label>
+            <label class="field"><span class="field__label">钩子类型</span><input v-model="form.hookType" class="app-input" type="text" /></label>
             <label class="field"><span class="field__label">执行阶段</span><input v-model="form.hookStage" class="app-input" type="text" /></label>
             <label class="field"><span class="field__label">状态</span><select v-model="form.hookStatus" class="app-select"><option>ENABLED</option><option>DISABLED</option></select></label>
             <label class="field"><span class="field__label">风险等级</span><select v-model="form.riskLevel" class="app-select"><option>LOW</option><option>MEDIUM</option><option>HIGH</option><option>CRITICAL</option></select></label>
@@ -513,7 +513,7 @@ onMounted(async () => {
           <label class="field"><span class="field__label">描述</span><textarea v-model="form.description" class="app-textarea" rows="3" /></label>
           <div class="form-grid form-grid--double">
             <label class="field"><span class="field__label">标签</span><input v-model="form.tagsText" class="app-input" type="text" /></label>
-            <label class="field"><span class="field__label">Agent 目标</span><input v-model="form.targetAgentCodesText" class="app-input" type="text" /></label>
+            <label class="field"><span class="field__label">智能体目标</span><input v-model="form.targetAgentCodesText" class="app-input" type="text" /></label>
             <label class="field"><span class="field__label">模型目标</span><input v-model="form.targetModelCodesText" class="app-input" type="text" /></label>
             <label class="field"><span class="field__label">环境目标</span><input v-model="form.targetEnvironmentsText" class="app-input" type="text" /></label>
           </div>
@@ -539,7 +539,7 @@ onMounted(async () => {
               <div class="form-grid">
                 <input v-model="bindingForm.bindingName" class="app-input" type="text" placeholder="绑定名称" />
                 <input v-model="bindingForm.bindingScope" class="app-input" type="text" placeholder="绑定范围" />
-                <input v-model="bindingForm.targetAgentCode" class="app-input" type="text" placeholder="Agent 编码" />
+                <input v-model="bindingForm.targetAgentCode" class="app-input" type="text" placeholder="智能体编码" />
               </div>
               <div v-if="bindings.length === 0" class="empty-state empty-state--compact">暂无绑定</div>
               <div v-else class="compact-list"><div v-for="item in bindings" :key="item.id" class="compact-item"><strong>{{ item.bindingName }}</strong><span>{{ item.bindingScope }} / {{ item.targetAgentCode || item.targetModelCode || item.environmentCode }}</span></div></div>
@@ -567,18 +567,20 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.hook-page { display: grid; gap: 24px; }
+.hook-page { display: grid; gap: 24px; min-height: 100%; min-width: 0; }
 .hero-panel, .section-panel, .metric-card, .catalog-chip, .list-item, .stack-card, .result-box, .empty-state { border: 1px solid rgba(255,255,255,.08); }
 .hero-panel, .section-panel { padding: 28px; border-radius: 24px; background: linear-gradient(180deg, rgba(255,255,255,.034), rgba(255,255,255,.012)), rgba(7,14,26,.82); box-shadow: 0 24px 56px rgba(0,0,0,.22); }
-.hero-panel__head, .section-panel__head, .toolbar-actions, .stack-card__head { display: flex; justify-content: space-between; gap: 14px; align-items: flex-start; }
+.hero-panel__head, .section-panel__head, .toolbar-actions, .stack-card__head { display: flex; justify-content: space-between; gap: 14px; align-items: flex-start; flex-wrap: wrap; }
 .hero-panel__head h2, .section-panel__head h3, .stack-card__head h4 { margin: 0; color: var(--color-ink-strong); }
 .hero-panel__summary, .section-panel__head p, .deleted-box p, .compact-item span { color: var(--color-ink-soft); line-height: 1.6; }
 .stats-strip { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; margin-top: 20px; }
 .metric-card { padding: 16px 18px; border-radius: 18px; background: rgba(255,255,255,.03); }
 .metric-card span { color: var(--color-ink-soft); }
 .metric-card strong { display: block; margin-top: 10px; color: var(--color-ink-strong); font-size: 1.5rem; }
-.hook-layout { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 20px; }
+.hook-layout { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 20px; align-items: start; min-width: 0; }
 .sidebar-panel, .list-stack, .tab-grid, .form-grid, .filter-grid { display: grid; gap: 14px; }
+.sidebar-panel { align-content: start; }
+.list-stack { overflow: auto; padding-right: 4px; scrollbar-gutter: stable; min-height: 0; }
 .form-grid--double { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .catalog-strip { display: flex; flex-wrap: wrap; gap: 10px; }
 .catalog-chip, .list-item { border-radius: 16px; background: rgba(255,255,255,.03); color: var(--color-ink-soft); }
@@ -593,8 +595,8 @@ onMounted(async () => {
 .app-textarea { min-height: 120px; padding: 14px; }
 .code-area, .result-box { font-family: var(--font-mono); font-size: .84rem; }
 .tab-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 18px; }
-.stack-card { display: grid; gap: 14px; padding: 18px; border-radius: 18px; background: rgba(255,255,255,.018); }
-.compact-list { display: grid; gap: 10px; }
+.stack-card { display: grid; gap: 14px; padding: 18px; border-radius: 18px; background: rgba(255,255,255,.018); min-width: 0; align-content: start; }
+.compact-list { display: grid; gap: 10px; overflow: auto; padding-right: 4px; scrollbar-gutter: stable; min-height: 0; }
 .compact-item { display: grid; gap: 4px; padding: 12px 14px; border-radius: 14px; background: rgba(255,255,255,.024); }
 .compact-item--action { grid-template-columns: 1fr auto; align-items: center; }
 .result-box { margin: 0; padding: 14px; border-radius: 14px; background: rgba(8,16,30,.96); white-space: pre-wrap; word-break: break-word; }

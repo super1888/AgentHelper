@@ -1,7 +1,18 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
-import { Bot, Building2, Database, FileCode2, GitBranch, LogOut, ShieldCheck, Sparkles, Users, Wrench } from 'lucide-vue-next'
+import {
+  Bot,
+  Building2,
+  Database,
+  FileCode2,
+  GitBranch,
+  LogOut,
+  ShieldCheck,
+  Sparkles,
+  Users,
+  Wrench,
+} from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
@@ -35,29 +46,29 @@ const navItems = [
   },
   {
     to: '/tools',
-    label: 'Tools',
-    description: 'tool registry, config, debug and risk governance',
+    label: '工具管理',
+    description: '工具注册、配置、调试与风险治理',
     icon: Wrench,
     isActive: () => route.name === 'tools',
   },
   {
     to: '/hooks',
-    label: 'Hooks',
-    description: 'hook orchestration, guardrail, binding and debug',
+    label: '钩子管理',
+    description: 'Hook 编排、护栏、绑定与调试',
     icon: GitBranch,
     isActive: () => route.name === 'hooks',
   },
   {
     to: '/interceptors',
-    label: 'Interceptors',
-    description: 'interceptor governance, debug, binding and runtime policy',
+    label: '拦截器管理',
+    description: '拦截器治理、调试、绑定与运行策略',
     icon: GitBranch,
     isActive: () => route.name === 'interceptors',
   },
   {
     to: '/a2a',
-    label: 'A2A',
-    description: 'agent card registry, routing, dispatch and audit',
+    label: 'A2A 协同',
+    description: 'Agent Card 注册、路由、调度与审计',
     icon: GitBranch,
     isActive: () => route.name === 'a2a',
   },
@@ -106,9 +117,9 @@ async function handleLogout() {
             <ShieldCheck :size="20" />
           </div>
           <div class="shell__brand-copy">
-            <p class="section-kicker">Agent Helper</p>
+            <p class="section-kicker">控制中枢</p>
             <h1>Agent Helper 控制台</h1>
-            <p>统一管理智能体、提示词模板、向量知识库、租户与用户能力。</p>
+            <p>统一管理智能体、提示词模板、知识库、租户与扩展能力。</p>
           </div>
         </section>
 
@@ -159,7 +170,7 @@ async function handleLogout() {
     <div class="shell__main">
       <header class="shell__topbar panel-card">
         <div class="shell__topbar-copy">
-          <p class="section-kicker">Workspace Focus</p>
+          <p class="section-kicker">当前工作区</p>
           <h2>{{ activeNav.label }}</h2>
           <p>{{ activeNav.description }}</p>
         </div>
@@ -181,24 +192,31 @@ async function handleLogout() {
   display: grid;
   grid-template-columns: 272px minmax(0, 1fr);
   gap: 28px;
-  width: min(1360px, calc(100% - 40px));
+  width: calc(100% - 40px);
+  max-width: 1840px;
+  height: 100vh;
+  height: 100dvh;
   margin: 0 auto;
-  padding: 24px 0 40px;
+  padding: 24px 0;
+  overflow: hidden;
 }
 
-.shell__sidebar {
+.shell__sidebar,
+.shell__main {
   min-width: 0;
+  min-height: 0;
 }
 
 .shell__sidebar-inner {
   position: sticky;
-  top: 20px;
+  top: 0;
   display: grid;
   gap: 16px;
-  max-height: calc(100vh - 40px);
-  max-height: calc(100dvh - 40px);
+  max-height: calc(100vh - 48px);
+  max-height: calc(100dvh - 48px);
   padding: 18px;
   overflow: auto;
+  scrollbar-gutter: stable;
 }
 
 .shell__brand {
@@ -370,8 +388,8 @@ async function handleLogout() {
 
 .shell__main {
   display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   gap: 18px;
-  min-width: 0;
 }
 
 .shell__topbar {
@@ -430,6 +448,10 @@ async function handleLogout() {
   flex-direction: column;
   gap: 24px;
   min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 4px;
+  scrollbar-gutter: stable;
 }
 
 @keyframes nav-breathe {
@@ -450,13 +472,21 @@ async function handleLogout() {
 @media (max-width: 1180px) {
   .shell {
     grid-template-columns: 1fr;
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
     gap: 24px;
+    overflow: visible;
   }
 
   .shell__sidebar-inner {
     position: static;
     max-height: none;
+  }
+
+  .shell__content {
     overflow: visible;
+    padding-right: 0;
   }
 }
 
@@ -464,6 +494,7 @@ async function handleLogout() {
   .shell {
     width: min(100%, calc(100% - 20px));
     padding-top: 16px;
+    padding-bottom: 16px;
   }
 
   .shell__sidebar-inner,
