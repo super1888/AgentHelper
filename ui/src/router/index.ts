@@ -82,6 +82,14 @@ const router = createRouter({
       },
     },
     {
+      path: '/a2a',
+      name: 'a2a',
+      component: () => import('@/views/a2a/A2aManagementView.vue'),
+      meta: {
+        requiresAuth: true,
+      },
+    },
+    {
       path: '/vectors',
       name: 'vectors',
       component: () => import('@/views/vectors/VectorManagementView.vue'),

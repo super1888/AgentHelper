@@ -55,6 +55,13 @@ const navItems = [
     isActive: () => route.name === 'interceptors',
   },
   {
+    to: '/a2a',
+    label: 'A2A',
+    description: 'agent card registry, routing, dispatch and audit',
+    icon: GitBranch,
+    isActive: () => route.name === 'a2a',
+  },
+  {
     to: '/vectors',
     label: '向量管理',
     description: '知识入库与语义检索',

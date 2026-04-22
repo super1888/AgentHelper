@@ -29,6 +29,7 @@ import com.spring.ai.common.repository.service.AgentSessionEventService;
 import com.spring.ai.common.repository.service.AgentSessionService;
 import com.spring.ai.common.repository.service.AgentTaskService;
 import com.spring.ai.common.repository.service.AgentVersionService;
+import com.spring.ai.common.web.CurrentUserContextSupport;
 import com.spring.ai.prompt.application.manager.PromptTemplateResolver;
 import com.spring.ai.prompt.config.PromptTemplateConstants;
 import com.spring.ai.prompt.domain.dto.PromptTemplateBindDTO;
@@ -70,6 +71,9 @@ public class SimpleAgentApplicationManager {
 
     @Resource
     private PromptTemplateResolver promptTemplateResolver; // 提示词模板解析器
+    
+    @Resource
+    private CurrentUserContextSupport currentUserContextSupport; 
 
     /**
      * 获取当前用户的所有Agent列表
@@ -77,8 +81,8 @@ public class SimpleAgentApplicationManager {
      * @return Agent摘要列表
      */
     public List<SimpleAgentSummaryResponse> listAgents() {
-        Long tenantId = simpleAgentSupportManager.getCurrentTenantId();
-        Long currentUserId = simpleAgentSupportManager.getCurrentUserId();
+        Long tenantId = currentUserContextSupport.getCurrentTenantIdWithAutoInit();
+        Long currentUserId = currentUserContextSupport.getCurrentUserId();
         return agentService.listByOwner(tenantId, currentUserId)
                 .stream()
                 .map(SimpleAgentAssembler::toSummaryResponse)
@@ -94,9 +98,9 @@ public class SimpleAgentApplicationManager {
     @Transactional(rollbackFor = Exception.class)
     public SimpleAgentCreateResponse createAgent(SimpleAgentCreateRequest request) {
         validateCreateRequest(request);
-        Long tenantId = simpleAgentSupportManager.getCurrentTenantId();
-        Long currentUserId = simpleAgentSupportManager.getCurrentUserId();
-        String currentUserName = simpleAgentSupportManager.getCurrentUserName();
+        Long tenantId = currentUserContextSupport.getCurrentTenantIdWithAutoInit();
+        Long currentUserId = currentUserContextSupport.getCurrentUserId();
+        String currentUserName = currentUserContextSupport.getCurrentUserName();
 
         // 转换为Agent实体并保存
         Agent agent = SimpleAgentAssembler.toCreateAgent(

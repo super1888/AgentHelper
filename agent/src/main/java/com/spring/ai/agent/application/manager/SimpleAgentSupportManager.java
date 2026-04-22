@@ -53,31 +53,10 @@ public class SimpleAgentSupportManager {
     private ObjectMapper objectMapper;
 
     /**
-     * 获取当前登录用户 ID。
-     */
-    public Long getCurrentUserId() {
-        return currentUserContextSupport.getCurrentUserId();
-    }
-
-    /**
-     * 获取当前登录用户名。
-     */
-    public String getCurrentUserName() {
-        return currentUserContextSupport.getCurrentUserName();
-    }
-
-    /**
-     * 获取当前租户 ID；若不存在则自动补建默认租户。
-     */
-    public Long getCurrentTenantId() {
-        return currentUserContextSupport.getCurrentTenantIdWithAutoInit();
-    }
-
-    /**
      * 校验并获取 Agent 主档。
      */
     public Agent requireAgent(String agentCode) {
-        Agent agent = agentService.getByAgentCode(agentCode, getCurrentTenantId());
+        Agent agent = agentService.getByAgentCode(agentCode, currentUserContextSupport.getCurrentTenantIdWithAutoInit());
         if (agent == null) {
             throw new BusinessException(ErrorCodeEnum.NOT_FOUND, HttpStatus.NOT_FOUND, "未找到智能体: " + agentCode);
         }
@@ -89,7 +68,7 @@ public class SimpleAgentSupportManager {
      * 校验并获取指定版本。
      */
     public AgentVersion requireAgentVersion(Long agentId, Integer versionNo) {
-        AgentVersion version = agentVersionService.getByAgentIdAndVersionNo(agentId, getCurrentTenantId(), versionNo);
+        AgentVersion version = agentVersionService.getByAgentIdAndVersionNo(agentId, currentUserContextSupport.getCurrentTenantIdWithAutoInit(), versionNo);
         if (version == null) {
             throw new BusinessException(ErrorCodeEnum.NOT_FOUND, HttpStatus.NOT_FOUND, "未找到智能体版本: " + versionNo);
         }
@@ -101,7 +80,7 @@ public class SimpleAgentSupportManager {
      */
     public AgentVersion requireAgentVersionById(Long versionId) {
         AgentVersion version = agentVersionService.getById(versionId);
-        if (version == null || !sameTenant(version.getTenantId(), getCurrentTenantId())) {
+        if (version == null || !sameTenant(version.getTenantId(), currentUserContextSupport.getCurrentTenantIdWithAutoInit())) {
             throw new BusinessException(ErrorCodeEnum.NOT_FOUND, HttpStatus.NOT_FOUND, "未找到智能体版本: " + versionId);
         }
         return version;
@@ -111,7 +90,7 @@ public class SimpleAgentSupportManager {
      * 校验并获取会话。
      */
     public AgentSession requireSession(String sessionCode) {
-        AgentSession session = agentSessionService.getBySessionCode(sessionCode, getCurrentTenantId());
+        AgentSession session = agentSessionService.getBySessionCode(sessionCode, currentUserContextSupport.getCurrentTenantIdWithAutoInit());
         if (session == null) {
             throw new BusinessException(ErrorCodeEnum.NOT_FOUND, HttpStatus.NOT_FOUND, "未找到会话: " + sessionCode);
         }
@@ -123,7 +102,7 @@ public class SimpleAgentSupportManager {
      * 校验并获取任务。
      */
     public AgentTask requireTask(String taskCode) {
-        AgentTask task = agentTaskService.getByTaskCode(taskCode, getCurrentTenantId());
+        AgentTask task = agentTaskService.getByTaskCode(taskCode, currentUserContextSupport.getCurrentTenantIdWithAutoInit());
         if (task == null) {
             throw new BusinessException(ErrorCodeEnum.NOT_FOUND, HttpStatus.NOT_FOUND, "未找到任务: " + taskCode);
         }
@@ -135,7 +114,7 @@ public class SimpleAgentSupportManager {
      * 校验当前用户是否拥有资源访问权。
      */
     public void validateOwner(Long ownerUserId) {
-        if (ownerUserId == null || !ownerUserId.equals(getCurrentUserId())) {
+        if (ownerUserId == null || !ownerUserId.equals(currentUserContextSupport.getCurrentUserId())) {
             throw new BusinessException(ErrorCodeEnum.FORBIDDEN, HttpStatus.FORBIDDEN, "当前用户无权访问该资源");
         }
     }
