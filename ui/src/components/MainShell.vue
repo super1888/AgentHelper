@@ -27,77 +27,77 @@ const navItems = [
   {
     to: '/agents',
     label: '智能体管理',
-    description: '角色、会话与运行策略',
+    description: '角色、版本、会话与运行编排',
     icon: Bot,
     isActive: () => String(route.path).startsWith('/agents'),
   },
   {
     to: '/core-config',
     label: '核心配置',
-    description: '模型供应商、模型参数与密钥托管',
+    description: '模型提供商、模型参数与密钥托管',
     icon: Cpu,
     isActive: () => route.name === 'core-config',
   },
   {
     to: '/prompts',
     label: '提示词模板',
-    description: '系统提示词资产管理',
+    description: '模板资产、变量、规则与渲染测试',
     icon: FileCode2,
     isActive: () => route.name === 'prompts',
   },
   {
     to: '/skills',
     label: 'Skill 管理',
-    description: '技能配置与发布治理',
+    description: '技能配置、版本发布与批量治理',
     icon: Sparkles,
     isActive: () => route.name === 'skills',
   },
   {
     to: '/tools',
     label: '工具管理',
-    description: '工具注册、配置、调试与风险治理',
+    description: '工具注册、调试、发布与风险控制',
     icon: Wrench,
     isActive: () => route.name === 'tools',
   },
   {
     to: '/hooks',
-    label: '钩子管理',
-    description: 'Hook 编排、护栏、绑定与调试',
+    label: 'Hook 管理',
+    description: 'Hook 编排、绑定、调试与规则治理',
     icon: GitBranch,
     isActive: () => route.name === 'hooks',
   },
   {
     to: '/interceptors',
     label: '拦截器管理',
-    description: '拦截器治理、调试、绑定与运行策略',
+    description: '拦截器治理、发布、绑定与运行策略',
     icon: GitBranch,
     isActive: () => route.name === 'interceptors',
   },
   {
     to: '/a2a',
     label: 'A2A 协同',
-    description: 'Agent Card 注册、路由、调度与审计',
+    description: 'Agent Card、路由、调度与审计',
     icon: GitBranch,
     isActive: () => route.name === 'a2a',
   },
   {
     to: '/vectors',
     label: '向量管理',
-    description: '知识入库与语义检索',
+    description: '知识入库、切片、检索与文件治理',
     icon: Database,
     isActive: () => route.name === 'vectors',
   },
   {
     to: '/tenants',
     label: '租户管理',
-    description: '组织边界与租户治理',
+    description: '组织边界、租户配置与成员归属',
     icon: Building2,
     isActive: () => route.name === 'tenants',
   },
   {
     to: '/users',
     label: '用户管理',
-    description: '账号、状态与归属关系',
+    description: '账号、状态、联系方式与租户绑定',
     icon: Users,
     isActive: () => route.name === 'users',
   },
@@ -126,8 +126,8 @@ async function handleLogout() {
           </div>
           <div class="shell__brand-copy">
             <p class="section-kicker">控制中枢</p>
-            <h1>Agent Helper 控制台</h1>
-            <p>统一管理智能体、提示词模板、知识库、租户与扩展能力。</p>
+            <h1>Agent Helper Console</h1>
+            <p>统一管理智能体、模型、提示词、知识库、租户与平台扩展能力。</p>
           </div>
         </section>
 
@@ -198,14 +198,13 @@ async function handleLogout() {
 <style scoped>
 .shell {
   display: grid;
-  grid-template-columns: 272px minmax(0, 1fr);
-  gap: 28px;
-  width: calc(100% - 40px);
-  max-width: 1840px;
+  grid-template-columns: var(--layout-sidebar-width) minmax(0, 1fr);
+  gap: var(--layout-gap);
+  width: min(calc(100% - 32px), var(--layout-max-width));
   height: 100vh;
   height: 100dvh;
   margin: 0 auto;
-  padding: 24px 0;
+  padding: 18px 0 20px;
   overflow: hidden;
 }
 
@@ -220,9 +219,9 @@ async function handleLogout() {
   top: 0;
   display: grid;
   gap: 16px;
-  max-height: calc(100vh - 48px);
-  max-height: calc(100dvh - 48px);
-  padding: 18px;
+  max-height: calc(100vh - 38px);
+  max-height: calc(100dvh - 38px);
+  padding: var(--compact-panel-padding);
   overflow: auto;
   scrollbar-gutter: stable;
 }
@@ -363,7 +362,7 @@ async function handleLogout() {
   display: grid;
   gap: 10px;
   padding: 14px;
-  border-radius: var(--radius-soft);
+  border-radius: 18px;
   border: 1px solid rgba(255, 255, 255, 0.05);
   background: rgba(255, 255, 255, 0.025);
 }
@@ -397,7 +396,7 @@ async function handleLogout() {
 .shell__main {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
-  gap: 18px;
+  gap: 16px;
 }
 
 .shell__topbar {
@@ -405,7 +404,7 @@ async function handleLogout() {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 18px 20px;
+  padding: 18px var(--panel-padding);
 }
 
 .shell__topbar-copy {
@@ -454,11 +453,12 @@ async function handleLogout() {
 .shell__content {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: var(--layout-gap);
   min-width: 0;
   min-height: 0;
   overflow: auto;
   padding-right: 4px;
+  padding-bottom: 8px;
   scrollbar-gutter: stable;
 }
 
@@ -483,7 +483,7 @@ async function handleLogout() {
     height: auto;
     min-height: 100vh;
     min-height: 100dvh;
-    gap: 24px;
+    gap: 18px;
     overflow: visible;
   }
 
@@ -501,13 +501,13 @@ async function handleLogout() {
 @media (max-width: 720px) {
   .shell {
     width: min(100%, calc(100% - 20px));
-    padding-top: 16px;
-    padding-bottom: 16px;
+    padding-top: 12px;
+    padding-bottom: 14px;
   }
 
   .shell__sidebar-inner,
   .shell__topbar {
-    padding: 16px;
+    padding: var(--compact-panel-padding);
   }
 
   .shell__topbar {

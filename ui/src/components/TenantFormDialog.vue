@@ -26,7 +26,7 @@ const errors = reactive<Partial<Record<TenantField, string>>>({})
 const dialogTitle = computed(() => (props.mode === 'create' ? '新建租户' : '编辑租户'))
 const dialogDescription = computed(() => (
   props.mode === 'create'
-    ? '创建新的租户边界，用于承载用户、Agent 和会话数据。'
+    ? '创建新的租户边界，用于承载用户、智能体和会话数据。'
     : '维护租户名称、编码、联系人和启停状态。'
 ))
 
@@ -42,7 +42,9 @@ function createEmptyForm(): TenantFormState {
 }
 
 function clearErrors() {
-  for (const key of Object.keys(errors) as TenantField[]) delete errors[key]
+  for (const key of Object.keys(errors) as TenantField[]) {
+    delete errors[key]
+  }
 }
 
 function syncFormWithProps() {
@@ -63,7 +65,9 @@ function handleSubmit() {
   clearErrors()
   const nextErrors = validateTenantForm(form)
   Object.assign(errors, nextErrors)
-  if (Object.keys(nextErrors).length > 0) return
+  if (Object.keys(nextErrors).length > 0) {
+    return
+  }
 
   const payload: CreateTenantPayload | UpdateTenantPayload = {
     tenantCode: form.tenantCode.trim(),
@@ -79,7 +83,9 @@ function handleSubmit() {
 watch(
   () => [props.modelValue, props.mode, props.tenant] as const,
   ([visible]) => {
-    if (visible) syncFormWithProps()
+    if (visible) {
+      syncFormWithProps()
+    }
   },
   { immediate: true },
 )
@@ -110,7 +116,14 @@ watch(
           <span class="field__label">租户编码</span>
           <div class="input-shell" :class="{ 'input-shell--invalid': Boolean(errors.tenantCode) }">
             <span class="input-shell__icon"><Hash :size="16" /></span>
-            <input v-model="form.tenantCode" class="app-input" type="text" :disabled="submitting" placeholder="例如 HEADQUARTER" @input="delete errors.tenantCode" />
+            <input
+              v-model="form.tenantCode"
+              class="app-input"
+              type="text"
+              :disabled="submitting"
+              placeholder="例如 HEADQUARTER"
+              @input="delete errors.tenantCode"
+            />
           </div>
           <span v-if="errors.tenantCode" class="field__error">{{ errors.tenantCode }}</span>
         </label>
@@ -119,7 +132,14 @@ watch(
           <span class="field__label">租户名称</span>
           <div class="input-shell" :class="{ 'input-shell--invalid': Boolean(errors.tenantName) }">
             <span class="input-shell__icon"><Building2 :size="16" /></span>
-            <input v-model="form.tenantName" class="app-input" type="text" :disabled="submitting" placeholder="例如 总部租户" @input="delete errors.tenantName" />
+            <input
+              v-model="form.tenantName"
+              class="app-input"
+              type="text"
+              :disabled="submitting"
+              placeholder="例如 总部租户"
+              @input="delete errors.tenantName"
+            />
           </div>
           <span v-if="errors.tenantName" class="field__error">{{ errors.tenantName }}</span>
         </label>
@@ -128,7 +148,14 @@ watch(
           <span class="field__label">联系人</span>
           <div class="input-shell" :class="{ 'input-shell--invalid': Boolean(errors.contactName) }">
             <span class="input-shell__icon"><ContactRound :size="16" /></span>
-            <input v-model="form.contactName" class="app-input" type="text" :disabled="submitting" placeholder="选填" @input="delete errors.contactName" />
+            <input
+              v-model="form.contactName"
+              class="app-input"
+              type="text"
+              :disabled="submitting"
+              placeholder="选填"
+              @input="delete errors.contactName"
+            />
           </div>
           <span v-if="errors.contactName" class="field__error">{{ errors.contactName }}</span>
         </label>
@@ -137,7 +164,14 @@ watch(
           <span class="field__label">联系电话</span>
           <div class="input-shell" :class="{ 'input-shell--invalid': Boolean(errors.contactPhone) }">
             <span class="input-shell__icon"><Phone :size="16" /></span>
-            <input v-model="form.contactPhone" class="app-input" type="text" :disabled="submitting" placeholder="11 位手机号" @input="delete errors.contactPhone" />
+            <input
+              v-model="form.contactPhone"
+              class="app-input"
+              type="text"
+              :disabled="submitting"
+              placeholder="11 位手机号"
+              @input="delete errors.contactPhone"
+            />
           </div>
           <span v-if="errors.contactPhone" class="field__error">{{ errors.contactPhone }}</span>
         </label>
@@ -146,7 +180,14 @@ watch(
           <span class="field__label">租户描述</span>
           <div class="input-shell input-shell--textarea" :class="{ 'input-shell--invalid': Boolean(errors.description) }">
             <span class="input-shell__icon input-shell__icon--textarea"><ScrollText :size="16" /></span>
-            <textarea v-model="form.description" class="app-textarea" rows="4" :disabled="submitting" placeholder="描述租户用途、组织范围或使用场景。" @input="delete errors.description" />
+            <textarea
+              v-model="form.description"
+              class="app-textarea"
+              rows="4"
+              :disabled="submitting"
+              placeholder="描述租户用途、组织范围或业务场景。"
+              @input="delete errors.description"
+            />
           </div>
           <span v-if="errors.description" class="field__error">{{ errors.description }}</span>
         </label>
@@ -161,29 +202,102 @@ watch(
           </label>
           <label class="status-toggle__option" :class="{ 'status-toggle__option--active': form.status === 0 }">
             <input v-model="form.status" type="radio" :value="0" :disabled="submitting" />
-            <span>禁用</span>
+            <span>停用</span>
           </label>
         </div>
       </fieldset>
     </form>
 
     <template #footer>
-      <button type="button" class="app-button app-button--secondary" :disabled="submitting" @click="emit('update:modelValue', false)">取消</button>
-      <button type="button" class="app-button" :disabled="submitting" @click="handleSubmit">{{ submitting ? '提交中...' : mode === 'create' ? '创建租户' : '保存修改' }}</button>
+      <button type="button" class="app-button app-button--secondary" :disabled="submitting" @click="emit('update:modelValue', false)">
+        取消
+      </button>
+      <button type="button" class="app-button" :disabled="submitting" @click="handleSubmit">
+        {{ submitting ? '提交中...' : mode === 'create' ? '创建租户' : '保存修改' }}
+      </button>
     </template>
   </AppDialog>
 </template>
 
 <style scoped>
-.tenant-form { display: flex; flex-direction: column; gap: 22px; }
-.identity-grid, .form-grid, .status-toggle { display: grid; gap: 16px; }
-.identity-grid, .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.identity-card { padding: 16px 18px; border-radius: 22px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); }
-.identity-card__label { display: block; margin-bottom: 8px; color: var(--color-ink-muted); font-size: .76rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
-.identity-card strong { color: var(--color-ink-strong); }
-.status-toggle { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.status-toggle__option { position: relative; display: inline-flex; align-items: center; justify-content: center; min-height: 54px; border: 1px solid rgba(255,255,255,.08); border-radius: 18px; color: var(--color-ink-soft); background: rgba(255,255,255,.04); cursor: pointer; transition: all 180ms ease; }
-.status-toggle__option--active { color: var(--color-ink-strong); border-color: rgba(83,184,255,.28); background: rgba(83,184,255,.12); transform: translateY(-1px); }
-.status-toggle__option input { position: absolute; opacity: 0; pointer-events: none; }
-@media (max-width: 720px) { .identity-grid, .form-grid, .status-toggle { grid-template-columns: 1fr; } }
+.tenant-form {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.identity-grid,
+.form-grid,
+.status-toggle {
+  display: grid;
+  gap: 16px;
+}
+
+.identity-grid,
+.form-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.identity-card {
+  padding: 16px 18px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.identity-card__label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--color-ink-muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.identity-card strong {
+  color: var(--color-ink-strong);
+}
+
+.field--full {
+  grid-column: 1 / -1;
+}
+
+.status-toggle {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.status-toggle__option {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 54px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  color: var(--color-ink-soft);
+  background: rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+}
+
+.status-toggle__option--active {
+  color: var(--color-ink-strong);
+  border-color: rgba(83, 184, 255, 0.28);
+  background: rgba(83, 184, 255, 0.12);
+  transform: translateY(-1px);
+}
+
+.status-toggle__option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (max-width: 720px) {
+  .identity-grid,
+  .form-grid,
+  .status-toggle {
+    grid-template-columns: 1fr;
+  }
+}
 </style>

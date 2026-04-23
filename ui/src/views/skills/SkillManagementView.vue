@@ -999,15 +999,15 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.skill-page { display: grid; gap: 26px; }
+.skill-page { display: grid; gap: var(--layout-gap); }
 .hero-panel, .section-panel, .metric-card, .feedback-banner, .result-box, .empty-state, .stack-card, .config-card { border: 1px solid rgba(255,255,255,.08); }
 .hero-panel, .section-panel {
-  padding: 30px;
-  border-radius: 28px;
+  padding: var(--panel-padding);
+  border-radius: var(--panel-radius);
   background: linear-gradient(180deg, rgba(255,255,255,.034), rgba(255,255,255,.012)), rgba(7,14,26,.82);
   box-shadow: 0 24px 56px rgba(0,0,0,.22);
 }
-.section-panel--compact { padding-top: 24px; padding-bottom: 24px; }
+.section-panel--compact { padding-top: var(--compact-panel-padding); padding-bottom: var(--compact-panel-padding); }
 .hero-panel__head, .section-panel__head, .toolbar-actions, .stack-card__head, .editor-block__head {
   display: flex; align-items: flex-start; justify-content: space-between; gap: 14px;
 }
@@ -1088,7 +1088,7 @@ onMounted(async () => {
 .config-card summary::after { content: '+'; float: right; color: rgba(173,195,229,.72); font-size: 1.1rem; }
 .config-card[open] summary::after { content: '-'; }
 .config-card__body { padding: 0 18px 18px; }
-.stack-card { padding: 16px 18px; border-radius: 16px; background: rgba(255,255,255,.022); }
+.stack-card { padding: var(--compact-panel-padding); border-radius: 18px; background: rgba(255,255,255,.022); }
 .toolbar-actions { flex-wrap: wrap; }
 .toolbar-actions--left { justify-content: flex-start; }
 .workbench-tabs { display: grid; gap: 18px; }
@@ -1197,7 +1197,7 @@ onMounted(async () => {
   .compact-row { grid-template-columns: 1fr; gap: 10px; }
 }
 @media (max-width: 760px) {
-  .hero-panel, .section-panel { padding: 22px; border-radius: 22px; }
+  .hero-panel, .section-panel { padding: var(--compact-panel-padding); border-radius: var(--sub-panel-radius); }
   .hero-panel__head, .section-panel__head, .toolbar-actions, .stack-card__head, .editor-block__head, .deleted-row { flex-direction: column; align-items: stretch; }
   .action-grid { grid-template-columns: 1fr; }
   .editor-block { padding: 18px; }

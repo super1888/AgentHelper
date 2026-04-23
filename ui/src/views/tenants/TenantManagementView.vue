@@ -7,14 +7,23 @@ import MainShell from '@/components/MainShell.vue'
 import StatusBadge from '@/components/StatusBadge.vue'
 import TenantFormDialog from '@/components/TenantFormDialog.vue'
 import { createTenant, fetchTenantStats, queryTenants, removeTenant, updateTenant } from '@/api/tenant'
-import type { CreateTenantPayload, TenantPageResult, TenantProfile, TenantStatistics, UpdateTenantPayload } from '@/types/tenant'
+import type {
+  CreateTenantPayload,
+  TenantPageResult,
+  TenantProfile,
+  TenantStatistics,
+  UpdateTenantPayload,
+} from '@/types/tenant'
 import { getErrorMessage } from '@/utils/errors'
 
 type FilterStatus = 'all' | 'enabled' | 'disabled'
 type DialogMode = 'create' | 'edit'
 type FeedbackTone = 'success' | 'error' | 'info'
 
-interface FeedbackState { tone: FeedbackTone; message: string }
+interface FeedbackState {
+  tone: FeedbackTone
+  message: string
+}
 
 const loading = ref(false)
 const statsLoading = ref(false)
@@ -26,14 +35,44 @@ const selectedTenant = ref<TenantProfile | null>(null)
 const deleteTarget = ref<TenantProfile | null>(null)
 const feedback = ref<FeedbackState | null>(null)
 
-const filters = reactive({ tenantCode: '', tenantName: '', status: 'all' as FilterStatus })
-const pageState = ref<TenantPageResult>({ list: [], total: 0, pageNum: 1, pageSize: 20, pages: 0 })
-const statistics = ref<TenantStatistics>({ totalCount: 0, enabledCount: 0, disabledCount: 0 })
+const filters = reactive({
+  tenantCode: '',
+  tenantName: '',
+  status: 'all' as FilterStatus,
+})
 
-const totalTenantsLabel = computed(() => (statsLoading.value ? '统计中...' : `总租户 ${statistics.value.totalCount}`))
-const statsSummary = computed(() => (statsLoading.value ? '正在刷新统计...' : `启用 ${statistics.value.enabledCount} / 禁用 ${statistics.value.disabledCount}`))
-const resultsSummary = computed(() => loading.value ? '正在加载租户数据...' : `共 ${pageState.value.total} 条，当前第 ${pageState.value.pageNum} / ${Math.max(pageState.value.pages, 1)} 页`)
-const deleteDescription = computed(() => deleteTarget.value ? `确认删除租户 ${deleteTarget.value.tenantName} 吗？该操作不可撤销。` : '')
+const pageState = ref<TenantPageResult>({
+  list: [],
+  total: 0,
+  pageNum: 1,
+  pageSize: 20,
+  pages: 0,
+})
+
+const statistics = ref<TenantStatistics>({
+  totalCount: 0,
+  enabledCount: 0,
+  disabledCount: 0,
+})
+
+const totalTenantsLabel = computed(() => (
+  statsLoading.value ? '统计刷新中...' : `总租户数 ${statistics.value.totalCount}`
+))
+
+const statsSummary = computed(() => (
+  statsLoading.value ? '正在刷新统计...' : `启用 ${statistics.value.enabledCount} / 停用 ${statistics.value.disabledCount}`
+))
+
+const resultsSummary = computed(() => (
+  loading.value
+    ? '正在加载租户列表...'
+    : `共 ${pageState.value.total} 条，当前第 ${pageState.value.pageNum} / ${Math.max(pageState.value.pages, 1)} 页`
+))
+
+const deleteDescription = computed(() => (
+  deleteTarget.value ? `确认删除租户“${deleteTarget.value.tenantName}”吗？该操作不可撤销。` : ''
+))
+
 const canGoPrev = computed(() => pageState.value.pageNum > 1)
 const canGoNext = computed(() => pageState.value.pageNum < Math.max(pageState.value.pages, 1))
 
@@ -49,7 +88,13 @@ function normalizeStatus() {
 }
 
 function buildQuery(pageNum = 1) {
-  return { pageNum, pageSize: 20, tenantCode: normalizeText(filters.tenantCode), tenantName: normalizeText(filters.tenantName), status: normalizeStatus() }
+  return {
+    pageNum,
+    pageSize: 20,
+    tenantCode: normalizeText(filters.tenantCode),
+    tenantName: normalizeText(filters.tenantName),
+    status: normalizeStatus(),
+  }
 }
 
 function showFeedback(tone: FeedbackTone, message: string) {
@@ -69,19 +114,21 @@ function resetFilters() {
 }
 
 function formatOwner(tenant: TenantProfile) {
-  return tenant.ownerUserName || (tenant.ownerUserId ? `用户 ${tenant.ownerUserId}` : '未配置')
+  return tenant.ownerUserName || (tenant.ownerUserId ? `用户 ${tenant.ownerUserId}` : '未配置负责人')
 }
 
 function formatContact(tenant: TenantProfile) {
   const parts = [tenant.contactName, tenant.contactPhone].filter(Boolean)
-  return parts.length > 0 ? parts.join(' / ') : '未填写'
+  return parts.length > 0 ? parts.join(' / ') : '未填写联系人信息'
 }
 
 async function loadTenants(pageNum = 1, successMessage?: string) {
   loading.value = true
   try {
     pageState.value = await queryTenants(buildQuery(pageNum))
-    if (successMessage) showFeedback('success', successMessage)
+    if (successMessage) {
+      showFeedback('success', successMessage)
+    }
   } catch (error) {
     showFeedback('error', getErrorMessage(error, '租户列表加载失败。'))
   } finally {
@@ -109,7 +156,9 @@ async function refreshCurrentPage() {
 }
 
 async function goToPage(pageNum: number) {
-  if (pageNum < 1 || pageNum > Math.max(pageState.value.pages, 1) || pageNum === pageState.value.pageNum) return
+  if (pageNum < 1 || pageNum > Math.max(pageState.value.pages, 1) || pageNum === pageState.value.pageNum) {
+    return
+  }
   await loadTenants(pageNum)
 }
 
@@ -133,10 +182,15 @@ async function handleDialogSubmit(event: { mode: DialogMode; payload: CreateTena
     if (event.mode === 'create') {
       await createTenant(event.payload as CreateTenantPayload)
       dialogOpen.value = false
-      await Promise.all([loadTenants(1, '租户已创建。'), loadStatistics()])
+      await Promise.all([
+        loadTenants(1, '租户已创建。'),
+        loadStatistics(),
+      ])
       return
     }
-    if (!selectedTenant.value) throw new Error('缺少待编辑的租户信息。')
+    if (!selectedTenant.value) {
+      throw new Error('缺少待编辑的租户信息。')
+    }
     await updateTenant(selectedTenant.value.id, event.payload as UpdateTenantPayload)
     dialogOpen.value = false
     await loadTenants(pageState.value.pageNum, '租户信息已更新。')
@@ -152,18 +206,27 @@ function requestDelete(tenant: TenantProfile) {
 }
 
 function handleDeleteDialogVisibility(visible: boolean) {
-  if (!visible) deleteTarget.value = null
+  if (!visible) {
+    deleteTarget.value = null
+  }
 }
 
 async function confirmDelete() {
-  if (!deleteTarget.value) return
+  if (!deleteTarget.value) {
+    return
+  }
   deletePending.value = true
   try {
     await removeTenant(deleteTarget.value.id)
     const deletedName = deleteTarget.value.tenantName
-    const nextPage = pageState.value.list.length === 1 && pageState.value.pageNum > 1 ? pageState.value.pageNum - 1 : pageState.value.pageNum
+    const nextPage = pageState.value.list.length === 1 && pageState.value.pageNum > 1
+      ? pageState.value.pageNum - 1
+      : pageState.value.pageNum
     deleteTarget.value = null
-    await Promise.all([loadTenants(nextPage, `租户 ${deletedName} 已删除。`), loadStatistics()])
+    await Promise.all([
+      loadTenants(nextPage, `租户 ${deletedName} 已删除。`),
+      loadStatistics(),
+    ])
   } catch (error) {
     showFeedback('error', getErrorMessage(error, '删除租户失败。'))
   } finally {
@@ -171,7 +234,9 @@ async function confirmDelete() {
   }
 }
 
-onMounted(() => { void Promise.all([loadTenants(), loadStatistics()]) })
+onMounted(() => {
+  void Promise.all([loadTenants(), loadStatistics()])
+})
 </script>
 
 <template>
@@ -182,10 +247,6 @@ onMounted(() => { void Promise.all([loadTenants(), loadStatistics()]) })
       :message="feedback?.message ?? ''"
       @update:model-value="!$event && clearFeedback()"
     />
-    <section v-if="false && feedback" class="feedback-banner" :class="`feedback-banner--${feedback?.tone}`">
-      <span>{{ feedback?.message }}</span>
-      <button type="button" class="app-button app-button--secondary" @click="clearFeedback">关闭</button>
-    </section>
 
     <section class="management-page">
       <article class="panel-card management-hero">
@@ -195,47 +256,72 @@ onMounted(() => { void Promise.all([loadTenants(), loadStatistics()]) })
           <p class="management-hero__meta">{{ totalTenantsLabel }} · {{ statsSummary }}</p>
         </div>
         <div class="management-hero__actions">
-          <button class="app-button app-button--secondary" :disabled="loading || statsLoading" @click="refreshCurrentPage"><RefreshCw :size="16" />刷新</button>
-          <button class="app-button" @click="openCreateDialog"><Plus :size="16" />新增租户</button>
+          <button class="app-button app-button--secondary" :disabled="loading || statsLoading" @click="refreshCurrentPage">
+            <RefreshCw :size="16" />
+            刷新
+          </button>
+          <button class="app-button" @click="openCreateDialog">
+            <Plus :size="16" />
+            新建租户
+          </button>
         </div>
       </article>
 
       <section class="management-stats">
-        <article class="panel-card management-stat"><span>总租户</span><strong>{{ statistics.totalCount }}</strong></article>
-        <article class="panel-card management-stat"><span>启用租户</span><strong>{{ statistics.enabledCount }}</strong></article>
-        <article class="panel-card management-stat"><span>禁用租户</span><strong>{{ statistics.disabledCount }}</strong></article>
+        <article class="panel-card management-stat">
+          <span>总租户数</span>
+          <strong>{{ statistics.totalCount }}</strong>
+        </article>
+        <article class="panel-card management-stat">
+          <span>启用租户</span>
+          <strong>{{ statistics.enabledCount }}</strong>
+        </article>
+        <article class="panel-card management-stat">
+          <span>停用租户</span>
+          <strong>{{ statistics.disabledCount }}</strong>
+        </article>
       </section>
 
       <article class="panel-card management-panel">
         <div class="management-head">
-          <div><strong>筛选条件</strong><p>{{ resultsSummary }}</p></div>
+          <div>
+            <strong>筛选条件</strong>
+            <p>{{ resultsSummary }}</p>
+          </div>
           <button class="app-button app-button--secondary" @click="resetFilters">重置</button>
         </div>
 
         <div class="management-filter-grid">
           <label class="field">
             <span class="field__label">租户编码</span>
-            <div class="input-shell"><span class="input-shell__icon"><Search :size="16" /></span><input v-model="filters.tenantCode" class="app-input" type="text" placeholder="按编码搜索" /></div>
+            <div class="input-shell">
+              <span class="input-shell__icon"><Search :size="16" /></span>
+              <input v-model="filters.tenantCode" class="app-input" type="text" placeholder="按租户编码搜索" />
+            </div>
           </label>
           <label class="field">
             <span class="field__label">租户名称</span>
-            <div class="input-shell"><input v-model="filters.tenantName" class="app-input" type="text" placeholder="按名称搜索" /></div>
+            <div class="input-shell">
+              <input v-model="filters.tenantName" class="app-input" type="text" placeholder="按租户名称搜索" />
+            </div>
           </label>
           <label class="field">
             <span class="field__label">状态</span>
             <select v-model="filters.status" class="app-select">
               <option value="all">全部</option>
               <option value="enabled">启用</option>
-              <option value="disabled">禁用</option>
+              <option value="disabled">停用</option>
             </select>
           </label>
-          <button class="app-button management-filter-grid__submit" :disabled="loading" @click="executeSearch">执行搜索</button>
+          <button class="app-button management-filter-grid__submit" :disabled="loading" @click="executeSearch">
+            执行搜索
+          </button>
         </div>
       </article>
 
       <article class="panel-card management-panel">
         <div v-if="loading" class="management-empty">正在加载租户列表...</div>
-        <div v-else-if="pageState.list.length === 0" class="management-empty">当前没有租户数据，请调整筛选条件或新建租户。</div>
+        <div v-else-if="pageState.list.length === 0" class="management-empty">当前没有匹配的租户数据，请调整筛选条件或新建租户。</div>
         <div v-else class="management-list">
           <article v-for="tenant in pageState.list" :key="tenant.id" class="management-card">
             <div class="management-card__head">
@@ -252,21 +338,47 @@ onMounted(() => { void Promise.all([loadTenants(), loadStatistics()]) })
               <span>成员数：{{ tenant.memberCount }}</span>
             </div>
             <div class="management-card__actions">
-              <button class="app-button app-button--secondary" @click="openEditDialog(tenant)"><UserRoundPen :size="16" />编辑</button>
-              <button class="app-button app-button--danger" @click="requestDelete(tenant)"><Trash2 :size="16" />删除</button>
+              <button class="app-button app-button--secondary" @click="openEditDialog(tenant)">
+                <UserRoundPen :size="16" />
+                编辑
+              </button>
+              <button class="app-button app-button--danger" @click="requestDelete(tenant)">
+                <Trash2 :size="16" />
+                删除
+              </button>
             </div>
           </article>
         </div>
 
         <div class="management-pager">
-          <button class="app-button app-button--secondary" :disabled="!canGoPrev || loading" @click="goToPage(pageState.pageNum - 1)"><ChevronLeft :size="16" />上一页</button>
+          <button class="app-button app-button--secondary" :disabled="!canGoPrev || loading" @click="goToPage(pageState.pageNum - 1)">
+            <ChevronLeft :size="16" />
+            上一页
+          </button>
           <span class="management-pager__summary">第 {{ pageState.pageNum }} / {{ Math.max(pageState.pages, 1) }} 页</span>
-          <button class="app-button app-button--secondary" :disabled="!canGoNext || loading" @click="goToPage(pageState.pageNum + 1)">下一页<ChevronRight :size="16" /></button>
+          <button class="app-button app-button--secondary" :disabled="!canGoNext || loading" @click="goToPage(pageState.pageNum + 1)">
+            下一页
+            <ChevronRight :size="16" />
+          </button>
         </div>
       </article>
     </section>
 
-    <TenantFormDialog v-model="dialogOpen" :mode="dialogMode" :tenant="selectedTenant" :submitting="submitting" @submit="handleDialogSubmit" />
-    <ConfirmDialog :model-value="deleteTarget !== null" title="删除租户" :description="deleteDescription" confirm-text="确认删除" :loading="deletePending" @update:model-value="handleDeleteDialogVisibility" @confirm="confirmDelete" />
+    <TenantFormDialog
+      v-model="dialogOpen"
+      :mode="dialogMode"
+      :tenant="selectedTenant"
+      :submitting="submitting"
+      @submit="handleDialogSubmit"
+    />
+    <ConfirmDialog
+      :model-value="deleteTarget !== null"
+      title="删除租户"
+      :description="deleteDescription"
+      confirm-text="确认删除"
+      :loading="deletePending"
+      @update:model-value="handleDeleteDialogVisibility"
+      @confirm="confirmDelete"
+    />
   </MainShell>
 </template>

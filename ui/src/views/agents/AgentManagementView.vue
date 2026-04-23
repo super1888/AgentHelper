@@ -841,7 +841,7 @@ onMounted(() => {
 <style scoped>
 .agent-page {
   display: grid;
-  gap: 22px;
+  gap: var(--layout-gap);
   min-width: 0;
   min-height: 100%;
 }
@@ -855,7 +855,7 @@ onMounted(() => {
 }
 .page__hero {
   align-items: flex-start;
-  padding: 24px 26px;
+  padding: var(--panel-padding);
   min-width: 0;
 }
 .page__meta,
@@ -864,15 +864,15 @@ onMounted(() => {
 }
 .page__grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(360px, 0.78fr);
-  gap: 22px;
+  grid-template-columns: minmax(0, 1.22fr) minmax(0, var(--layout-side-column));
+  gap: var(--layout-gap);
   align-items: start;
   min-width: 0;
 }
 .page__grid--bottom {
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(360px, 0.78fr);
-  gap: 22px;
+  grid-template-columns: minmax(0, 1.22fr) minmax(0, var(--layout-side-column));
+  gap: var(--layout-gap);
   align-items: start;
   min-width: 0;
 }
@@ -888,8 +888,8 @@ onMounted(() => {
   gap: 14px;
   align-content: start;
   min-width: 0;
-  padding: 18px;
-  border-radius: 24px;
+  padding: var(--compact-panel-padding);
+  border-radius: var(--sub-panel-radius);
   background: rgba(255, 255, 255, 0.04);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
@@ -911,7 +911,7 @@ onMounted(() => {
   grid-column: 1 / -1;
 }
 .toolbar {
-  grid-template-columns: 1fr 180px 220px;
+  grid-template-columns: minmax(0, 1fr) 180px minmax(220px, 260px);
 }
 .mode-grid,
 .variable-grid {
@@ -1033,7 +1033,7 @@ onMounted(() => {
 }
 
 .field--compact {
-  min-width: 260px;
+  min-width: min(100%, 300px);
 }
 .prompt-preview,
 .code-line {
@@ -1064,7 +1064,7 @@ onMounted(() => {
   color: #d8f2ff;
   background: rgba(77, 179, 255, 0.16);
 }
-@media (max-width: 1080px) {
+@media (max-width: 1320px) {
   .page__grid,
   .page__grid--bottom,
   .section-grid,

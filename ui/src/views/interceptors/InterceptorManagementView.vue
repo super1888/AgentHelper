@@ -598,7 +598,7 @@ onMounted(() => {
 }
 
 .grid {
-  grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+  grid-template-columns: minmax(0, 1.14fr) minmax(0, var(--layout-side-column));
   align-items: start;
 }
 
@@ -629,8 +629,8 @@ onMounted(() => {
   gap: 12px;
   align-content: start;
   min-width: 0;
-  padding: 18px;
-  border-radius: 24px;
+  padding: var(--compact-panel-padding);
+  border-radius: var(--sub-panel-radius);
   background: rgba(255, 255, 255, 0.04);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
@@ -675,7 +675,7 @@ onMounted(() => {
   word-break: break-word;
 }
 
-@media (max-width: 1080px) {
+@media (max-width: 1320px) {
   .grid,
   .stats,
   .form {

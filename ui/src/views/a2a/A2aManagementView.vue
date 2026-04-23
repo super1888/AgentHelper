@@ -482,7 +482,7 @@ onMounted(() => {
 .cards,
 .rows {
   display: grid;
-  gap: 18px;
+  gap: var(--layout-gap);
 }
 
 .a2a-page {
@@ -517,7 +517,7 @@ onMounted(() => {
 }
 
 .hero {
-  padding: 26px;
+  padding: var(--panel-padding);
   background:
     radial-gradient(circle at top left, rgba(34, 197, 94, 0.22), transparent 28%),
     radial-gradient(circle at right, rgba(59, 130, 246, 0.18), transparent 26%);
@@ -558,7 +558,7 @@ onMounted(() => {
 
 .grid--main,
 .grid--tasks {
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1.14fr) minmax(0, var(--layout-side-column));
 }
 
 .grid--three {
@@ -610,11 +610,11 @@ textarea {
 .deleted,
 .row,
 .preview {
-  padding: 14px;
+  padding: var(--compact-panel-padding);
   color: inherit;
   text-align: left;
   border: 1px solid rgba(148, 163, 184, 0.18);
-  border-radius: 20px;
+  border-radius: var(--sub-panel-radius);
   background: rgba(15, 23, 42, 0.62);
   min-width: 0;
 }
@@ -679,7 +679,7 @@ textarea {
   cursor: pointer;
 }
 
-@media (max-width: 1280px) {
+@media (max-width: 1320px) {
   .stats,
   .grid--main,
   .grid--three,

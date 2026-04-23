@@ -547,11 +547,11 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.tool-page { display: grid; gap: 24px; min-width: 0; min-height: 100%; }
+.tool-page { display: grid; gap: var(--layout-gap); min-width: 0; min-height: 100%; }
 .hero-panel, .section-panel, .metric-card, .catalog-chip, .tool-list__item, .log-card, .empty-state, .result-box { border: 1px solid rgba(255,255,255,.08); }
 .hero-panel, .section-panel {
-  padding: 28px;
-  border-radius: 26px;
+  padding: var(--panel-padding);
+  border-radius: var(--panel-radius);
   background: linear-gradient(180deg, rgba(255,255,255,.034), rgba(255,255,255,.012)), rgba(7,14,26,.82);
   box-shadow: 0 24px 56px rgba(0,0,0,.22);
 }
@@ -562,7 +562,7 @@ onMounted(async () => {
 .metric-card { padding: 18px 20px; border-radius: 18px; background: linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.02)); }
 .metric-card span { color: var(--color-ink-soft); }
 .metric-card strong { display: block; margin-top: 10px; color: var(--color-ink-strong); font-size: 1.6rem; }
-.tool-layout { display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 20px; align-items: start; min-width: 0; }
+.tool-layout { display: grid; grid-template-columns: minmax(0, var(--layout-side-column)) minmax(0, 1fr); gap: var(--layout-gap); align-items: start; min-width: 0; }
 .section-panel--sidebar { display: grid; gap: 16px; align-content: start; }
 .filter-grid, .form-grid { display: grid; gap: 14px; }
 .form-grid--double { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -599,7 +599,7 @@ onMounted(async () => {
   word-break: break-word;
 }
 .log-list { display: grid; gap: 12px; min-width: 0; }
-.log-card { padding: 16px 18px; border-radius: 18px; background: rgba(255,255,255,.018); min-width: 0; }
+.log-card { padding: var(--compact-panel-padding); border-radius: 18px; background: rgba(255,255,255,.018); min-width: 0; }
 .log-card__head { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .empty-state {
   display: grid;
@@ -615,7 +615,7 @@ onMounted(async () => {
 @media (max-width: 1380px) {
   .stats-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
-@media (max-width: 1180px) {
+@media (max-width: 1320px) {
   .tool-layout, .form-grid--double { grid-template-columns: 1fr; }
 }
 @media (max-width: 760px) {

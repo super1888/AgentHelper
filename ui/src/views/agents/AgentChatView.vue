@@ -162,11 +162,9 @@ function extractText(data: unknown) {
   if (typeof data === 'string') {
     return data
   }
-
   if (data == null) {
     return ''
   }
-
   return JSON.stringify(data, null, 2)
 }
 
@@ -216,7 +214,7 @@ function resolveStreamDelay(appendedText: string) {
   if (!appendedText) {
     return 24
   }
-  if (/[，。！？；：,.!?;:]\s*$/.test(appendedText)) {
+  if (/[，。！；：,.!?;:]\s*$/.test(appendedText)) {
     return 88
   }
   if (/\s$/.test(appendedText)) {
@@ -242,7 +240,7 @@ function drainAssistantStream(taskId: string | null, agentVersionNo?: string | n
   upsertAssistantBubble(taskId, {
     title: 'Agent',
     content: `${previous}${appendedText}`,
-    meta: agentVersionNo ? `姝ｅ湪鐢熸垚 · v${agentVersionNo}` : '姝ｅ湪鐢熸垚',
+    meta: agentVersionNo ? `流式生成中 · v${agentVersionNo}` : '流式生成中',
     streaming: true,
   })
 
@@ -292,13 +290,13 @@ function handleAgentEvent(event: AgentChatEvent) {
     upsertAssistantBubble(event.taskId, {
       title: 'Agent',
       content: '',
-      meta: '姝ｅ湪缁勭粐鍥炲簲',
+      meta: '任务开始执行',
       streaming: true,
     })
     pushBubble({
       id: `system-start-${event.eventSequence}`,
       role: 'system',
-      title: '任务已开始',
+      title: '任务已启动',
       content: '消息已送达，Agent 正在处理中。',
       meta: formatTimestamp(toSafeNumber(event.timestamp)),
       taskId: event.taskId,
@@ -328,7 +326,7 @@ function handleAgentEvent(event: AgentChatEvent) {
     pushBubble({
       id: `reasoning-${event.eventSequence}`,
       role: 'system',
-      title: '思考片段',
+      title: '推理片段',
       content: extractText(event.data),
       meta: formatTimestamp(toSafeNumber(event.timestamp)),
       taskId: event.taskId,
@@ -356,8 +354,8 @@ function handleAgentEvent(event: AgentChatEvent) {
       title: 'Agent',
       content: extractText(event.data),
       meta: `完成于 ${formatTimestamp(toSafeNumber(event.timestamp))}`,
+      streaming: false,
     })
-    upsertAssistantBubble(event.taskId, { streaming: false })
     sending.value = false
     lastFailedTaskId.value = null
     return
@@ -368,7 +366,7 @@ function handleAgentEvent(event: AgentChatEvent) {
     lastFailedTaskId.value = event.taskId
     upsertAssistantBubble(event.taskId, {
       title: 'Agent',
-      meta: '已中断',
+      meta: '执行中断',
       streaming: false,
     })
     pushBubble({
@@ -426,7 +424,7 @@ async function loadAgentDetail() {
 
 async function prepareSession() {
   if (!routeSessionId.value) {
-    showFeedback('error', '缺少会话参数，请从 Agent 管理页进入聊天。')
+    showFeedback('error', '缺少会话参数，请从 Agent 管理页重新进入聊天。')
     return
   }
 
@@ -500,7 +498,7 @@ async function recoverTask() {
 
   try {
     await recoverAgentTask(sessionId.value, { taskId: lastFailedTaskId.value })
-    showFeedback('success', '恢复任务已提交。')
+    showFeedback('success', '恢复任务请求已提交。')
   } catch (error) {
     showFeedback('error', getErrorMessage(error, '恢复任务失败。'))
   } finally {
@@ -557,17 +555,6 @@ onBeforeUnmount(() => {
       :message="feedback?.message ?? ''"
       @update:model-value="!$event && clearFeedback()"
     />
-    <section
-      v-if="false && feedback"
-      class="feedback-banner"
-      :class="`feedback-banner--${feedback?.tone}`"
-      aria-live="polite"
-    >
-      <span>{{ feedback?.message }}</span>
-      <button type="button" class="app-button app-button--ghost" @click="clearFeedback">
-        关闭
-      </button>
-    </section>
 
     <section class="management-page chat-workspace">
       <header class="chat-workspace__hero panel-card management-hero">
@@ -637,13 +624,13 @@ onBeforeUnmount(() => {
           <div class="sidebar-block">
             <span class="sidebar-block__label">当前版本</span>
             <strong>v{{ Number(route.query.versionNo || 0) || '-' }}</strong>
-            <p>前端使用会话返回的版本信息展示当前运行上下文。</p>
+            <p>展示当前会话实际绑定的 Agent 版本上下文。</p>
           </div>
 
           <div class="sidebar-block">
             <span class="sidebar-block__label">最近任务</span>
             <strong>{{ lastTaskId || '尚未开始' }}</strong>
-            <p>若任务失败，可以直接从这里触发恢复。</p>
+            <p>如果任务失败，可以直接触发恢复。</p>
           </div>
 
           <div class="sidebar-block sidebar-block--accent">
@@ -689,13 +676,15 @@ onBeforeUnmount(() => {
           </div>
 
           <footer class="composer">
-            <textarea
-              v-model="inputMessage"
-              class="composer__textarea"
-              rows="4"
-              placeholder="输入问题或指令，按 Ctrl + Enter 发送"
-              @keydown.ctrl.enter.prevent="sendMessage"
-            />
+            <div class="input-shell input-shell--textarea composer__shell">
+              <textarea
+                v-model="inputMessage"
+                class="app-textarea composer__textarea"
+                rows="4"
+                placeholder="输入问题或指令，按 Ctrl + Enter 发送"
+                @keydown.ctrl.enter.prevent="sendMessage"
+              />
+            </div>
 
             <div class="composer__actions">
               <span class="composer__hint">
@@ -718,7 +707,7 @@ onBeforeUnmount(() => {
 <style scoped>
 .chat-workspace {
   display: grid;
-  gap: 18px;
+  gap: var(--layout-gap);
 }
 
 .chat-workspace__hero {
@@ -726,7 +715,7 @@ onBeforeUnmount(() => {
   align-items: flex-start;
   justify-content: space-between;
   gap: 24px;
-  padding-bottom: 28px;
+  padding: var(--panel-padding);
 }
 
 .back-link {
@@ -790,14 +779,14 @@ onBeforeUnmount(() => {
 
 .chat-grid {
   display: grid;
-  grid-template-columns: 290px minmax(0, 1fr);
-  gap: 22px;
+  grid-template-columns: minmax(280px, 320px) minmax(0, 1fr);
+  gap: var(--layout-gap);
 }
 
 .chat-sidebar,
 .chat-panel {
-  padding: 22px;
-  border-radius: 26px;
+  padding: var(--compact-panel-padding);
+  border-radius: var(--sub-panel-radius);
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.018)),
     rgba(6, 12, 24, 0.72);
@@ -810,8 +799,8 @@ onBeforeUnmount(() => {
 }
 
 .sidebar-block {
-  padding: 18px;
-  border-radius: 22px;
+  padding: 16px;
+  border-radius: 18px;
   background: rgba(255, 255, 255, 0.04);
 }
 
@@ -845,7 +834,7 @@ onBeforeUnmount(() => {
 .chat-panel {
   display: flex;
   flex-direction: column;
-  min-height: 760px;
+  min-height: min(72vh, 820px);
 }
 
 .transcript {
@@ -955,26 +944,12 @@ onBeforeUnmount(() => {
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+.composer__shell {
+  min-height: 136px;
+}
+
 .composer__textarea {
-  width: 100%;
   min-height: 128px;
-  padding: 18px;
-  color: var(--color-ink-strong);
-  border: 1px solid var(--color-border);
-  border-radius: 22px;
-  background: rgba(255, 255, 255, 0.05);
-  resize: vertical;
-  outline: none;
-  transition: border-color 180ms ease, box-shadow 180ms ease;
-}
-
-.composer__textarea:focus {
-  border-color: rgba(77, 179, 255, 0.42);
-  box-shadow: var(--shadow-focus);
-}
-
-.composer__textarea::placeholder {
-  color: rgba(166, 183, 211, 0.56);
 }
 
 .composer__actions {
@@ -1016,7 +991,7 @@ onBeforeUnmount(() => {
   }
 
   .chat-panel {
-    min-height: 680px;
+    min-height: 620px;
   }
 }
 

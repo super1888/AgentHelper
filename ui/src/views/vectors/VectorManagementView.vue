@@ -776,9 +776,9 @@ onBeforeUnmount(() => {
 .result-card,
 .detail-metric {
   width: 100%;
-  padding: 18px;
+  padding: var(--compact-panel-padding);
   text-align: left;
-  border-radius: 22px;
+  border-radius: var(--sub-panel-radius);
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(255, 255, 255, 0.035);
 }
