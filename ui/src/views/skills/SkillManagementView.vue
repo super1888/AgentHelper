@@ -1006,10 +1006,12 @@ onMounted(async () => {
   border-radius: var(--panel-radius);
   background: linear-gradient(180deg, rgba(255,255,255,.034), rgba(255,255,255,.012)), rgba(7,14,26,.82);
   box-shadow: 0 24px 56px rgba(0,0,0,.22);
+  min-width: 0;
+  overflow: visible;
 }
 .section-panel--compact { padding-top: var(--compact-panel-padding); padding-bottom: var(--compact-panel-padding); }
 .hero-panel__head, .section-panel__head, .toolbar-actions, .stack-card__head, .editor-block__head {
-  display: flex; align-items: flex-start; justify-content: space-between; gap: 14px;
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; min-width: 0;
 }
 .hero-panel__head h2, .section-panel__head h3, .editor-block__head h4 { margin: 0; color: var(--color-ink-strong); }
 .hero-panel__head h2 { font-size: clamp(2rem, 2.8vw, 2.8rem); }
@@ -1090,6 +1092,23 @@ onMounted(async () => {
 .config-card__body { padding: 0 18px 18px; }
 .stack-card { padding: var(--compact-panel-padding); border-radius: 18px; background: rgba(255,255,255,.022); }
 .toolbar-actions { flex-wrap: wrap; }
+.hero-panel__head,
+.section-panel__head,
+.stack-card__head,
+.editor-block__head {
+  min-height: 60px;
+}
+.hero-panel__head > div:first-child,
+.section-panel__head > div:first-child,
+.stack-card__head > div:first-child,
+.editor-block__head > div:first-child {
+  min-width: 0;
+  flex: 1 1 320px;
+}
+.toolbar-actions {
+  flex: 1 1 320px;
+  justify-content: flex-end;
+}
 .toolbar-actions--left { justify-content: flex-start; }
 .workbench-tabs { display: grid; gap: 18px; }
 .tab-radio { position: absolute; opacity: 0; pointer-events: none; }

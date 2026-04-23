@@ -554,11 +554,12 @@ onMounted(() => {
 
 .stats strong {
   font-size: 2rem;
+  line-height: 1.2;
 }
 
 .grid--main,
 .grid--tasks {
-  grid-template-columns: minmax(0, 1.14fr) minmax(0, var(--layout-side-column));
+  grid-template-columns: minmax(0, 1.18fr) minmax(360px, 0.92fr);
 }
 
 .grid--three {
@@ -585,20 +586,25 @@ label span,
 .stats small,
 .empty {
   color: rgba(226, 232, 240, 0.72);
+  line-height: 1.45;
 }
 
 input,
 select,
 textarea {
   width: 100%;
+  min-height: 54px;
   padding: 12px 14px;
   color: #f8fafc;
   border: 1px solid rgba(148, 163, 184, 0.22);
   border-radius: 16px;
   background: rgba(15, 23, 42, 0.82);
+  line-height: 1.45;
 }
 
 textarea {
+  min-height: 120px;
+  line-height: 1.6;
   resize: vertical;
 }
 
@@ -624,6 +630,7 @@ textarea {
   gap: 10px;
   width: 100%;
   cursor: pointer;
+  overflow: visible;
 }
 
 .agent-card.active {
@@ -635,6 +642,7 @@ textarea {
   padding: 6px 10px;
   border-radius: 999px;
   font-size: 0.78rem;
+  line-height: 1.4;
   background: rgba(148, 163, 184, 0.16);
 }
 
@@ -653,6 +661,7 @@ textarea {
 .mini {
   color: #dbeafe;
   border: 0;
+  flex: 0 0 auto;
 }
 
 .mini.danger {
@@ -673,6 +682,55 @@ textarea {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.panel-head strong,
+.panel-head h3,
+.agent-card strong,
+.deleted span,
+.preview strong {
+  line-height: 1.35;
+}
+
+.panel-head > div:first-child,
+.agent-card div:first-child,
+.deleted span {
+  min-width: 0;
+  flex: 1 1 320px;
+}
+
+.actions > * {
+  min-width: 0;
+}
+
+.panel-head .actions {
+  width: 100%;
+  justify-content: flex-end;
+}
+
+.panel-head,
+.actions,
+.row,
+.row--log {
+  min-width: 0;
+}
+
+.panel-head {
+  min-height: 60px;
+}
+
+.panel-head .actions input,
+.panel-head .actions select,
+.panel-head .actions .app-button {
+  flex: 1 1 180px;
+}
+
+.agent-card .actions {
+  justify-content: flex-start;
+}
+
+.agent-card .actions .mini {
+  min-width: 92px;
 }
 
 .clickable {

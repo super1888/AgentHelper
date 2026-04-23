@@ -2,5 +2,7 @@
 <project version="4">
   <component name="SqlDialectMappings">
     <file url="file://$PROJECT_DIR$/docs/a2a_seed.sql" dialect="MySQL" />
+    <file url="file://$PROJECT_DIR$/docs/core_model_config.sql" dialect="MySQL" />
+    <file url="file://$PROJECT_DIR$/docs/core_model_seed.sql" dialect="MySQL" />
   </component>
 </project>

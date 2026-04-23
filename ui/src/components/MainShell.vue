@@ -205,7 +205,7 @@ async function handleLogout() {
   height: 100dvh;
   margin: 0 auto;
   padding: 18px 0 20px;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .shell__sidebar,
@@ -255,7 +255,7 @@ async function handleLogout() {
   margin: 0;
   color: var(--color-ink-strong);
   font-size: 1.72rem;
-  line-height: 1.04;
+  line-height: 1.08;
   letter-spacing: -0.04em;
 }
 
@@ -277,8 +277,8 @@ async function handleLogout() {
   grid-template-columns: 40px minmax(0, 1fr);
   gap: 12px;
   align-items: center;
-  min-height: 62px;
-  padding: 10px 12px;
+  min-height: 72px;
+  padding: 12px;
   border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 18px;
   color: var(--color-ink-soft);
@@ -342,20 +342,20 @@ async function handleLogout() {
 
 .shell__nav-copy {
   display: grid;
-  gap: 3px;
+  gap: 4px;
   min-width: 0;
 }
 
 .shell__nav-copy strong {
-  font-size: 0.93rem;
-  line-height: 1.2;
+  font-size: 0.95rem;
+  line-height: 1.35;
 }
 
 .shell__nav-copy span {
   color: inherit;
   opacity: 0.74;
-  font-size: 0.76rem;
-  line-height: 1.42;
+  font-size: 0.78rem;
+  line-height: 1.5;
 }
 
 .shell__sidebar-meta {
@@ -375,6 +375,7 @@ async function handleLogout() {
 .shell__meta-block span {
   color: var(--color-ink-muted);
   font-size: 0.72rem;
+  line-height: 1.45;
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
@@ -382,6 +383,7 @@ async function handleLogout() {
 .shell__meta-block strong {
   color: var(--color-ink-strong);
   font-size: 0.92rem;
+  line-height: 1.35;
 }
 
 .shell__meta-divider {
@@ -404,6 +406,7 @@ async function handleLogout() {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+  min-height: 86px;
   padding: 18px var(--panel-padding);
 }
 
@@ -416,7 +419,7 @@ async function handleLogout() {
   margin: 0;
   color: var(--color-ink-strong);
   font-size: 1.58rem;
-  line-height: 1.06;
+  line-height: 1.12;
   letter-spacing: -0.03em;
 }
 
@@ -445,6 +448,7 @@ async function handleLogout() {
 .shell__topbar-tag strong {
   color: var(--color-ink-soft);
   font-size: 0.82rem;
+  line-height: 1.45;
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -457,6 +461,9 @@ async function handleLogout() {
   min-width: 0;
   min-height: 0;
   overflow: auto;
+  overflow-x: visible;
+  overflow-y: auto;
+  padding-top: 4px;
   padding-right: 4px;
   padding-bottom: 8px;
   scrollbar-gutter: stable;

@@ -691,7 +691,7 @@ onMounted(() => {
             </label>
           </div>
 
-          <div class="action-row">
+          <div class="action-row action-row--stacked list-card-actions">
             <label class="field field--compact">
               <span class="field__label">迁移模式</span>
               <select v-model="migrationMode" class="app-select">
@@ -852,26 +852,28 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   gap: 12px;
+  align-items: flex-start;
+  flex-wrap: wrap;
 }
 .page__hero {
-  align-items: flex-start;
   padding: var(--panel-padding);
   min-width: 0;
 }
 .page__meta,
 .muted {
   color: var(--color-ink-soft);
+  line-height: 1.6;
 }
 .page__grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.22fr) minmax(0, var(--layout-side-column));
+  grid-template-columns: minmax(0, 1.28fr) minmax(360px, 0.92fr);
   gap: var(--layout-gap);
   align-items: start;
   min-width: 0;
 }
 .page__grid--bottom {
   display: grid;
-  grid-template-columns: minmax(0, 1.22fr) minmax(0, var(--layout-side-column));
+  grid-template-columns: minmax(0, 1.28fr) minmax(360px, 0.92fr);
   gap: var(--layout-gap);
   align-items: start;
   min-width: 0;
@@ -895,6 +897,7 @@ onMounted(() => {
 }
 .card-section {
   min-height: 0;
+  overflow: visible;
 }
 .section-grid,
 .toolbar,
@@ -911,7 +914,8 @@ onMounted(() => {
   grid-column: 1 / -1;
 }
 .toolbar {
-  grid-template-columns: minmax(0, 1fr) 180px minmax(220px, 260px);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: end;
 }
 .mode-grid,
 .variable-grid {
@@ -929,11 +933,14 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   min-height: 54px;
+  padding: 10px 16px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 18px;
   color: var(--color-ink-soft);
   background: rgba(255, 255, 255, 0.04);
   cursor: pointer;
+  line-height: 1.4;
+  text-align: center;
 }
 .mode-pill--active {
   color: var(--color-ink-strong);
@@ -958,6 +965,9 @@ onMounted(() => {
 .stack {
   min-height: 0;
 }
+.stack > * {
+  min-width: 0;
+}
 .chip,
 .status-pill,
 .variable-badge,
@@ -970,6 +980,7 @@ onMounted(() => {
   border-radius: 999px;
   font-size: 0.78rem;
   font-weight: 700;
+  line-height: 1.4;
 }
 .chip {
   color: #d8f2ff;
@@ -1027,13 +1038,18 @@ onMounted(() => {
   gap: 8px;
   color: var(--color-ink-soft);
   font-size: 0.8rem;
+  line-height: 1.45;
+}
+.checkbox-line span {
+  line-height: 1.45;
 }
 .empty--compact {
   padding: 14px 16px;
 }
 
 .field--compact {
-  min-width: min(100%, 300px);
+  flex: 1 1 260px;
+  min-width: min(100%, 260px);
 }
 .prompt-preview,
 .code-line {
@@ -1047,6 +1063,53 @@ onMounted(() => {
 }
 .full-width {
   width: 100%;
+}
+.section-head > div:first-child,
+.list-item__head > div:first-child,
+.action-row > div:first-child {
+  min-width: 0;
+}
+.section-head strong {
+  display: inline-block;
+  line-height: 1.35;
+  padding-block: 2px;
+}
+.card-section > .section-head:first-child {
+  margin-top: 2px;
+  padding-top: 2px;
+}
+.section-head .app-button,
+.action-row .app-button {
+  flex: 0 0 auto;
+}
+.action-row--stacked {
+  flex-direction: column;
+  align-items: stretch;
+}
+.list-card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.list-card-actions .app-button {
+  width: 100%;
+}
+.toolbar .field:first-child {
+  grid-column: 1 / -1;
+}
+.toolbar .field {
+  min-width: 0;
+}
+.list-item {
+  overflow: visible;
+}
+.list-item__head strong,
+.summary-card strong,
+.version-card strong {
+  line-height: 1.35;
+}
+.status-pill {
+  flex-shrink: 0;
 }
 .feedback {
   padding: 14px 16px;

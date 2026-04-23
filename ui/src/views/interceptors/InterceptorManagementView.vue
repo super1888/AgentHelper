@@ -598,12 +598,13 @@ onMounted(() => {
 }
 
 .grid {
-  grid-template-columns: minmax(0, 1.14fr) minmax(0, var(--layout-side-column));
+  grid-template-columns: minmax(0, 1.16fr) minmax(400px, 0.94fr);
   align-items: start;
+  min-width: 0;
 }
 
 .stack {
-  overflow: auto;
+  overflow: visible;
   padding-right: 4px;
   scrollbar-gutter: stable;
 }
@@ -640,10 +641,13 @@ onMounted(() => {
 .actions {
   align-items: flex-start;
   flex-wrap: wrap;
+  min-width: 0;
+  min-height: 60px;
 }
 
 .section {
   min-height: 0;
+  overflow: visible;
 }
 
 .list-item {
@@ -659,6 +663,33 @@ onMounted(() => {
 
 .muted {
   color: var(--color-ink-soft);
+  line-height: 1.6;
+}
+
+.hero > div:first-child,
+.head > strong,
+.head > small {
+  min-width: 0;
+  flex: 1 1 320px;
+}
+
+.head .app-button,
+.actions .app-button {
+  flex: 1 1 160px;
+}
+
+.head input {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+
+.head strong,
+.list-item strong,
+.mini strong {
+  line-height: 1.35;
+}
+.actions > * {
+  flex: 1 1 180px;
 }
 
 .code,

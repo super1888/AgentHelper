@@ -664,6 +664,7 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   gap: 20px;
   margin-bottom: 24px;
+  flex-wrap: wrap;
 }
 
 .vector-workspace__headline {
@@ -702,6 +703,7 @@ onBeforeUnmount(() => {
 .vector-stat span {
   color: var(--color-ink-muted);
   font-size: 0.84rem;
+  line-height: 1.45;
 }
 
 .vector-stat strong {
@@ -709,6 +711,7 @@ onBeforeUnmount(() => {
   margin-top: 8px;
   color: var(--color-ink-strong);
   font-size: 1.5rem;
+  line-height: 1.2;
 }
 
 .vector-grid {
@@ -723,6 +726,7 @@ onBeforeUnmount(() => {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.018)),
     rgba(6, 12, 24, 0.72);
+  overflow: visible;
 }
 
 .vector-panel--detail {
@@ -805,6 +809,8 @@ onBeforeUnmount(() => {
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
+  flex-wrap: wrap;
+  min-width: 0;
 }
 
 .file-card__head p,
@@ -821,6 +827,28 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.section-header,
+.upload-box__actions,
+.file-card,
+.document-card,
+.result-card {
+  min-width: 0;
+}
+
+.section-header {
+  min-height: 60px;
+}
+
+.section-header > div:first-child,
+.file-card__head > div:first-child,
+.document-card__head > div:first-child,
+.result-card__meta > div:first-child {
+  min-width: 0;
+  flex: 1 1 320px;
 }
 
 .file-card__meta {
@@ -875,6 +903,7 @@ onBeforeUnmount(() => {
 
 .detail-metric strong {
   color: var(--color-ink-strong);
+  line-height: 1.35;
 }
 
 @media (max-width: 1100px) {
