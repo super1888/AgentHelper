@@ -23,4 +23,6 @@ public class SimpleAgentVersionConfigDTO {
     private List<String> selectedHookCodes;
 
     private SimpleAgentPromptConfigDTO promptConfig;
+
+    private SimpleAgentModelBindingDTO modelBinding;
 }

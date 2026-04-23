@@ -3,6 +3,7 @@ import type {
   AgentChatPayload,
   AgentCreatePayload,
   AgentCreateResult,
+  AgentBatchMigratePayload,
   AgentDetail,
   AgentReconnectPayload,
   AgentReconnectResult,
@@ -13,8 +14,10 @@ import type {
   AgentSummary,
 } from '@/types/agent'
 
-export async function queryAgents() {
-  const response = await apiClient.get('/agents/simple')
+export async function queryAgents(modelCode?: string) {
+  const response = await apiClient.get('/agents/simple', {
+    params: modelCode ? { modelCode } : undefined,
+  })
   return unwrapResponse<AgentSummary[]>(response)
 }
 
@@ -47,6 +50,11 @@ export async function disableAgent(agentId: string) {
 
 export async function removeAgent(agentId: string) {
   const response = await apiClient.delete(`/agents/simple/${agentId}`)
+  return unwrapResponse<void>(response)
+}
+
+export async function batchMigrateAgentModels(payload: AgentBatchMigratePayload) {
+  const response = await apiClient.post('/agents/simple/models/migrate', payload)
   return unwrapResponse<void>(response)
 }
 

@@ -12,10 +12,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
-/**
- * 文件用途：通用 JSON 工具
- * 核心职责：统一处理 JSON 序列化、反序列化与 Map 类型转换，减少各模块重复实现
- */
 @Component
 public class CommonJsonUtils {
 
@@ -25,69 +21,57 @@ public class CommonJsonUtils {
     @Resource
     private ObjectMapper objectMapper;
 
-    /**
-     * 解析 JSON 字符串为 Map。
-     */
     public Map<String, Object> parseMap(String json) {
         if (!StringUtils.hasText(json)) {
             return Map.of();
         }
         try {
             return objectMapper.readValue(json, MAP_TYPE);
-        } catch (JsonProcessingException e) {
-            throw new BusinessException(ErrorCodeEnum.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR, "JSON parse failed", e);
+        } catch (JsonProcessingException ex) {
+            throw new BusinessException(ErrorCodeEnum.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR,
+                    "JSON parse failed", ex);
         }
     }
 
-    /**
-     * 将 JSON 字符串解析为指定对象。
-     */
     public <T> T parseObject(String json, Class<T> clazz) {
         if (!StringUtils.hasText(json)) {
             return null;
         }
         try {
             return objectMapper.readValue(json, clazz);
-        } catch (JsonProcessingException e) {
-            throw new BusinessException(ErrorCodeEnum.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR, "JSON parse failed", e);
+        } catch (JsonProcessingException ex) {
+            throw new BusinessException(ErrorCodeEnum.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR,
+                    "JSON parse failed", ex);
         }
     }
 
-    /**
-     * 将对象序列化为 JSON 字符串。
-     */
     public String toJson(Object value) {
         try {
             return objectMapper.writeValueAsString(value);
-        } catch (JsonProcessingException e) {
-            throw new BusinessException(ErrorCodeEnum.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR, "JSON serialize failed", e);
+        } catch (JsonProcessingException ex) {
+            throw new BusinessException(ErrorCodeEnum.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR,
+                    "JSON serialize failed", ex);
         }
     }
 
-    /**
-     * 生成格式化 JSON 字符串，便于调试展示。
-     */
     public String prettyJson(Object value) {
         try {
             return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(value);
-        } catch (JsonProcessingException e) {
-            throw new BusinessException(ErrorCodeEnum.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR, "JSON pretty print failed", e);
+        } catch (JsonProcessingException ex) {
+            throw new BusinessException(ErrorCodeEnum.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR,
+                    "JSON pretty print failed", ex);
         }
     }
 
-    /**
-     * 将任意对象安全转换为 Map 结构。
-     */
     public Map<String, Object> objectMap(Object value) {
-        if (value instanceof Map<?, ?> map) {
-            return map.entrySet().stream().collect(Collectors.toMap(item -> String.valueOf(item.getKey()), Map.Entry::getValue));
+        if (!(value instanceof Map)) {
+            return Map.of();
         }
-        return Map.of();
+        Map<?, ?> map = (Map<?, ?>) value;
+        return map.entrySet().stream()
+                .collect(Collectors.toMap(entry -> String.valueOf(entry.getKey()), Map.Entry::getValue));
     }
 
-    /**
-     * Map 空值保护。
-     */
     public Map<String, Object> safeMap(Map<String, Object> value) {
         return value == null ? Map.of() : value;
     }

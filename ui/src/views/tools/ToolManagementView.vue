@@ -375,7 +375,7 @@ onMounted(async () => {
           <div>
             <p class="section-kicker">工具注册中心</p>
             <h2>工具管理台</h2>
-            <p class="hero-panel__summary">统一管理 Agent 可用工具的目录、来源、风险、调试和日志。</p>
+            <p class="hero-panel__summary">统一管理智能体可用工具的目录、来源、风险、调试和日志。</p>
           </div>
           <div class="toolbar-actions">
             <button class="app-button app-button--secondary" type="button" @click="resetForm">新建工具</button>

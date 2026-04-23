@@ -18,4 +18,6 @@ public class SimpleAgentUpdateRequest {
     private List<String> selectedHookCodes;
 
     private SimpleAgentPromptConfigDTO promptConfig;
+
+    private String modelConfigCode;
 }

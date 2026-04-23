@@ -2,14 +2,17 @@ package com.spring.ai.agent.application.manager;
 
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import com.spring.ai.agent.domain.dto.AgentInfoDTO;
+import com.spring.ai.agent.domain.dto.SimpleAgentModelBindingDTO;
 import com.spring.ai.agent.domain.dto.SimpleAgentVersionConfigDTO;
 import com.spring.ai.agent.factory.AgentFactory;
 import com.spring.ai.agent.store.SimpleAgentRegistry;
 import com.spring.ai.agent.store.SimpleAgentRegistry.StoredSimpleAgent;
 import com.spring.ai.common.enums.AgentTypeEnum;
+import com.spring.ai.common.enums.ErrorCodeEnum;
+import com.spring.ai.common.exception.BusinessException;
 import com.spring.ai.common.repository.enitiy.Agent;
 import com.spring.ai.common.repository.enitiy.AgentVersion;
-import com.spring.ai.core.facotry.GetChatModel;
+import com.spring.ai.core.application.manager.CoreApplicationManager;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -33,7 +36,7 @@ public class SimpleAgentRuntimeManager {
     private AgentFactory agentFactory;
 
     @Resource
-    private GetChatModel getChatModel;
+    private CoreApplicationManager coreApplicationManager;
 
     public ReactAgent getOrCreate(Agent agent, AgentVersion version) {
         StoredSimpleAgent storedSimpleAgent = simpleAgentRegistry.get(version.getId());
@@ -42,12 +45,13 @@ public class SimpleAgentRuntimeManager {
         }
 
         SimpleAgentVersionConfigDTO config = simpleAgentSupportManager.parseConfig(version.getConfigSnapshotJson());
+        SimpleAgentModelBindingDTO modelBinding = config == null ? null : config.getModelBinding();
         AgentInfoDTO agentInfoDTO = AgentInfoDTO.builder()
                 .agentId(agent.getId())
                 .agentName(config.getAgentName())
                 .description(buildDescription(config))
                 .instruction(buildInstruction(config))
-                .model(getChatModel.creatDashScopeChatModel())
+                .model(resolveChatModel(modelBinding))
                 .enableLogging(Boolean.FALSE)
                 .build();
 
@@ -61,6 +65,13 @@ public class SimpleAgentRuntimeManager {
                 .reactAgent(reactAgent)
                 .build());
         return reactAgent;
+    }
+
+    private org.springframework.ai.chat.model.ChatModel resolveChatModel(SimpleAgentModelBindingDTO modelBinding) {
+        if (modelBinding == null || !StringUtils.hasText(modelBinding.getModelCode())) {
+            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "当前 Agent 版本未绑定模型配置");
+        }
+        return coreApplicationManager.createChatModel(modelBinding.getModelCode());
     }
 
     private String buildDescription(SimpleAgentVersionConfigDTO config) {

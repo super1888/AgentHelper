@@ -35,22 +35,22 @@ public class DynamicChatModelFactory {
 
         return switch (provider) {
             case DASHSCOPE -> DashScopeChatModel.builder()
-                    .dashScopeApi(scopeApi.getDashScopeApi(request.getApiKey()))
+                    .dashScopeApi(scopeApi.getDashScopeApi(request.getApiKey(), request.getBaseUrl()))
                     .defaultOptions(buildDashScopeOptions(options))
                     .build();
             case DEEPSEEK -> DeepSeekChatModel.builder()
-                    .deepSeekApi(scopeApi.getDeepSeekApi(request.getApiKey()))
+                    .deepSeekApi(scopeApi.getDeepSeekApi(request.getApiKey(), request.getBaseUrl()))
                     .defaultOptions(buildDeepSeekOptions(options))
                     .build();
             case OPENAI -> OpenAiChatModel.builder()
-                    .openAiApi(scopeApi.getOpenAiApi(request.getApiKey()))
+                    .openAiApi(scopeApi.getOpenAiApi(request.getApiKey(), request.getBaseUrl()))
                     .defaultOptions(buildOpenAiOptions(options))
                     .build();
             case ZHIPU -> new ZhiPuAiChatModel(
-                    scopeApi.getZhiPuAiApi(request.getApiKey()),
+                    scopeApi.getZhiPuAiApi(request.getApiKey(), request.getBaseUrl()),
                     buildZhiPuAiOptions(options));
             case ANTHROPIC -> AnthropicChatModel.builder()
-                    .anthropicApi(scopeApi.getAnthropicApi(request.getApiKey()))
+                    .anthropicApi(scopeApi.getAnthropicApi(request.getApiKey(), request.getBaseUrl()))
                     .defaultOptions(buildAnthropicOptions(options))
                     .build();
         };

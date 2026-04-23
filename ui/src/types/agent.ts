@@ -21,6 +21,9 @@ export interface AgentSummary {
   currentVersionNo: number | null
   publishedVersionNo: number | null
   ownerUserName: string | null
+  modelCode?: string | null
+  modelName?: string | null
+  providerName?: string | null
 }
 
 export interface AgentVersion {
@@ -40,6 +43,13 @@ export interface AgentVersion {
   promptTemplateContent?: string | null
   promptVariableDefinitions?: PromptTemplateVariable[] | null
   promptVariables?: Record<string, string> | null
+  modelCode?: string | null
+  modelName?: string | null
+  providerConfigCode?: string | null
+  providerEnum?: string | null
+  providerName?: string | null
+  modelIdentifier?: string | null
+  modelType?: string | null
   published: boolean
   createTime: number | null
 }
@@ -65,6 +75,7 @@ export interface AgentCreatePayload {
   selectedHookCodes: string[]
   agentType?: string
   promptConfig?: AgentPromptConfig | null
+  modelConfigCode: string
 }
 
 export interface AgentCreateResult {
@@ -134,4 +145,10 @@ export interface AgentRecoverResult {
   taskId: string
   taskStatus: string
   message: string
+}
+
+export interface AgentBatchMigratePayload {
+  agentIds: string[]
+  targetModelConfigCode: string
+  migrationMode?: 'DRAFT_ONLY' | 'PUBLISH_NEW_VERSION'
 }

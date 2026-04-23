@@ -42,6 +42,20 @@ public class SimpleAgentVersionResponse {
 
     Map<String, String> promptVariables;
 
+    String modelCode;
+
+    String modelName;
+
+    String providerConfigCode;
+
+    String providerEnum;
+
+    String providerName;
+
+    String modelIdentifier;
+
+    String modelType;
+
     Boolean published;
 
     Long createTime;

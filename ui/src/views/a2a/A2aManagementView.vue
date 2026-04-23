@@ -405,7 +405,7 @@ onMounted(() => {
               <div><strong>{{ item.agentName }}</strong><span class="chip" :data-status="item.publishStatus">{{ item.publishStatus }}</span></div>
               <p>{{ item.agentCode }} · {{ item.ownerTeam || '未分配团队' }}</p>
               <small>{{ item.endpointUrl }}</small>
-              <p>{{ item.riskLevel }} / {{ item.trustLevel }} / {{ item.transportType }} / retry={{ item.retryTimes ?? 1 }}</p>
+               <p>{{ item.riskLevel }} / {{ item.trustLevel }} / {{ item.transportType }} / 重试 {{ item.retryTimes ?? 1 }} 次</p>
               <div class="actions"><button type="button" class="mini" :disabled="actioning" @click.stop="handlePublish(item.id)">发布</button><button type="button" class="mini danger" :disabled="actioning" @click.stop="handleDelete(item.id)">下线</button></div>
             </button>
           </div>
@@ -439,7 +439,7 @@ onMounted(() => {
           <div class="panel-head"><div><p class="section-kicker">调度演练</p><h3>任务派发</h3></div></div>
           <div class="form-grid">
             <label><span>源智能体</span><input v-model="dispatchForm.sourceAgentCode" type="text" placeholder="可留空" /></label>
-            <label><span>指定目标</span><input v-model="dispatchForm.targetAgentCode" type="text" placeholder="可留空" /></label>
+            <label><span>目标智能体</span><input v-model="dispatchForm.targetAgentCode" type="text" placeholder="可留空" /></label>
             <label class="wide"><span>任务类型</span><input v-model="dispatchForm.taskType" type="text" /></label>
             <label class="wide"><span>请求载荷 JSON</span><textarea v-model="dispatchForm.payloadText" rows="10"></textarea></label>
           </div>

@@ -4,10 +4,12 @@ import { useRouter } from 'vue-router'
 import { MessageSquareText, Plus, RefreshCw, Rocket, Search, ShieldBan, Trash2 } from 'lucide-vue-next'
 import AppFeedbackDialog from '@/components/AppFeedbackDialog.vue'
 import MainShell from '@/components/MainShell.vue'
-import { createAgent, createAgentSession, disableAgent, fetchAgentDetail, publishAgent, queryAgents, removeAgent, updateAgent } from '@/api/agent'
+import { batchMigrateAgentModels, createAgent, createAgentSession, disableAgent, fetchAgentDetail, publishAgent, queryAgents, removeAgent, updateAgent } from '@/api/agent'
+import { queryEnabledModels } from '@/api/core'
 import { queryHooks } from '@/api/hook'
 import { queryPromptTemplates } from '@/api/prompt'
 import type { AgentCreatePayload, AgentDetail, AgentPromptConfig, AgentSessionResult, AgentSummary, AgentVersion } from '@/types/agent'
+import type { ModelOption } from '@/types/core'
 import type { HookItem } from '@/types/hook'
 import type { PromptTemplateItem, PromptTemplateVariable } from '@/types/prompt'
 import { getErrorMessage } from '@/utils/errors'
@@ -15,12 +17,14 @@ import { getErrorMessage } from '@/utils/errors'
 type PromptMode = 'template' | 'custom-inline' | 'custom-file'
 type FormMode = 'create' | 'edit'
 type PendingAction = 'publish' | 'disable' | 'session' | 'delete' | null
+type MigrationMode = 'DRAFT_ONLY' | 'PUBLISH_NEW_VERSION'
 
 const router = useRouter()
 const loading = ref(false)
 const detailLoading = ref(false)
 const promptTemplatesLoading = ref(false)
 const hooksLoading = ref(false)
+const modelsLoading = ref(false)
 const submitting = ref(false)
 const actionPending = ref<PendingAction>(null)
 const feedback = ref('')
@@ -28,6 +32,7 @@ const feedbackTone = ref<'success' | 'error' | 'info'>('info')
 const agents = ref<AgentSummary[]>([])
 const promptTemplates = ref<PromptTemplateItem[]>([])
 const hooks = ref<HookItem[]>([])
+const availableModels = ref<ModelOption[]>([])
 const selectedAgentId = ref('')
 const selectedAgentDetail = ref<AgentDetail | null>(null)
 const createdSession = ref<AgentSessionResult | null>(null)
@@ -35,12 +40,16 @@ const formMode = ref<FormMode>('create')
 const editingAgentId = ref<string | null>(null)
 const formPanelRef = ref<HTMLElement | null>(null)
 
-const filters = reactive({ keyword: '', status: 'ALL' })
+const filters = reactive({ keyword: '', status: 'ALL', modelCode: '' })
+const selectedAgentIds = ref<string[]>([])
+const batchMigrating = ref(false)
+const migrationMode = ref<MigrationMode>('DRAFT_ONLY')
 const form = reactive({
   agentName: '',
   description: '',
   selectedCapabilitiesText: 'knowledge_search, session_management, failover_recovery',
   selectedHookCodes: [] as string[],
+  modelConfigCode: '',
   promptMode: 'template' as PromptMode,
   selectedPromptTemplateId: '',
   customPromptContent: '',
@@ -55,7 +64,8 @@ const filteredAgents = computed(() => {
       .filter(Boolean)
       .some((value) => String(value).toLowerCase().includes(keyword))
     const matchesStatus = filters.status === 'ALL' || item.agentStatus === filters.status
-    return matchesKeyword && matchesStatus
+    const matchesModel = !filters.modelCode || item.modelCode === filters.modelCode
+    return matchesKeyword && matchesStatus && matchesModel
   })
 })
 
@@ -75,6 +85,7 @@ const capabilityPreview = computed(() => parseCapabilities(form.selectedCapabili
 const availableHooks = computed(() =>
   hooks.value.filter((item) => item.hookStatus === 'ENABLED' && item.publishStatus === 'PUBLISHED'),
 )
+const selectedModel = computed(() => availableModels.value.find((item) => item.modelCode === form.modelConfigCode) ?? null)
 const totalAgentsLabel = computed(() => `共 ${agents.value.length} 个智能体`)
 const publishedCountLabel = computed(() => `已发布 ${agents.value.filter((item) => item.agentStatus === 'PUBLISHED').length} 个`)
 const formTitle = computed(() => (formMode.value === 'create' ? '创建智能体' : '编辑智能体'))
@@ -94,6 +105,10 @@ watch(() => [form.promptMode, form.selectedPromptTemplateId] as const, ([mode]) 
   }
 })
 
+watch(() => filters.modelCode, () => {
+  void loadAgents()
+})
+
 function setFeedback(tone: 'success' | 'error' | 'info', message: string) {
   feedbackTone.value = tone
   feedback.value = message
@@ -108,6 +123,7 @@ function resetForm() {
   form.description = ''
   form.selectedCapabilitiesText = 'knowledge_search, session_management, failover_recovery'
   form.selectedHookCodes = []
+  form.modelConfigCode = availableModels.value.find((item) => item.defaultModel)?.modelCode ?? availableModels.value[0]?.modelCode ?? ''
   form.promptMode = 'template'
   form.selectedPromptTemplateId = promptTemplates.value[0] ? String(promptTemplates.value[0].id) : ''
   form.customPromptContent = ''
@@ -142,6 +158,7 @@ function enterEditMode() {
   form.description = selectedAgentDetail.value.description ?? ''
   form.selectedCapabilitiesText = version.selectedCapabilities.join(', ')
   form.selectedHookCodes = [...(version.selectedHookCodes ?? [])]
+  form.modelConfigCode = version.modelCode || ''
   requestAnimationFrame(() => {
     formPanelRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   })
@@ -189,6 +206,7 @@ function buildPayload(): AgentCreatePayload {
     systemPrompt: form.promptMode === 'custom-inline' ? form.customPromptContent.trim() || null : null,
     selectedCapabilities: parseCapabilities(form.selectedCapabilitiesText),
     selectedHookCodes: [...form.selectedHookCodes],
+    modelConfigCode: form.modelConfigCode,
     agentType: 'REACT',
     promptConfig: buildPromptConfig(),
   }
@@ -198,6 +216,11 @@ function formatStatus(status: string) {
   if (status === 'PUBLISHED') return '已发布'
   if (status === 'DISABLED') return '已停用'
   return '草稿中'
+}
+
+function formatModelBinding(version: AgentVersion) {
+  if (!version.modelName) return '未绑定模型'
+  return `${version.modelName} / ${version.providerName || version.providerEnum || '-'}`
 }
 
 function formatPromptBinding(version: AgentVersion) {
@@ -245,11 +268,26 @@ async function loadHooks() {
   }
 }
 
+async function loadModels() {
+  modelsLoading.value = true
+  try {
+    availableModels.value = await queryEnabledModels()
+    if (!form.modelConfigCode) {
+      form.modelConfigCode = availableModels.value.find((item) => item.defaultModel)?.modelCode ?? availableModels.value[0]?.modelCode ?? ''
+    }
+  } catch (error) {
+    setFeedback('error', getErrorMessage(error, '模型列表加载失败。'))
+  } finally {
+    modelsLoading.value = false
+  }
+}
+
 async function loadAgents(options?: { keepSelection?: boolean; successMessage?: string }) {
   loading.value = true
   try {
-    const result = await queryAgents()
+    const result = await queryAgents(filters.modelCode || undefined)
     agents.value = result
+    selectedAgentIds.value = selectedAgentIds.value.filter((item) => result.some((agent) => agent.agentId === item))
     const keepSelection = options?.keepSelection && result.some((item) => item.agentId === selectedAgentId.value)
     if (!keepSelection) {
       selectedAgentId.value = result[0]?.agentId ?? ''
@@ -289,6 +327,10 @@ async function handleSubmit() {
   }
   if (!buildPromptConfig()) {
     setFeedback('error', '请选择提示词模板，或补全自定义提示词配置。')
+    return
+  }
+  if (!form.modelConfigCode) {
+    setFeedback('error', '请选择模型配置。')
     return
   }
   submitting.value = true
@@ -396,8 +438,40 @@ async function handleOpenChat(versionNo?: number) {
   }
 }
 
+async function handleBatchMigrateModel() {
+  if (!form.modelConfigCode) {
+    setFeedback('error', '请先在左侧选择一个目标模型。')
+    return
+  }
+  if (selectedAgentIds.value.length === 0) {
+    setFeedback('error', '请至少勾选一个智能体。')
+    return
+  }
+  batchMigrating.value = true
+  try {
+    await batchMigrateAgentModels({
+      agentIds: [...selectedAgentIds.value],
+      targetModelConfigCode: form.modelConfigCode,
+      migrationMode: migrationMode.value,
+    })
+    await loadAgents({
+      keepSelection: true,
+      successMessage: migrationMode.value === 'PUBLISH_NEW_VERSION'
+        ? `已批量迁移并发布 ${selectedAgentIds.value.length} 个智能体的新版本。`
+        : `已批量迁移 ${selectedAgentIds.value.length} 个智能体的草稿版本模型绑定。`,
+    })
+    if (selectedAgentId.value) {
+      await loadAgentDetail(selectedAgentId.value)
+    }
+  } catch (error) {
+    setFeedback('error', getErrorMessage(error, '批量迁移模型失败。'))
+  } finally {
+    batchMigrating.value = false
+  }
+}
+
 onMounted(() => {
-  void Promise.all([loadAgents(), loadPromptTemplates(), loadHooks()])
+  void Promise.all([loadAgents(), loadPromptTemplates(), loadHooks(), loadModels()])
 })
 </script>
 
@@ -551,6 +625,20 @@ onMounted(() => {
                 </label>
               </div>
             </section>
+
+            <label class="field section-grid__full">
+              <span class="field__label">绑定模型</span>
+              <select v-model="form.modelConfigCode" class="app-select" :disabled="modelsLoading">
+                <option value="">{{ modelsLoading ? '正在加载模型...' : '请选择模型配置' }}</option>
+                <option v-for="model in availableModels" :key="model.modelCode" :value="model.modelCode">
+                  {{ model.modelName }} / {{ model.providerName || model.providerEnum }} / {{ model.modelIdentifier }}
+                </option>
+              </select>
+              <small v-if="selectedModel" class="muted">
+                当前选择：{{ selectedModel.modelType }} · {{ selectedModel.providerName || selectedModel.providerEnum }}
+                <template v-if="selectedModel.defaultModel"> · 默认模型</template>
+              </small>
+            </label>
           </div>
 
           <div class="chip-row">
@@ -592,6 +680,28 @@ onMounted(() => {
                 <option value="DISABLED">已停用</option>
               </select>
             </label>
+            <label class="field">
+              <span class="field__label">模型筛选</span>
+              <select v-model="filters.modelCode" class="app-select">
+                <option value="">全部模型</option>
+                <option v-for="model in availableModels" :key="model.modelCode" :value="model.modelCode">
+                  {{ model.modelName }}
+                </option>
+              </select>
+            </label>
+          </div>
+
+          <div class="action-row">
+            <label class="field field--compact">
+              <span class="field__label">迁移模式</span>
+              <select v-model="migrationMode" class="app-select">
+                <option value="DRAFT_ONLY">仅迁移草稿版本</option>
+                <option value="PUBLISH_NEW_VERSION">同时生成并发布新版本</option>
+              </select>
+            </label>
+            <button class="app-button app-button--secondary" :disabled="batchMigrating" @click="handleBatchMigrateModel">
+              {{ batchMigrating ? '迁移中...' : `批量迁移到当前模型 (${selectedAgentIds.length})` }}
+            </button>
           </div>
 
           <div v-if="loading" class="empty">正在加载智能体列表...</div>
@@ -604,11 +714,16 @@ onMounted(() => {
               :class="{ 'list-item--active': selectedAgentId === agent.agentId }"
               @click="selectedAgentId = agent.agentId"
             >
+              <label class="checkbox-line" @click.stop>
+                <input v-model="selectedAgentIds" type="checkbox" :value="agent.agentId" />
+                <span>加入批量迁移</span>
+              </label>
               <div class="list-item__head">
                 <strong>{{ agent.agentName }}</strong>
                 <span class="status-pill" :class="`status-pill--${agent.agentStatus.toLowerCase()}`">{{ formatStatus(agent.agentStatus) }}</span>
               </div>
               <p class="muted">{{ agent.description || '暂无描述' }}</p>
+              <small class="muted">模型：{{ agent.modelName || '未绑定模型' }} {{ agent.providerName ? ` / ${agent.providerName}` : '' }}</small>
               <small class="muted">当前 v{{ agent.currentVersionNo ?? '-' }} / 发布 v{{ agent.publishedVersionNo ?? '-' }}</small>
             </button>
           </div>
@@ -670,6 +785,7 @@ onMounted(() => {
                   {{ hookCode }}
                 </span>
               </div>
+              <p class="muted">模型绑定：{{ formatModelBinding(version) }}</p>
               <div v-if="version.promptVariableDefinitions?.length" class="variable-grid variable-grid--compact">
                 <article v-for="variable in version.promptVariableDefinitions" :key="`${version.versionId}-${variable.variableName}`" class="variable-card">
                   <div class="variable-card__head">
@@ -795,7 +911,7 @@ onMounted(() => {
   grid-column: 1 / -1;
 }
 .toolbar {
-  grid-template-columns: 1fr 180px;
+  grid-template-columns: 1fr 180px 220px;
 }
 .mode-grid,
 .variable-grid {
@@ -905,8 +1021,19 @@ onMounted(() => {
   gap: 10px;
   align-items: center;
 }
+.checkbox-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-ink-soft);
+  font-size: 0.8rem;
+}
 .empty--compact {
   padding: 14px 16px;
+}
+
+.field--compact {
+  min-width: 260px;
 }
 .prompt-preview,
 .code-line {

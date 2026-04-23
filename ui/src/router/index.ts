@@ -42,6 +42,14 @@ const router = createRouter({
       },
     },
     {
+      path: '/core-config',
+      name: 'core-config',
+      component: () => import('@/views/core/CoreManagementView.vue'),
+      meta: {
+        requiresAuth: true,
+      },
+    },
+    {
       path: '/prompts',
       name: 'prompts',
       component: () => import('@/views/prompts/PromptTemplateManagementView.vue'),

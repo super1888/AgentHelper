@@ -11,5 +11,7 @@ public class ChatModelRequest {
 
     private String apiKey;
 
+    private String baseUrl;
+
     private ChatOptionsDTO options;
 }

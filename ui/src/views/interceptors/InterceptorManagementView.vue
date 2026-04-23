@@ -242,7 +242,7 @@ async function loadDashboard() {
     catalog.value = catalogItems
     stats.value = statValue
   } catch (error) {
-    notice('error', getErrorMessage(error, 'Interceptor 数据加载失败。'))
+    notice('error', getErrorMessage(error, '拦截器数据加载失败。'))
   } finally {
     loading.value = false
   }
@@ -266,7 +266,7 @@ async function loadDetail(id: number) {
     testCases.value = testCaseItems
     logs.value = logItems
   } catch (error) {
-    notice('error', getErrorMessage(error, 'Interceptor 详情加载失败。'))
+    notice('error', getErrorMessage(error, '拦截器详情加载失败。'))
   } finally {
     acting.value = false
   }
@@ -413,7 +413,7 @@ onMounted(() => {
         <div>
           <p class="section-kicker">拦截器治理</p>
           <h2>拦截器工作台</h2>
-          <p class="muted">围绕 Agent 的工具调用、上下文治理和调试模拟做统一配置。</p>
+          <p class="muted">围绕智能体的工具调用、上下文治理和调试模拟做统一配置。</p>
         </div>
         <button class="app-button app-button--secondary" :disabled="loading" @click="loadDashboard">
           <RefreshCw :size="16" />刷新
@@ -526,7 +526,7 @@ onMounted(() => {
           </div>
           <div class="form">
             <input v-model="bindingForm.bindingName" class="app-input" type="text" placeholder="绑定名称" />
-            <input v-model="bindingForm.targetAgentCode" class="app-input" type="text" placeholder="目标 Agent 编码" />
+            <input v-model="bindingForm.targetAgentCode" class="app-input" type="text" placeholder="目标智能体编码" />
             <input v-model="bindingForm.targetModelCode" class="app-input full" type="text" placeholder="目标模型编码" />
           </div>
           <button class="app-button app-button--secondary" :disabled="acting || !selectedId" @click="handleCreateBinding">新增绑定</button>

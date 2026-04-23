@@ -4,6 +4,7 @@ import { RouterLink, useRoute, useRouter } from 'vue-router'
 import {
   Bot,
   Building2,
+  Cpu,
   Database,
   FileCode2,
   GitBranch,
@@ -29,6 +30,13 @@ const navItems = [
     description: '角色、会话与运行策略',
     icon: Bot,
     isActive: () => String(route.path).startsWith('/agents'),
+  },
+  {
+    to: '/core-config',
+    label: '核心配置',
+    description: '模型供应商、模型参数与密钥托管',
+    icon: Cpu,
+    isActive: () => route.name === 'core-config',
   },
   {
     to: '/prompts',

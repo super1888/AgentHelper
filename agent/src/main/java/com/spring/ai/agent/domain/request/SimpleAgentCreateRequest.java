@@ -20,4 +20,6 @@ public class SimpleAgentCreateRequest {
     private String agentType;
 
     private SimpleAgentPromptConfigDTO promptConfig;
+
+    private String modelConfigCode;
 }

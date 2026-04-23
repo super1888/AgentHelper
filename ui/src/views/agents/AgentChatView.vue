@@ -65,10 +65,25 @@ const streamTimers = new Map<string, ReturnType<typeof setTimeout>>()
 
 const agentId = computed(() => String(route.params.agentId || ''))
 const routeSessionId = computed(() => String(route.query.sessionId || ''))
+const routeVersionNo = computed(() => Number(route.query.versionNo || 0) || 0)
 const headerTitle = computed(() => agentDetail.value?.agentName || 'Agent Chat')
 const connectionLabel = computed(() => (connected.value ? '实时连接中' : '连接已断开'))
 const canSend = computed(() => connected.value && inputMessage.value.trim().length > 0 && !sending.value)
 const canRecover = computed(() => Boolean(sessionId.value && lastFailedTaskId.value) && !recovering.value)
+const currentVersion = computed(() => {
+  if (!agentDetail.value?.versions?.length) {
+    return null
+  }
+  return agentDetail.value.versions.find((item) => item.versionNo === routeVersionNo.value)
+    ?? agentDetail.value.versions.find((item) => item.versionNo === agentDetail.value?.publishedVersionNo)
+    ?? agentDetail.value.versions[0]
+})
+const currentModelSummary = computed(() => {
+  if (!currentVersion.value?.modelName) {
+    return '未绑定模型'
+  }
+  return `${currentVersion.value.modelName} / ${currentVersion.value.providerName || currentVersion.value.providerEnum || '-'}`
+})
 
 watch(
   () => bubbles.value.length,
@@ -611,6 +626,12 @@ onBeforeUnmount(() => {
             <span class="sidebar-block__label">Agent</span>
             <strong>{{ agentDetail?.agentName || agentId }}</strong>
             <p>{{ agentDetail?.description || '当前会话已绑定固定版本。' }}</p>
+          </div>
+
+          <div class="sidebar-block">
+            <span class="sidebar-block__label">当前模型</span>
+            <strong>{{ currentModelSummary }}</strong>
+            <p>标识：{{ currentVersion?.modelIdentifier || '-' }} · 类型：{{ currentVersion?.modelType || '-' }}</p>
           </div>
 
           <div class="sidebar-block">

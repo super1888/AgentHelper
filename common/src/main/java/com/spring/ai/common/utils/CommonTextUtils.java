@@ -5,10 +5,6 @@ import java.time.ZoneId;
 import java.util.List;
 import org.springframework.util.StringUtils;
 
-/**
- * 文件用途：通用文本与集合处理工具
- * 核心职责：统一处理 trim、空值转换、字符串列表清洗与时间戳转换
- */
 public final class CommonTextUtils {
 
     private CommonTextUtils() {
@@ -40,7 +36,10 @@ public final class CommonTextUtils {
      * 清洗字符串列表，空值过滤并去重。
      */
     public static List<String> emptyIfNull(List<String> value) {
-        return value == null ? List.of() : value.stream()
+        if (value == null) {
+            return List.of();
+        }
+        return value.stream()
                 .filter(StringUtils::hasText)
                 .map(String::trim)
                 .distinct()
@@ -51,15 +50,17 @@ public final class CommonTextUtils {
      * 将任意列表对象转为字符串列表。
      */
     public static List<String> stringList(Object value) {
-        if (value instanceof List<?> list) {
-            return list.stream().map(String::valueOf).filter(StringUtils::hasText).map(String::trim).toList();
+        if (!(value instanceof List)) {
+            return List.of();
         }
-        return List.of();
+        List<?> list = (List<?>) value;
+        return list.stream()
+                .map(String::valueOf)
+                .filter(StringUtils::hasText)
+                .map(String::trim)
+                .toList();
     }
 
-    /**
-     * LocalDateTime 转毫秒时间戳。
-     */
     public static Long toEpochMilli(LocalDateTime time) {
         return time == null ? null : time.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
     }

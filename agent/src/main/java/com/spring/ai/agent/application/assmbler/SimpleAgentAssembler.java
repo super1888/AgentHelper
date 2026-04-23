@@ -2,6 +2,7 @@ package com.spring.ai.agent.application.assmbler;
 
 import com.spring.ai.agent.domain.dto.SimpleAgentVersionConfigDTO;
 import com.spring.ai.agent.domain.dto.AgentPromptTemplateVariableDTO;
+import com.spring.ai.agent.domain.dto.SimpleAgentModelBindingDTO;
 import com.spring.ai.agent.domain.dto.SimpleAgentPromptConfigDTO;
 import com.spring.ai.agent.domain.request.SimpleAgentCreateRequest;
 import com.spring.ai.agent.domain.request.SimpleAgentUpdateRequest;
@@ -69,7 +70,8 @@ public final class SimpleAgentAssembler {
             String systemPrompt,
             List<String> selectedCapabilities,
             List<String> selectedHookCodes,
-            SimpleAgentPromptConfigDTO promptConfig
+            SimpleAgentPromptConfigDTO promptConfig,
+            SimpleAgentModelBindingDTO modelBinding
     ) {
         return SimpleAgentVersionConfigDTO.builder()
                 .agentName(trim(agentName))
@@ -78,6 +80,7 @@ public final class SimpleAgentAssembler {
                 .selectedCapabilities(normalizeCapabilities(selectedCapabilities))
                 .selectedHookCodes(normalizeHookCodes(selectedHookCodes))
                 .promptConfig(promptConfig)
+                .modelBinding(modelBinding)
                 .build();
     }
 
@@ -200,6 +203,11 @@ public final class SimpleAgentAssembler {
     }
 
     public static SimpleAgentSummaryResponse toSummaryResponse(Agent agent) {
+        return toSummaryResponse(agent, null);
+    }
+
+    public static SimpleAgentSummaryResponse toSummaryResponse(Agent agent, SimpleAgentVersionConfigDTO config) {
+        SimpleAgentModelBindingDTO modelBinding = config == null ? null : config.getModelBinding();
         return SimpleAgentSummaryResponse.builder()
                 .agentId(agent.getAgentCode())
                 .agentName(agent.getAgentName())
@@ -209,6 +217,9 @@ public final class SimpleAgentAssembler {
                 .currentVersionNo(agent.getLatestVersionNo())
                 .publishedVersionNo(agent.getPublishedVersionNo())
                 .ownerUserName(agent.getOwnerUserName())
+                .modelCode(modelBinding == null ? null : modelBinding.getModelCode())
+                .modelName(modelBinding == null ? null : modelBinding.getModelName())
+                .providerName(modelBinding == null ? null : modelBinding.getProviderName())
                 .build();
     }
 
@@ -218,6 +229,7 @@ public final class SimpleAgentAssembler {
             SimpleAgentVersionConfigDTO config
     ) {
         SimpleAgentPromptConfigDTO promptConfig = config == null ? null : config.getPromptConfig();
+        SimpleAgentModelBindingDTO modelBinding = config == null ? null : config.getModelBinding();
         return SimpleAgentVersionResponse.builder()
                 .versionId(version.getId() == null ? null : String.valueOf(version.getId()))
                 .versionNo(version.getVersionNo())
@@ -235,6 +247,13 @@ public final class SimpleAgentAssembler {
                 .promptTemplateContent(promptConfig == null ? null : promptConfig.getPromptTemplateContent())
                 .promptVariableDefinitions(promptConfig == null ? null : promptConfig.getPromptVariableDefinitions())
                 .promptVariables(promptConfig == null ? null : promptConfig.getPromptVariables())
+                .modelCode(modelBinding == null ? null : modelBinding.getModelCode())
+                .modelName(modelBinding == null ? null : modelBinding.getModelName())
+                .providerConfigCode(modelBinding == null ? null : modelBinding.getProviderConfigCode())
+                .providerEnum(modelBinding == null ? null : modelBinding.getProviderEnum())
+                .providerName(modelBinding == null ? null : modelBinding.getProviderName())
+                .modelIdentifier(modelBinding == null ? null : modelBinding.getModelIdentifier())
+                .modelType(modelBinding == null ? null : modelBinding.getModelType())
                 .published(version.getIsPublished() != null && version.getIsPublished() == 1)
                 .createTime(toEpochMilli(version.getCreateTime()))
                 .build();

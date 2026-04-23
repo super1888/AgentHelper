@@ -1,6 +1,7 @@
 package com.spring.ai.agent.controller;
 
 import com.spring.ai.agent.application.manager.SimpleAgentApplicationManager;
+import com.spring.ai.agent.domain.request.SimpleAgentBatchMigrateModelRequest;
 import com.spring.ai.agent.domain.request.SimpleAgentCreateRequest;
 import com.spring.ai.agent.domain.request.SimpleAgentReconnectRequest;
 import com.spring.ai.agent.domain.request.SimpleAgentSessionCreateRequest;
@@ -39,8 +40,10 @@ public class SimpleAgentController {
      * @return Agent 概览列表
      */
     @GetMapping
-    public ApiResponse<List<SimpleAgentSummaryResponse>> listAgents() {
-        return ApiResponse.success(simpleAgentApplicationManager.listAgents());
+    public ApiResponse<List<SimpleAgentSummaryResponse>> listAgents(
+            @RequestParam(value = "modelCode", required = false) String modelCode
+    ) {
+        return ApiResponse.success(simpleAgentApplicationManager.listAgents(modelCode));
     }
 
     /**
@@ -106,6 +109,12 @@ public class SimpleAgentController {
     @DeleteMapping("/{agentId}")
     public ApiResponse<Void> deleteAgent(@PathVariable("agentId") String agentId) {
         simpleAgentApplicationManager.deleteAgent(agentId);
+        return ApiResponse.success(null);
+    }
+
+    @PostMapping("/models/migrate")
+    public ApiResponse<Void> batchMigrateModels(@RequestBody SimpleAgentBatchMigrateModelRequest request) {
+        simpleAgentApplicationManager.batchMigrateModels(request);
         return ApiResponse.success(null);
     }
 

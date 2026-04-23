@@ -33,10 +33,28 @@ public class ScopeApi {
                 .build();
     }
 
+    public DashScopeApi getDashScopeApi(String apiKey, String baseUrl) {
+        DashScopeApi.Builder builder = DashScopeApi.builder()
+                .apiKey(resolveApiKey(apiKey, dashscopeApiKey, "dashscope"));
+        if (StringUtils.isNotBlank(baseUrl)) {
+            builder.baseUrl(baseUrl.trim());
+        }
+        return builder.build();
+    }
+
     public DeepSeekApi getDeepSeekApi(String apiKey) {
         return DeepSeekApi.builder()
                 .apiKey(resolveApiKey(apiKey, deepseekApiKey, "deepseek"))
                 .build();
+    }
+
+    public DeepSeekApi getDeepSeekApi(String apiKey, String baseUrl) {
+        DeepSeekApi.Builder builder = DeepSeekApi.builder()
+                .apiKey(resolveApiKey(apiKey, deepseekApiKey, "deepseek"));
+        if (StringUtils.isNotBlank(baseUrl)) {
+            builder.baseUrl(baseUrl.trim());
+        }
+        return builder.build();
     }
 
     public AnthropicApi getAnthropicApi(String apiKey) {
@@ -45,16 +63,43 @@ public class ScopeApi {
                 .build();
     }
 
+    public AnthropicApi getAnthropicApi(String apiKey, String baseUrl) {
+        AnthropicApi.Builder builder = AnthropicApi.builder()
+                .apiKey(resolveApiKey(apiKey, anthropicApiKey, "anthropic"));
+        if (StringUtils.isNotBlank(baseUrl)) {
+            builder.baseUrl(baseUrl.trim());
+        }
+        return builder.build();
+    }
+
     public OpenAiApi getOpenAiApi(String apiKey) {
         return OpenAiApi.builder()
                 .apiKey(resolveApiKey(apiKey, openAiApiKey, "openai"))
                 .build();
     }
 
+    public OpenAiApi getOpenAiApi(String apiKey, String baseUrl) {
+        OpenAiApi.Builder builder = OpenAiApi.builder()
+                .apiKey(resolveApiKey(apiKey, openAiApiKey, "openai"));
+        if (StringUtils.isNotBlank(baseUrl)) {
+            builder.baseUrl(baseUrl.trim());
+        }
+        return builder.build();
+    }
+
     public ZhiPuAiApi getZhiPuAiApi(String apiKey) {
         return ZhiPuAiApi.builder()
                 .apiKey(resolveApiKey(apiKey, zhiPuAiApiKey, "zhipuai"))
                 .build();
+    }
+
+    public ZhiPuAiApi getZhiPuAiApi(String apiKey, String baseUrl) {
+        ZhiPuAiApi.Builder builder = ZhiPuAiApi.builder()
+                .apiKey(resolveApiKey(apiKey, zhiPuAiApiKey, "zhipuai"));
+        if (StringUtils.isNotBlank(baseUrl)) {
+            builder.baseUrl(baseUrl.trim());
+        }
+        return builder.build();
     }
 
     private String resolveApiKey(String requestApiKey, String configuredApiKey, String provider) {
