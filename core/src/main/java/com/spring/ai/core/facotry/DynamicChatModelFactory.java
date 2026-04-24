@@ -8,6 +8,7 @@ import com.spring.ai.core.domain.dto.ChatModelRequest;
 import com.spring.ai.core.domain.dto.ChatOptionsDTO;
 import com.spring.ai.core.modelApi.ScopeApi;
 import jakarta.annotation.Resource;
+import java.util.Collections;
 import org.springframework.ai.anthropic.AnthropicChatModel;
 import org.springframework.ai.anthropic.AnthropicChatOptions;
 import org.springframework.ai.chat.client.ChatClient;
@@ -99,19 +100,25 @@ public class DynamicChatModelFactory {
     private DashScopeChatOptions buildDashScopeOptions(ChatOptionsDTO options) {
         DashScopeChatOptionsBuilder builder = DashScopeChatOptions.builder();
         if (StringUtils.hasText(options.getModel())) {
-            builder.withModel(options.getModel().trim());
+            builder.model(options.getModel().trim());
         }
         if (options.getTemperature() != null) {
-            builder.withTemperature(options.getTemperature());
+            builder.temperature(options.getTemperature());
         }
         if (options.getMaxTokens() != null) {
-            builder.withMaxToken(options.getMaxTokens());
+            builder.maxToken(options.getMaxTokens());
         }
         if (options.getTopP() != null) {
-            builder.withTopP(options.getTopP());
+            builder.topP(options.getTopP());
         }
         if (options.getTopK() != null) {
-            builder.withTopK(options.getTopK());
+            builder.topK(options.getTopK());
+        }
+        if (options.getFrequencyPenalty() != null) {
+            builder.repetitionPenalty(options.getFrequencyPenalty());
+        }
+        if (options.getStopSequences() != null) {
+            builder.stop(Collections.singletonList(options.getStopSequences()));
         }
         return builder.build();
     }

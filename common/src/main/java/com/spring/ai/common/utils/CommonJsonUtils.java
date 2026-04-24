@@ -63,6 +63,21 @@ public class CommonJsonUtils {
         }
     }
 
+    /**
+     * 将 JSON 文本规范化为紧凑格式，并在入参非法时抛出可读业务异常。
+     */
+    public String normalizeJsonOrNull(String rawJson, String fieldName) {
+        String value = CommonTextUtils.trimToNull(rawJson);
+        if (value == null) {
+            return null;
+        }
+        try {
+            return objectMapper.writeValueAsString(objectMapper.readTree(value));
+        } catch (JsonProcessingException ex) {
+            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, fieldName + " 不是合法 JSON");
+        }
+    }
+
     public Map<String, Object> objectMap(Object value) {
         if (!(value instanceof Map)) {
             return Map.of();

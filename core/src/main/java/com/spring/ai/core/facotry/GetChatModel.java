@@ -15,7 +15,7 @@ public class GetChatModel {
 
     public ChatModel creatDashScopeChatModel() {
         ChatOptionsDTO options = new ChatOptionsDTO();
-        options.setModel("qwen-max");
+        options.setModel("qwen3-max-preview");
         options.setTemperature(0.7);
         options.setMaxTokens(2000);
         options.setTopP(0.9);
@@ -23,6 +23,7 @@ public class GetChatModel {
         ChatModelRequest request = new ChatModelRequest();
         request.setProvider(ModelProviderEnum.DASHSCOPE.name());
         request.setOptions(options);
+//        request.setBaseUrl("https://dashscope.aliyuncs.com/api/v1");
         return dynamicChatModelFactory.create(request);
     }
 }

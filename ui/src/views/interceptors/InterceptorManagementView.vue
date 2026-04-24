@@ -77,7 +77,7 @@ const form = reactive({
   triggerMode: 'SYNC',
   failStrategy: 'CONTINUE',
   sortWeight: 100,
-  timeoutMs: 5000,
+  timeoutMs: 10000,
   hotUpdateEnabled: 0,
   versionCode: '',
   versionDescription: '',
@@ -154,7 +154,7 @@ function resetForm() {
   form.triggerMode = 'SYNC'
   form.failStrategy = 'CONTINUE'
   form.sortWeight = 100
-  form.timeoutMs = 5000
+  form.timeoutMs = 10000
   form.hotUpdateEnabled = 0
   form.versionCode = ''
   form.versionDescription = ''
@@ -181,7 +181,7 @@ function fillForm(item: InterceptorItem) {
   form.triggerMode = item.triggerMode
   form.failStrategy = item.failStrategy
   form.sortWeight = item.sortWeight ?? 100
-  form.timeoutMs = item.timeoutMs ?? 5000
+  form.timeoutMs = item.timeoutMs ?? 10000
   form.hotUpdateEnabled = item.hotUpdateEnabled ?? 0
   form.versionCode = item.versionCode ?? ''
   form.versionDescription = item.versionDescription ?? ''

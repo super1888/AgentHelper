@@ -61,6 +61,13 @@ public final class CommonTextUtils {
                 .toList();
     }
 
+    /**
+     * 将 null 与空字符串视为等价，便于做表单字段比较。
+     */
+    public static boolean equalsNullableBlank(String left, String right) {
+        return (left == null || left.isEmpty()) ? (right == null || right.isEmpty()) : left.equals(right);
+    }
+
     public static Long toEpochMilli(LocalDateTime time) {
         return time == null ? null : time.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
     }

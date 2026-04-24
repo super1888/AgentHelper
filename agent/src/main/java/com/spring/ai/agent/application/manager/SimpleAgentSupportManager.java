@@ -1,5 +1,7 @@
 package com.spring.ai.agent.application.manager;
 
+import com.spring.ai.agent.application.assmbler.SimpleAgentAssembler;
+import com.spring.ai.agent.domain.response.SimpleAgentWsEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -9,12 +11,14 @@ import com.spring.ai.common.exception.BusinessException;
 import com.spring.ai.common.exception.BusinessExceptions;
 import com.spring.ai.common.repository.enitiy.Agent;
 import com.spring.ai.common.repository.enitiy.AgentSession;
+import com.spring.ai.common.repository.enitiy.AgentSessionEvent;
 import com.spring.ai.common.repository.enitiy.AgentTask;
 import com.spring.ai.common.repository.enitiy.AgentVersion;
 import com.spring.ai.common.repository.service.AgentService;
 import com.spring.ai.common.repository.service.AgentSessionService;
 import com.spring.ai.common.repository.service.AgentTaskService;
 import com.spring.ai.common.repository.service.AgentVersionService;
+import com.spring.ai.common.utils.CommonTextUtils;
 import com.spring.ai.common.web.CurrentUserContextSupport;
 import jakarta.annotation.Resource;
 import java.util.Collections;
@@ -194,6 +198,35 @@ public class SimpleAgentSupportManager {
                     fieldName + " 超出 Long 范围",
                     exception);
         }
+    }
+
+    /**
+     * 统一组装事件回放载荷，避免多个管理器重复拼装 taskCode、版本号和时间戳。
+     */
+    public SimpleAgentWsEvent buildReplayEvent(AgentSession session, AgentSessionEvent event) {
+        return SimpleAgentAssembler.toWsEvent(
+                session,
+                resolveTaskCode(event.getTaskId()),
+                event.getAgentVersionId(),
+                session.getAgentVersionNo(),
+                event.getEventType(),
+                event.getEventBody(),
+                event.getEventSequence(),
+                event.getCreateTime() == null
+                        ? System.currentTimeMillis()
+                        : CommonTextUtils.toEpochMilli(event.getCreateTime())
+        );
+    }
+
+    /**
+     * 将任务主键解析为前端可直接识别的 taskCode，查不到任务时退化为主键字符串。
+     */
+    public String resolveTaskCode(Long taskId) {
+        if (taskId == null) {
+            return null;
+        }
+        AgentTask task = agentTaskService.getById(taskId);
+        return task == null ? String.valueOf(taskId) : task.getTaskCode();
     }
 
     private boolean sameTenant(Long resourceTenantId, Long currentTenantId) {

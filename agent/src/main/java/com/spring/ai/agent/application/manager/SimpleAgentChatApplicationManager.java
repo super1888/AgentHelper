@@ -10,7 +10,6 @@ import com.spring.ai.agent.domain.dto.SimpleAgentVersionConfigDTO;
 import com.spring.ai.agent.domain.request.SimpleAgentChatRequest;
 import com.spring.ai.agent.domain.request.SimpleAgentRecoverRequest;
 import com.spring.ai.agent.domain.response.SimpleAgentRecoverResponse;
-import com.spring.ai.agent.domain.response.SimpleAgentWsEvent;
 import com.spring.ai.common.config.async.CommonAsyncConfig;
 import com.spring.ai.common.constants.SimpleAgentConstants;
 import com.spring.ai.common.enums.ErrorCodeEnum;
@@ -18,7 +17,6 @@ import com.spring.ai.common.exception.BusinessException;
 import com.spring.ai.common.exception.BusinessExceptions;
 import com.spring.ai.common.repository.enitiy.Agent;
 import com.spring.ai.common.repository.enitiy.AgentSession;
-import com.spring.ai.common.repository.enitiy.AgentSessionEvent;
 import com.spring.ai.common.repository.enitiy.AgentTask;
 import com.spring.ai.common.repository.enitiy.AgentVersion;
 import com.spring.ai.common.repository.service.AgentService;
@@ -31,7 +29,6 @@ import com.spring.ai.hooks.domain.dto.HookRuntimeResultDTO;
 import com.spring.ai.websocket.annotation.WebSocketPush;
 import com.spring.ai.websocket.service.WebSocketPushService;
 import jakarta.annotation.Resource;
-import java.time.ZoneId;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
@@ -140,6 +137,7 @@ public class SimpleAgentChatApplicationManager {
         SimpleAgentVersionConfigDTO versionConfig = simpleAgentSupportManager.parseConfig(version.getConfigSnapshotJson());
         List<String> selectedHookCodes = versionConfig == null ? null : versionConfig.getSelectedHookCodes();
         StringBuilder fullContent = new StringBuilder();
+        StringBuilder reasoningContent = new StringBuilder();
         try {
             HookRuntimeResultDTO preHookResult = hookRuntimeManager.applyPreModelHooks(
                     session.getTenantId(),
@@ -154,7 +152,7 @@ public class SimpleAgentChatApplicationManager {
             }
             String runtimeRequestMessage = preHookResult.getContent();
             Flux<NodeOutput> stream = reactAgent.stream(runtimeRequestMessage);
-            stream.doOnNext(output -> handleStreamingOutput(output, session, task, fullContent))
+            stream.doOnNext(output -> handleStreamingOutput(output, session, task, fullContent, reasoningContent))
                     .doOnComplete(() -> handleTaskSuccessWithHooks(
                             session,
                             task,
@@ -200,7 +198,8 @@ public class SimpleAgentChatApplicationManager {
             NodeOutput output,
             AgentSession session,
             AgentTask task,
-            StringBuilder fullContent
+            StringBuilder fullContent,
+            StringBuilder reasoningContent
     ) {
         if (!(output instanceof StreamingOutput streamingOutput)) {
             return;
@@ -209,12 +208,16 @@ public class SimpleAgentChatApplicationManager {
         Message message = streamingOutput.message();
 
         if (outputType == OutputType.AGENT_MODEL_STREAMING && message instanceof AssistantMessage assistantMessage) {
-            String reasoning = stringify(assistantMessage.getMetadata().get("reasoningContent"));
+            /**
+             * reasoningContent 和 text 都可能以“累计全文”形式反复返回，这里先裁剪成真正新增片段，再推送和落库。
+             */
+            String reasoning = resolveIncrementalText(reasoningContent, stringify(assistantMessage.getMetadata().get("reasoningContent")));
             if (StringUtils.hasText(reasoning)) {
+                reasoningContent.append(reasoning);
                 simpleAgentChatPersistenceManager.publishEvent(session, task, "AGENT_REASONING", reasoning, 1);
             }
 
-            String text = assistantMessage.getText();
+            String text = resolveIncrementalText(fullContent, assistantMessage.getText());
             if (StringUtils.hasText(text)) {
                 fullContent.append(text);
                 simpleAgentChatPersistenceManager.publishEvent(session, task, "AGENT_TOKEN", text, 1);
@@ -239,7 +242,7 @@ public class SimpleAgentChatApplicationManager {
                 .forEach(event -> webSocketPushService.sendToSession(
                         session.getSessionCode(),
                         event.getEventType(),
-                        buildReplayEvent(session, event)
+                        simpleAgentSupportManager.buildReplayEvent(session, event)
                 ));
     }
 
@@ -286,29 +289,6 @@ public class SimpleAgentChatApplicationManager {
         return failedTask;
     }
 
-    private SimpleAgentWsEvent buildReplayEvent(AgentSession session, AgentSessionEvent event) {
-        return SimpleAgentAssembler.toWsEvent(
-                session,
-                resolveTaskCode(event.getTaskId()),
-                event.getAgentVersionId(),
-                session.getAgentVersionNo(),
-                event.getEventType(),
-                event.getEventBody(),
-                event.getEventSequence(),
-                event.getCreateTime() == null
-                        ? System.currentTimeMillis()
-                        : event.getCreateTime().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-        );
-    }
-
-    private String resolveTaskCode(Long taskId) {
-        if (taskId == null) {
-            return null;
-        }
-        AgentTask task = agentTaskService.getById(taskId);
-        return task == null ? String.valueOf(taskId) : task.getTaskCode();
-    }
-
     private Integer resolveRetryCount(Long sourceTaskId) {
         if (sourceTaskId == null) {
             return 0;
@@ -322,6 +302,36 @@ public class SimpleAgentChatApplicationManager {
 
     private String stringify(Object value) {
         return value == null ? "" : String.valueOf(value);
+    }
+
+    /**
+     * 兼容流式输出可能返回“累计全文”或“增量片段”两种模式，只提取真正新增的部分。
+     */
+    private String resolveIncrementalText(StringBuilder accumulatedContent, String currentText) {
+        if (!StringUtils.hasText(currentText)) {
+            return "";
+        }
+        String normalizedCurrentText = currentText;
+        String existingContent = accumulatedContent == null ? "" : accumulatedContent.toString();
+        if (!StringUtils.hasText(existingContent)) {
+            return normalizedCurrentText;
+        }
+        if (normalizedCurrentText.equals(existingContent)) {
+            return "";
+        }
+        if (normalizedCurrentText.startsWith(existingContent)) {
+            return normalizedCurrentText.substring(existingContent.length());
+        }
+        if (existingContent.endsWith(normalizedCurrentText)) {
+            return "";
+        }
+        int maxOverlap = Math.min(existingContent.length(), normalizedCurrentText.length());
+        for (int overlap = maxOverlap; overlap > 0; overlap--) {
+            if (existingContent.regionMatches(existingContent.length() - overlap, normalizedCurrentText, 0, overlap)) {
+                return normalizedCurrentText.substring(overlap);
+            }
+        }
+        return normalizedCurrentText;
     }
 
     private String resolveErrorMessage(Throwable throwable) {

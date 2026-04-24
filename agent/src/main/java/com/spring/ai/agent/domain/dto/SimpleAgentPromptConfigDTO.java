@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import com.spring.ai.prompt.domain.dto.PromptTemplateEnterpriseConfigDTO;
 
 @Data
 @Builder
@@ -33,4 +34,6 @@ public class SimpleAgentPromptConfigDTO {
     private List<AgentPromptTemplateVariableDTO> promptVariableDefinitions;
 
     private Map<String, String> promptVariables;
+
+    private PromptTemplateEnterpriseConfigDTO enterpriseConfig;
 }

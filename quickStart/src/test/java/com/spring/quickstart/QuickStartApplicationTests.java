@@ -842,7 +842,7 @@ class QuickStartApplicationTests {
         ChatModel chatModel = getChatModel.creatDashScopeChatModel();
 //        ChatClient chatClient = ChatClient.create(chatModel);
 //
-//        String content = chatClient.prompt("What day is tomorrow?").tools(new DateTimeTools()).call().content();
+//        String content = chatClient.prompt("What day is tomorrow?").call().content();
 //        System.out.println(content);
         List<String> list = Arrays.asList("aa", "bb");
         String[] array = list.toArray(new String[0]);
@@ -853,7 +853,7 @@ class QuickStartApplicationTests {
                 .call()
                 .content();
 
-        System.out.println(response);
+//        System.out.println(response);
 
     }
 

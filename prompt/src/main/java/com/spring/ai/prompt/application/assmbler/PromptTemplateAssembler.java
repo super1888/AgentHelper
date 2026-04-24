@@ -1,15 +1,13 @@
 package com.spring.ai.prompt.application.assmbler;
 
 import com.spring.ai.common.repository.enitiy.PromptTemplateRecord;
+import com.spring.ai.common.utils.CommonTextUtils;
 import com.spring.ai.prompt.config.PromptTemplateConstants;
 import com.spring.ai.prompt.domain.dto.PromptTemplateEnterpriseConfigDTO;
 import com.spring.ai.prompt.domain.dto.PromptTemplateVariableDTO;
 import com.spring.ai.prompt.domain.response.PromptTemplateResponse;
 import com.spring.ai.prompt.domain.response.PromptTemplateStatisticsResponse;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.List;
-import org.springframework.util.StringUtils;
 
 /**
  * 提示词模板对象组装器。
@@ -36,13 +34,13 @@ public final class PromptTemplateAssembler {
     ) {
         PromptTemplateRecord record = new PromptTemplateRecord();
         record.setTemplateCode(normalizeCode(templateCode));
-        record.setTemplateName(trim(templateName));
-        record.setDescription(trimToNull(description));
+        record.setTemplateName(CommonTextUtils.trim(templateName));
+        record.setDescription(CommonTextUtils.trimToNull(description));
         record.setTemplateType(PromptTemplateConstants.TEMPLATE_TYPE_SYSTEM);
         record.setSourceType(sourceType);
         record.setTemplateContent(templateContent);
-        record.setSourcePath(trimToNull(sourcePath));
-        record.setExt(trimToNull(ext));
+        record.setSourcePath(CommonTextUtils.trimToNull(sourcePath));
+        record.setExt(CommonTextUtils.trimToNull(ext));
         record.setTemplateStatus(PromptTemplateConstants.TEMPLATE_STATUS_ENABLED);
         record.setTenantId(tenantId);
         record.setOwnerUserId(ownerUserId);
@@ -63,13 +61,13 @@ public final class PromptTemplateAssembler {
             String templateStatus,
             String ext
     ) {
-        record.setTemplateName(trim(templateName));
-        record.setDescription(trimToNull(description));
+        record.setTemplateName(CommonTextUtils.trim(templateName));
+        record.setDescription(CommonTextUtils.trimToNull(description));
         record.setSourceType(sourceType);
         record.setTemplateContent(templateContent);
-        record.setSourcePath(trimToNull(sourcePath));
-        record.setExt(trimToNull(ext));
-        if (StringUtils.hasText(templateStatus)) {
+        record.setSourcePath(CommonTextUtils.trimToNull(sourcePath));
+        record.setExt(CommonTextUtils.trimToNull(ext));
+        if (CommonTextUtils.trimToNull(templateStatus) != null) {
             record.setTemplateStatus(templateStatus);
         }
     }
@@ -96,8 +94,8 @@ public final class PromptTemplateAssembler {
                 .ownerUserName(record.getOwnerUserName())
                 .variableDefinitions(variableDefinitions)
                 .enterpriseConfig(enterpriseConfig)
-                .createTime(toEpochMilli(record.getCreateTime()))
-                .updateTime(toEpochMilli(record.getUpdateTime()))
+                .createTime(CommonTextUtils.toEpochMilli(record.getCreateTime()))
+                .updateTime(CommonTextUtils.toEpochMilli(record.getUpdateTime()))
                 .build();
     }
 
@@ -125,23 +123,8 @@ public final class PromptTemplateAssembler {
     /**
      * 将本地时间转换为毫秒时间戳。
      */
-    public static Long toEpochMilli(LocalDateTime time) {
-        if (time == null) {
-            return null;
-        }
-        return time.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
-    }
-
     private static String normalizeCode(String templateCode) {
-        return trim(templateCode) == null ? null : trim(templateCode).toUpperCase();
-    }
-
-    private static String trimToNull(String value) {
-        String trimmed = trim(value);
-        return StringUtils.hasText(trimmed) ? trimmed : null;
-    }
-
-    private static String trim(String value) {
-        return value == null ? null : value.trim();
+        String normalizedCode = CommonTextUtils.trim(templateCode);
+        return normalizedCode == null ? null : normalizedCode.toUpperCase();
     }
 }

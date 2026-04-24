@@ -32,7 +32,6 @@ import com.spring.ai.interceptors.domain.response.InterceptorTestCaseResponse;
 import jakarta.annotation.Resource;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -513,7 +512,7 @@ public class InterceptorApplicationManager {
         boolean failure = "FAILED".equalsIgnoreCase(String.valueOf(requestPayload.getOrDefault("toolStatus", "SUCCESS")));
         int maxRetries = numberValue(config.get("maxRetries"), 2);
         trace.put("retryPlan", Map.of("maxRetries", maxRetries, "backoffFactor", config.getOrDefault("backoffFactor", 1.0)));
-        return orderedMap(
+        return interceptorSupportManager.orderedMap(
                 "action", failure ? "RETRY" : "PASS",
                 "retryCount", failure ? maxRetries : 0,
                 "toolName", requestPayload.get("toolName"),
@@ -531,7 +530,7 @@ public class InterceptorApplicationManager {
             }
         }
         trace.put("toolDescription", config.get("toolDescription"));
-        return orderedMap("action", "CREATE_TODO_LIST", "todoItems", items, "blocked", false);
+        return interceptorSupportManager.orderedMap("action", "CREATE_TODO_LIST", "todoItems", items, "blocked", false);
     }
 
     private Map<String, Object> simulateToolSelection(
@@ -540,46 +539,56 @@ public class InterceptorApplicationManager {
             Map<String, Object> contextPayload,
             Map<String, Object> trace
     ) {
-        List<String> candidates = CommonTextUtils.stringList(firstNonNull(requestPayload.get("toolCandidates"), contextPayload.get("toolCandidates")));
+        List<String> candidates = CommonTextUtils.stringList(
+                interceptorSupportManager.firstNonNull(requestPayload.get("toolCandidates"), contextPayload.get("toolCandidates"))
+        );
         List<String> alwaysInclude = CommonTextUtils.stringList(config.get("alwaysInclude"));
-        int maxTools = numberValue(config.get("maxTools"), 3);
+        int maxTools = interceptorSupportManager.numberValue(config.get("maxTools"), 3);
         List<String> selected = new ArrayList<>();
-        alwaysInclude.forEach(item -> addIfAbsent(selected, item));
-        candidates.stream().limit(Math.max(0, maxTools - selected.size())).forEach(item -> addIfAbsent(selected, item));
+        alwaysInclude.forEach(item -> interceptorSupportManager.addIfAbsent(selected, item));
+        candidates.stream().limit(Math.max(0, maxTools - selected.size())).forEach(item -> interceptorSupportManager.addIfAbsent(selected, item));
         boolean blocked = selected.isEmpty() && "BLOCK".equals(config.getOrDefault("emptySelectionStrategy", "BLOCK"));
         trace.put("candidateCount", candidates.size());
-        return orderedMap("action", "SELECT_TOOLS", "selectedTools", selected, "blocked", blocked);
+        return interceptorSupportManager.orderedMap("action", "SELECT_TOOLS", "selectedTools", selected, "blocked", blocked);
     }
 
     private Map<String, Object> simulateToolEmulator(Map<String, Object> config, Map<String, Object> requestPayload, Map<String, Object> trace) {
         Map<String, Object> mockResponses = commonJsonUtils.objectMap(config.get("mockResponses"));
         List<Map<String, Object>> responses = new ArrayList<>();
-        for (Object item : objectList(requestPayload.get("toolCalls"))) {
+        for (Object item : interceptorSupportManager.objectList(requestPayload.get("toolCalls"))) {
             Map<String, Object> call = commonJsonUtils.objectMap(item);
             String toolName = String.valueOf(call.getOrDefault("name", ""));
-            responses.add(orderedMap("toolName", toolName, "response", mockResponses.getOrDefault(toolName, Map.of("mocked", true))));
+            responses.add(interceptorSupportManager.orderedMap(
+                    "toolName", toolName,
+                    "response", mockResponses.getOrDefault(toolName, Map.of("mocked", true))
+            ));
         }
         trace.put("emulateAll", config.getOrDefault("emulateAll", false));
-        return orderedMap("action", "EMULATE_TOOLS", "toolResponses", responses, "blocked", false);
+        return interceptorSupportManager.orderedMap("action", "EMULATE_TOOLS", "toolResponses", responses, "blocked", false);
     }
 
     private Map<String, Object> simulateContextEditing(Map<String, Object> config, Map<String, Object> requestPayload, Map<String, Object> trace) {
-        List<Object> messages = objectList(requestPayload.get("messages"));
-        int keep = numberValue(config.get("keep"), 6);
+        List<Object> messages = interceptorSupportManager.objectList(requestPayload.get("messages"));
+        int keep = interceptorSupportManager.numberValue(config.get("keep"), 6);
         List<Object> keptMessages = messages.size() <= keep ? messages : messages.subList(messages.size() - keep, messages.size());
         trace.put("originalMessageCount", messages.size());
         trace.put("keptMessageCount", keptMessages.size());
-        return orderedMap("action", "EDIT_CONTEXT", "messages", keptMessages, "blocked", false);
+        return interceptorSupportManager.orderedMap("action", "EDIT_CONTEXT", "messages", keptMessages, "blocked", false);
     }
 
     private Map<String, Object> simulateGeneric(
             Map<String, Object> config,
             Map<String, Object> requestPayload,
             Map<String, Object> contextPayload,
-            Map<String, Object> trace
+        Map<String, Object> trace
     ) {
         trace.put("configKeys", config.keySet());
-        return orderedMap("action", "PASS_THROUGH", "requestPayload", requestPayload, "contextPayload", contextPayload, "blocked", false);
+        return interceptorSupportManager.orderedMap(
+                "action", "PASS_THROUGH",
+                "requestPayload", requestPayload,
+                "contextPayload", contextPayload,
+                "blocked", false
+        );
     }
 
     private void saveExecutionLog(
@@ -660,45 +669,6 @@ public class InterceptorApplicationManager {
         if (!StringUtils.hasText(request.getBindingScope())) {
             throw BusinessExceptions.badRequest("绑定范围不能为空");
         }
-    }
-
-    private List<Object> objectList(Object value) {
-        if (value instanceof List<?> list) {
-            return new ArrayList<>(list);
-        }
-        return List.of();
-    }
-
-    private Object firstNonNull(Object left, Object right) {
-        return left == null ? right : left;
-    }
-
-    private int numberValue(Object value, int defaultValue) {
-        if (value instanceof Number number) {
-            return number.intValue();
-        }
-        if (value != null) {
-            try {
-                return Integer.parseInt(String.valueOf(value));
-            } catch (NumberFormatException ignored) {
-                return defaultValue;
-            }
-        }
-        return defaultValue;
-    }
-
-    private void addIfAbsent(List<String> values, String value) {
-        if (StringUtils.hasText(value) && !values.contains(value.trim())) {
-            values.add(value.trim());
-        }
-    }
-
-    private Map<String, Object> orderedMap(Object... values) {
-        Map<String, Object> result = new LinkedHashMap<>();
-        for (int i = 0; i + 1 < values.length; i += 2) {
-            result.put(String.valueOf(values[i]), values[i + 1]);
-        }
-        return result;
     }
 
     private record SimulatedResult(

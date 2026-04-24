@@ -299,7 +299,7 @@ public class SimpleAgentApplicationManager {
         List<SimpleAgentWsEvent> missedEvents = agentSessionEventService
                 .listReplayEvents(session.getId(), session.getTenantId(), lastSequence)
                 .stream()
-                .map(event -> buildReplayEvent(session, event))
+                .map(event -> simpleAgentSupportManager.buildReplayEvent(session, event))
                 .toList();
         return SimpleAgentAssembler.toReconnectResponse(session, missedEvents);
     }
@@ -388,6 +388,9 @@ public class SimpleAgentApplicationManager {
             PromptTemplateResolvedDTO promptResolved,
             SimpleAgentPromptConfigDTO promptConfig
     ) {
+        /**
+         * 将模板解析后的快照完整写入 Agent 版本配置，确保运行时可直接消费模板变量和企业级策略。
+         */
         return SimpleAgentPromptConfigDTO.builder()
                 .promptTemplateId(promptResolved.getPromptTemplateId() == null
                         ? null
@@ -400,6 +403,7 @@ public class SimpleAgentApplicationManager {
                 .promptTemplateContent(promptConfig == null ? null : promptConfig.getPromptTemplateContent())
                 .promptVariableDefinitions(SimpleAgentAssembler.toPromptVariableDefinitions(promptResolved.getVariableDefinitions()))
                 .promptVariables(promptResolved.getPromptVariables())
+                .enterpriseConfig(promptResolved.getEnterpriseConfig())
                 .build();
     }
 
@@ -526,26 +530,5 @@ public class SimpleAgentApplicationManager {
             throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST,
                     "浠呭厑璁稿垹闄ゅ凡绂佺敤鐨� Agent");
         }
-    }
-
-    private SimpleAgentWsEvent buildReplayEvent(AgentSession session, AgentSessionEvent event) {
-        return SimpleAgentAssembler.toWsEvent(
-                session,
-                resolveTaskCode(event.getTaskId()),
-                event.getAgentVersionId(),
-                session.getAgentVersionNo(),
-                event.getEventType(),
-                event.getEventBody(),
-                event.getEventSequence(),
-                SimpleAgentAssembler.toEpochMilli(event.getCreateTime())
-        );
-    }
-
-    private String resolveTaskCode(Long taskId) {
-        if (taskId == null) {
-            return null;
-        }
-        AgentTask task = agentTaskService.getById(taskId);
-        return task == null ? String.valueOf(taskId) : task.getTaskCode();
     }
 }

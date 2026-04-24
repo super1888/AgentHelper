@@ -4,6 +4,7 @@ import com.spring.ai.common.enums.ErrorCodeEnum;
 import com.spring.ai.common.exception.BusinessException;
 import com.spring.ai.common.repository.enitiy.PromptTemplateRecord;
 import com.spring.ai.common.repository.service.PromptTemplateRecordService;
+import com.spring.ai.common.utils.CommonTextUtils;
 import com.spring.ai.prompt.application.assmbler.PromptTemplateAssembler;
 import com.spring.ai.prompt.config.PromptTemplateConstants;
 import com.spring.ai.prompt.domain.dto.PromptTemplateEnterpriseConfigDTO;
@@ -16,7 +17,6 @@ import com.spring.ai.prompt.domain.response.PromptTemplateRenderResponse;
 import com.spring.ai.prompt.domain.response.PromptTemplateResponse;
 import com.spring.ai.prompt.domain.response.PromptTemplateStatisticsResponse;
 import jakarta.annotation.Resource;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -317,8 +317,8 @@ public class PromptTemplateApplicationManager {
         return PromptTemplateVariableDTO.builder()
                 .variableName(item.getVariableName().trim())
                 .required(Boolean.TRUE.equals(item.getRequired()))
-                .defaultValue(trimToNull(item.getDefaultValue()))
-                .description(trimToNull(item.getDescription()))
+                .defaultValue(CommonTextUtils.trimToNull(item.getDefaultValue()))
+                .description(CommonTextUtils.trimToNull(item.getDescription()))
                 .build();
     }
 
@@ -348,22 +348,22 @@ public class PromptTemplateApplicationManager {
             return null;
         }
         return PromptTemplateEnterpriseConfigDTO.RenderingPolicy.builder()
-                .dynamicVariables(normalizeStringList(policy.getDynamicVariables()))
-                .dataSources(normalizeStringList(policy.getDataSources()))
+                .dynamicVariables(CommonTextUtils.emptyIfNull(policy.getDynamicVariables()))
+                .dataSources(CommonTextUtils.emptyIfNull(policy.getDataSources()))
                 .conditionalBranches(policy.getConditionalBranches() == null ? List.of() : policy.getConditionalBranches().stream()
                         .map(item -> PromptTemplateEnterpriseConfigDTO.ConditionalRule.builder()
-                                .name(trimToNull(item.getName()))
-                                .conditionExpression(trimToNull(item.getConditionExpression()))
-                                .trueTemplate(trimToNull(item.getTrueTemplate()))
-                                .falseTemplate(trimToNull(item.getFalseTemplate()))
+                                .name(CommonTextUtils.trimToNull(item.getName()))
+                                .conditionExpression(CommonTextUtils.trimToNull(item.getConditionExpression()))
+                                .trueTemplate(CommonTextUtils.trimToNull(item.getTrueTemplate()))
+                                .falseTemplate(CommonTextUtils.trimToNull(item.getFalseTemplate()))
                                 .build())
                         .toList())
                 .loopRenderers(policy.getLoopRenderers() == null ? List.of() : policy.getLoopRenderers().stream()
                         .map(item -> PromptTemplateEnterpriseConfigDTO.LoopRule.builder()
-                                .listVariable(trimToNull(item.getListVariable()))
-                                .itemAlias(trimToNull(item.getItemAlias()))
-                                .emptyTemplate(trimToNull(item.getEmptyTemplate()))
-                                .itemTemplate(trimToNull(item.getItemTemplate()))
+                                .listVariable(CommonTextUtils.trimToNull(item.getListVariable()))
+                                .itemAlias(CommonTextUtils.trimToNull(item.getItemAlias()))
+                                .emptyTemplate(CommonTextUtils.trimToNull(item.getEmptyTemplate()))
+                                .itemTemplate(CommonTextUtils.trimToNull(item.getItemTemplate()))
                                 .build())
                         .toList())
                 .build();
@@ -374,11 +374,11 @@ public class PromptTemplateApplicationManager {
             return null;
         }
         return PromptTemplateEnterpriseConfigDTO.RolePolicy.builder()
-                .agentRole(trimToNull(policy.getAgentRole()))
-                .dutyScope(trimToNull(policy.getDutyScope()))
-                .forbiddenActions(normalizeStringList(policy.getForbiddenActions()))
-                .tone(trimToNull(policy.getTone()))
-                .speechRules(normalizeStringList(policy.getSpeechRules()))
+                .agentRole(CommonTextUtils.trimToNull(policy.getAgentRole()))
+                .dutyScope(CommonTextUtils.trimToNull(policy.getDutyScope()))
+                .forbiddenActions(CommonTextUtils.emptyIfNull(policy.getForbiddenActions()))
+                .tone(CommonTextUtils.trimToNull(policy.getTone()))
+                .speechRules(CommonTextUtils.emptyIfNull(policy.getSpeechRules()))
                 .build();
     }
 
@@ -389,14 +389,14 @@ public class PromptTemplateApplicationManager {
             return null;
         }
         return PromptTemplateEnterpriseConfigDTO.WorkflowPolicy.builder()
-                .workflowStages(normalizeStringList(policy.getWorkflowStages()))
-                .hardRules(normalizeStringList(policy.getHardRules()))
+                .workflowStages(CommonTextUtils.emptyIfNull(policy.getWorkflowStages()))
+                .hardRules(CommonTextUtils.emptyIfNull(policy.getHardRules()))
                 .toolRules(policy.getToolRules() == null ? List.of() : policy.getToolRules().stream()
                         .map(item -> PromptTemplateEnterpriseConfigDTO.ToolRule.builder()
-                                .toolCode(trimToNull(item.getToolCode()))
-                                .triggerCondition(trimToNull(item.getTriggerCondition()))
-                                .parameterSpec(trimToNull(item.getParameterSpec()))
-                                .permissionScope(trimToNull(item.getPermissionScope()))
+                                .toolCode(CommonTextUtils.trimToNull(item.getToolCode()))
+                                .triggerCondition(CommonTextUtils.trimToNull(item.getTriggerCondition()))
+                                .parameterSpec(CommonTextUtils.trimToNull(item.getParameterSpec()))
+                                .permissionScope(CommonTextUtils.trimToNull(item.getPermissionScope()))
                                 .build())
                         .toList())
                 .build();
@@ -409,10 +409,10 @@ public class PromptTemplateApplicationManager {
             return null;
         }
         return PromptTemplateEnterpriseConfigDTO.SecurityPolicy.builder()
-                .desensitizationRules(normalizeStringList(policy.getDesensitizationRules()))
-                .antiInjectionRules(normalizeStringList(policy.getAntiInjectionRules()))
-                .complianceBlacklist(normalizeStringList(policy.getComplianceBlacklist()))
-                .permissionTiers(normalizeStringList(policy.getPermissionTiers()))
+                .desensitizationRules(CommonTextUtils.emptyIfNull(policy.getDesensitizationRules()))
+                .antiInjectionRules(CommonTextUtils.emptyIfNull(policy.getAntiInjectionRules()))
+                .complianceBlacklist(CommonTextUtils.emptyIfNull(policy.getComplianceBlacklist()))
+                .permissionTiers(CommonTextUtils.emptyIfNull(policy.getPermissionTiers()))
                 .build();
     }
 
@@ -421,11 +421,11 @@ public class PromptTemplateApplicationManager {
             return null;
         }
         return PromptTemplateEnterpriseConfigDTO.AssetPolicy.builder()
-                .commonModules(normalizeStringList(policy.getCommonModules()))
-                .businessModules(normalizeStringList(policy.getBusinessModules()))
-                .versionStrategy(trimToNull(policy.getVersionStrategy()))
-                .permissionStrategy(trimToNull(policy.getPermissionStrategy()))
-                .categories(normalizeStringList(policy.getCategories()))
+                .commonModules(CommonTextUtils.emptyIfNull(policy.getCommonModules()))
+                .businessModules(CommonTextUtils.emptyIfNull(policy.getBusinessModules()))
+                .versionStrategy(CommonTextUtils.trimToNull(policy.getVersionStrategy()))
+                .permissionStrategy(CommonTextUtils.trimToNull(policy.getPermissionStrategy()))
+                .categories(CommonTextUtils.emptyIfNull(policy.getCategories()))
                 .build();
     }
 
@@ -436,10 +436,10 @@ public class PromptTemplateApplicationManager {
             return null;
         }
         return PromptTemplateEnterpriseConfigDTO.OutputPolicy.builder()
-                .outputFormat(trimToNull(policy.getOutputFormat()))
-                .requiredFields(normalizeStringList(policy.getRequiredFields()))
+                .outputFormat(CommonTextUtils.trimToNull(policy.getOutputFormat()))
+                .requiredFields(CommonTextUtils.emptyIfNull(policy.getRequiredFields()))
                 .maxLength(policy.getMaxLength())
-                .channelConstraints(normalizeStringList(policy.getChannelConstraints()))
+                .channelConstraints(CommonTextUtils.emptyIfNull(policy.getChannelConstraints()))
                 .build();
     }
 
@@ -450,10 +450,10 @@ public class PromptTemplateApplicationManager {
             return null;
         }
         return PromptTemplateEnterpriseConfigDTO.ContextPolicy.builder()
-                .historyStrategy(trimToNull(policy.getHistoryStrategy()))
-                .memoryFields(normalizeStringList(policy.getMemoryFields()))
+                .historyStrategy(CommonTextUtils.trimToNull(policy.getHistoryStrategy()))
+                .memoryFields(CommonTextUtils.emptyIfNull(policy.getMemoryFields()))
                 .sessionIsolation(policy.getSessionIsolation())
-                .retentionStrategy(trimToNull(policy.getRetentionStrategy()))
+                .retentionStrategy(CommonTextUtils.trimToNull(policy.getRetentionStrategy()))
                 .build();
     }
 
@@ -464,10 +464,10 @@ public class PromptTemplateApplicationManager {
             return null;
         }
         return PromptTemplateEnterpriseConfigDTO.FallbackPolicy.builder()
-                .fallbackMessages(normalizeStringList(policy.getFallbackMessages()))
-                .repeatedRules(normalizeStringList(policy.getRepeatedRules()))
-                .supportedLanguages(normalizeStringList(policy.getSupportedLanguages()))
-                .resilienceStrategy(trimToNull(policy.getResilienceStrategy()))
+                .fallbackMessages(CommonTextUtils.emptyIfNull(policy.getFallbackMessages()))
+                .repeatedRules(CommonTextUtils.emptyIfNull(policy.getRepeatedRules()))
+                .supportedLanguages(CommonTextUtils.emptyIfNull(policy.getSupportedLanguages()))
+                .resilienceStrategy(CommonTextUtils.trimToNull(policy.getResilienceStrategy()))
                 .build();
     }
 
@@ -479,9 +479,9 @@ public class PromptTemplateApplicationManager {
         }
         return PromptTemplateEnterpriseConfigDTO.ObservabilityPolicy.builder()
                 .traceEnabled(policy.getTraceEnabled())
-                .metricKeys(normalizeStringList(policy.getMetricKeys()))
-                .logBindingFields(normalizeStringList(policy.getLogBindingFields()))
-                .grayReleaseStrategy(trimToNull(policy.getGrayReleaseStrategy()))
+                .metricKeys(CommonTextUtils.emptyIfNull(policy.getMetricKeys()))
+                .logBindingFields(CommonTextUtils.emptyIfNull(policy.getLogBindingFields()))
+                .grayReleaseStrategy(CommonTextUtils.trimToNull(policy.getGrayReleaseStrategy()))
                 .build();
     }
 
@@ -492,28 +492,10 @@ public class PromptTemplateApplicationManager {
             return null;
         }
         return PromptTemplateEnterpriseConfigDTO.IntegrationPolicy.builder()
-                .externalSystems(normalizeStringList(policy.getExternalSystems()))
-                .parameterBindings(normalizeStringList(policy.getParameterBindings()))
-                .batchScenarios(normalizeStringList(policy.getBatchScenarios()))
-                .editorMode(trimToNull(policy.getEditorMode()))
+                .externalSystems(CommonTextUtils.emptyIfNull(policy.getExternalSystems()))
+                .parameterBindings(CommonTextUtils.emptyIfNull(policy.getParameterBindings()))
+                .batchScenarios(CommonTextUtils.emptyIfNull(policy.getBatchScenarios()))
+                .editorMode(CommonTextUtils.trimToNull(policy.getEditorMode()))
                 .build();
-    }
-
-    private List<String> normalizeStringList(List<String> values) {
-        if (values == null || values.isEmpty()) {
-            return List.of();
-        }
-        List<String> normalizedValues = new ArrayList<>();
-        for (String value : values) {
-            String normalized = trimToNull(value);
-            if (normalized != null) {
-                normalizedValues.add(normalized);
-            }
-        }
-        return normalizedValues;
-    }
-
-    private String trimToNull(String value) {
-        return StringUtils.hasText(value) ? value.trim() : null;
     }
 }

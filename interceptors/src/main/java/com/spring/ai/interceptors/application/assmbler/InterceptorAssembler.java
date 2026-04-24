@@ -5,6 +5,7 @@ import com.spring.ai.common.repository.enitiy.InterceptorExecutionLogRecord;
 import com.spring.ai.common.repository.enitiy.InterceptorRecord;
 import com.spring.ai.common.repository.enitiy.InterceptorTestCaseRecord;
 import com.spring.ai.common.repository.enitiy.InterceptorVersionRecord;
+import com.spring.ai.common.utils.CommonTextUtils;
 import com.spring.ai.interceptors.domain.dto.InterceptorCatalogDTO;
 import com.spring.ai.interceptors.domain.dto.InterceptorSnapshotDTO;
 import com.spring.ai.interceptors.domain.request.InterceptorBindingSaveRequest;
@@ -17,8 +18,6 @@ import com.spring.ai.interceptors.domain.response.InterceptorExecutionLogRespons
 import com.spring.ai.interceptors.domain.response.InterceptorResponse;
 import com.spring.ai.interceptors.domain.response.InterceptorTestCaseResponse;
 import com.spring.ai.interceptors.domain.response.InterceptorVersionResponse;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 
@@ -81,8 +80,8 @@ public final class InterceptorAssembler {
                 .testCaseCount(testCaseCount)
                 .logCount(logCount)
                 .remark(record.getRemark())
-                .createTime(toEpochMilli(record.getCreateTime()))
-                .updateTime(toEpochMilli(record.getUpdateTime()))
+                .createTime(CommonTextUtils.toEpochMilli(record.getCreateTime()))
+                .updateTime(CommonTextUtils.toEpochMilli(record.getUpdateTime()))
                 .versions(versions == null ? List.of() : versions.stream().map(InterceptorAssembler::toVersionResponse).toList())
                 .build();
     }
@@ -96,7 +95,7 @@ public final class InterceptorAssembler {
                 .versionStatus(record.getVersionStatus())
                 .publishStatus(record.getPublishStatus())
                 .snapshotJson(record.getSnapshotJson())
-                .createTime(toEpochMilli(record.getCreateTime()))
+                .createTime(CommonTextUtils.toEpochMilli(record.getCreateTime()))
                 .build();
     }
 
@@ -119,7 +118,7 @@ public final class InterceptorAssembler {
                 .elapsedMs(record.getElapsedMs())
                 .failureReason(record.getFailureReason())
                 .operatorUserName(record.getOperatorUserName())
-                .createTime(toEpochMilli(record.getCreateTime()))
+                .createTime(CommonTextUtils.toEpochMilli(record.getCreateTime()))
                 .build();
     }
 
@@ -136,7 +135,7 @@ public final class InterceptorAssembler {
                 .enabled(record.getEnabled())
                 .lastRunStatus(record.getLastRunStatus())
                 .lastRunDurationMs(record.getLastRunDurationMs())
-                .lastRunAt(toEpochMilli(record.getLastRunAt()))
+                .lastRunAt(CommonTextUtils.toEpochMilli(record.getLastRunAt()))
                 .lastResultJson(record.getLastResultJson())
                 .build();
     }
@@ -154,7 +153,7 @@ public final class InterceptorAssembler {
                 .priorityNo(record.getPriorityNo())
                 .enabled(record.getEnabled())
                 .remark(record.getRemark())
-                .createTime(toEpochMilli(record.getCreateTime()))
+                .createTime(CommonTextUtils.toEpochMilli(record.getCreateTime()))
                 .build();
     }
 
@@ -199,21 +198,21 @@ public final class InterceptorAssembler {
     }
 
     public static void mergeRecord(InterceptorRecord record, InterceptorSaveRequest request) {
-        record.setInterceptorCode(trim(request.getInterceptorCode()));
-        record.setInterceptorName(trim(request.getInterceptorName()));
-        record.setDescription(trimToNull(request.getDescription()));
-        record.setInterceptorType(trim(request.getInterceptorType()));
-        record.setInterceptorStage(trim(request.getInterceptorStage()));
-        record.setInterceptorStatus(trim(request.getInterceptorStatus()));
-        record.setRiskLevel(trim(request.getRiskLevel()));
-        record.setTriggerMode(trim(request.getTriggerMode()));
-        record.setFailStrategy(trim(request.getFailStrategy()));
+        record.setInterceptorCode(CommonTextUtils.trim(request.getInterceptorCode()));
+        record.setInterceptorName(CommonTextUtils.trim(request.getInterceptorName()));
+        record.setDescription(CommonTextUtils.trimToNull(request.getDescription()));
+        record.setInterceptorType(CommonTextUtils.trim(request.getInterceptorType()));
+        record.setInterceptorStage(CommonTextUtils.trim(request.getInterceptorStage()));
+        record.setInterceptorStatus(CommonTextUtils.trim(request.getInterceptorStatus()));
+        record.setRiskLevel(CommonTextUtils.trim(request.getRiskLevel()));
+        record.setTriggerMode(CommonTextUtils.trim(request.getTriggerMode()));
+        record.setFailStrategy(CommonTextUtils.trim(request.getFailStrategy()));
         record.setSortWeight(request.getSortWeight());
         record.setTimeoutMs(request.getTimeoutMs());
         record.setHotUpdateEnabled(request.getHotUpdateEnabled());
-        record.setBuiltinInterceptorKey(trimToNull(request.getBuiltinInterceptorKey()));
-        record.setScriptLanguage(trimToNull(request.getScriptLanguage()));
-        record.setRemark(trimToNull(request.getRemark()));
+        record.setBuiltinInterceptorKey(CommonTextUtils.trimToNull(request.getBuiltinInterceptorKey()));
+        record.setScriptLanguage(CommonTextUtils.trimToNull(request.getScriptLanguage()));
+        record.setRemark(CommonTextUtils.trimToNull(request.getRemark()));
     }
 
     public static void fillTestCaseRecord(
@@ -225,11 +224,11 @@ public final class InterceptorAssembler {
     ) {
         record.setInterceptorId(interceptor.getId());
         record.setInterceptorCode(interceptor.getInterceptorCode());
-        record.setCaseName(trim(request.getCaseName()));
+        record.setCaseName(CommonTextUtils.trim(request.getCaseName()));
         record.setInputPayloadJson(inputPayloadJson);
         record.setContextPayloadJson(contextPayloadJson);
         record.setExpectedSuccess(request.getExpectedSuccess());
-        record.setExpectedResponseContains(trimToNull(request.getExpectedResponseContains()));
+        record.setExpectedResponseContains(CommonTextUtils.trimToNull(request.getExpectedResponseContains()));
         record.setEnabled(request.getEnabled());
         record.setTenantId(interceptor.getTenantId());
     }
@@ -237,27 +236,15 @@ public final class InterceptorAssembler {
     public static void fillBindingRecord(InterceptorAgentBindingRecord record, InterceptorRecord interceptor, InterceptorBindingSaveRequest request) {
         record.setInterceptorId(interceptor.getId());
         record.setInterceptorCode(interceptor.getInterceptorCode());
-        record.setBindingName(trim(request.getBindingName()));
-        record.setBindingScope(trim(request.getBindingScope()));
-        record.setTargetAgentCode(trimToNull(request.getTargetAgentCode()));
-        record.setTargetModelCode(trimToNull(request.getTargetModelCode()));
-        record.setEnvironmentCode(trimToNull(request.getEnvironmentCode()));
+        record.setBindingName(CommonTextUtils.trim(request.getBindingName()));
+        record.setBindingScope(CommonTextUtils.trim(request.getBindingScope()));
+        record.setTargetAgentCode(CommonTextUtils.trimToNull(request.getTargetAgentCode()));
+        record.setTargetModelCode(CommonTextUtils.trimToNull(request.getTargetModelCode()));
+        record.setEnvironmentCode(CommonTextUtils.trimToNull(request.getEnvironmentCode()));
         record.setPriorityNo(request.getPriorityNo());
         record.setEnabled(request.getEnabled());
-        record.setRemark(trimToNull(request.getRemark()));
+        record.setRemark(CommonTextUtils.trimToNull(request.getRemark()));
         record.setTenantId(interceptor.getTenantId());
     }
 
-    private static Long toEpochMilli(LocalDateTime value) {
-        return value == null ? null : value.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
-    }
-
-    private static String trim(String value) {
-        return value == null ? null : value.trim();
-    }
-
-    private static String trimToNull(String value) {
-        String trimmed = trim(value);
-        return trimmed == null || trimmed.isBlank() ? null : trimmed;
-    }
 }

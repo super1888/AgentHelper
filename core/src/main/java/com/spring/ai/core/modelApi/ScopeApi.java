@@ -1,7 +1,7 @@
 package com.spring.ai.core.modelApi;
 
 import com.alibaba.cloud.ai.dashscope.api.DashScopeApi;
-import org.apache.commons.lang3.StringUtils;
+import io.micrometer.common.util.StringUtils;
 import org.springframework.ai.anthropic.api.AnthropicApi;
 import org.springframework.ai.deepseek.api.DeepSeekApi;
 import org.springframework.ai.openai.api.OpenAiApi;
@@ -10,8 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 /**
- * 各供应商底层 API 客户端创建器。
- * 优先使用调用方显式传入的密钥与地址；若未传入，则回退到系统配置。
+ * 各供应商底层 API 客户端创建器。 优先使用调用方显式传入的密钥与地址；若未传入，则回退到系统配置。
  */
 @Component
 public class ScopeApi {
@@ -32,15 +31,6 @@ public class ScopeApi {
     private String zhiPuAiApiKey;
 
     /**
-     * 创建 DashScope API 客户端，地址使用框架默认值。
-     */
-    public DashScopeApi getDashScopeApi(String apiKey) {
-        return DashScopeApi.builder()
-                .apiKey(resolveApiKey(apiKey, dashscopeApiKey, "dashscope"))
-                .build();
-    }
-
-    /**
      * 创建 DashScope API 客户端，并允许覆盖默认服务地址。
      */
     public DashScopeApi getDashScopeApi(String apiKey, String baseUrl) {
@@ -52,14 +42,6 @@ public class ScopeApi {
         return builder.build();
     }
 
-    /**
-     * 创建 DeepSeek API 客户端，地址使用框架默认值。
-     */
-    public DeepSeekApi getDeepSeekApi(String apiKey) {
-        return DeepSeekApi.builder()
-                .apiKey(resolveApiKey(apiKey, deepseekApiKey, "deepseek"))
-                .build();
-    }
 
     /**
      * 创建 DeepSeek API 客户端，并允许覆盖默认服务地址。
@@ -74,15 +56,6 @@ public class ScopeApi {
     }
 
     /**
-     * 创建 Anthropic API 客户端，地址使用框架默认值。
-     */
-    public AnthropicApi getAnthropicApi(String apiKey) {
-        return AnthropicApi.builder()
-                .apiKey(resolveApiKey(apiKey, anthropicApiKey, "anthropic"))
-                .build();
-    }
-
-    /**
      * 创建 Anthropic API 客户端，并允许覆盖默认服务地址。
      */
     public AnthropicApi getAnthropicApi(String apiKey, String baseUrl) {
@@ -92,15 +65,6 @@ public class ScopeApi {
             builder.baseUrl(baseUrl.trim());
         }
         return builder.build();
-    }
-
-    /**
-     * 创建 OpenAI API 客户端，地址使用框架默认值。
-     */
-    public OpenAiApi getOpenAiApi(String apiKey) {
-        return OpenAiApi.builder()
-                .apiKey(resolveApiKey(apiKey, openAiApiKey, "openai"))
-                .build();
     }
 
     /**
@@ -142,7 +106,7 @@ public class ScopeApi {
     private String resolveApiKey(String requestApiKey, String configuredApiKey, String provider) {
         String resolved = StringUtils.isBlank(requestApiKey) ? configuredApiKey : requestApiKey;
         if (StringUtils.isBlank(resolved)) {
-            throw new IllegalArgumentException("\u672a\u914d\u7f6e\u6a21\u578b\u63d0\u4f9b\u5546\u8bbf\u95ee\u5bc6\u94a5\uff1a" + provider);
+            throw new IllegalArgumentException("没有找到配置的api-key" + provider);
         }
         return resolved;
     }

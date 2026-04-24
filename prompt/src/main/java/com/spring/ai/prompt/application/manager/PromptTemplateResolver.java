@@ -6,6 +6,7 @@ import com.spring.ai.common.exception.BusinessExceptions;
 import com.spring.ai.common.repository.enitiy.PromptTemplateRecord;
 import com.spring.ai.prompt.config.PromptTemplateConstants;
 import com.spring.ai.prompt.domain.dto.PromptTemplateBindDTO;
+import com.spring.ai.prompt.domain.dto.PromptTemplateExtDTO;
 import com.spring.ai.prompt.domain.dto.PromptTemplateResolvedDTO;
 import com.spring.ai.prompt.domain.dto.PromptTemplateVariableDTO;
 import jakarta.annotation.Resource;
@@ -55,7 +56,8 @@ public class PromptTemplateResolver {
             throw BusinessExceptions.badRequest("prompt template is disabled");
         }
         String promptContent = resolveContent(record.getSourceType(), record.getTemplateContent(), record.getSourcePath());
-        List<PromptTemplateVariableDTO> variableDefinitions = promptTemplateSupportManager.parseVariableDefinitions(record.getExt());
+        PromptTemplateExtDTO templateExt = promptTemplateSupportManager.parseTemplateExt(record.getExt());
+        List<PromptTemplateVariableDTO> variableDefinitions = templateExt.getVariableDefinitions();
         Map<String, String> normalizedVariables = resolvePromptVariables(variableDefinitions, promptVariables);
         return PromptTemplateResolvedDTO.builder()
                 .promptTemplateId(record.getId())
@@ -66,6 +68,7 @@ public class PromptTemplateResolver {
                 .promptTemplatePath(record.getSourcePath())
                 .variableDefinitions(variableDefinitions)
                 .promptVariables(normalizedVariables)
+                .enterpriseConfig(templateExt.getEnterpriseConfig())
                 .effectiveSystemPrompt(renderEnterpriseTemplate(
                         promptContent,
                         new LinkedHashMap<>(normalizedVariables),
@@ -88,6 +91,7 @@ public class PromptTemplateResolver {
                         : null)
                 .variableDefinitions(List.of())
                 .promptVariables(Map.of())
+                .enterpriseConfig(null)
                 .effectiveSystemPrompt(promptContent)
                 .build();
     }

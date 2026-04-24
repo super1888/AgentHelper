@@ -3,38 +3,27 @@ export interface ProviderCatalogItem {
   providerLabel: string
 }
 
-export interface ModelProviderItem {
-  providerConfigCode: string
-  providerEnum: string
-  providerName: string
-  baseUrl: string | null
-  organizationId: string | null
-  defaultHeadersJson: string | null
-  status: string
-  apiKeyMasked: string | null
-  apiKeyConfigured: boolean
-  ownerUserName: string | null
-  updateTime: number | null
-  remark: string | null
-}
-
-export interface ModelProviderPayload {
-  providerEnum: string
-  providerName: string
-  baseUrl?: string | null
-  apiKey?: string | null
-  organizationId?: string | null
-  defaultHeadersJson?: string | null
-  remark?: string | null
-  status?: string | null
-}
-
-export interface ModelDefinitionItem {
+export interface ModelOption {
   modelCode: string
   modelName: string
   providerConfigCode: string
   providerEnum: string
   providerName: string | null
+  modelIdentifier: string
+  modelType: string
+  defaultModel: boolean
+}
+
+export interface ModelConnectionItem {
+  modelCode: string
+  providerConfigCode: string
+  connectionName: string
+  providerEnum: string
+  baseUrl: string | null
+  organizationId: string | null
+  defaultHeadersJson: string | null
+  apiKeyMasked: string | null
+  apiKeyConfigured: boolean
   modelType: string
   modelIdentifier: string
   temperature: number | null
@@ -51,15 +40,20 @@ export interface ModelDefinitionItem {
   supportVision: boolean
   supportJsonSchema: boolean
   defaultModel: boolean
-  status: string
   advancedConfigJson: string | null
+  status: string
   remark: string | null
   updateTime: number | null
 }
 
-export interface ModelDefinitionPayload {
-  modelName: string
-  providerConfigCode: string
+export interface ModelConnectionPayload {
+  modelCode?: string
+  connectionName: string
+  providerEnum: string
+  baseUrl?: string | null
+  apiKey?: string | null
+  organizationId?: string | null
+  defaultHeadersJson?: string | null
   modelType?: string | null
   modelIdentifier: string
   temperature?: number | null
@@ -77,27 +71,21 @@ export interface ModelDefinitionPayload {
   supportJsonSchema?: boolean | null
   defaultModel?: boolean | null
   advancedConfigJson?: string | null
-  remark?: string | null
   status?: string | null
+  remark?: string | null
 }
 
-export interface ModelOption {
-  modelCode: string
-  modelName: string
-  providerConfigCode: string
-  providerEnum: string
-  providerName: string | null
-  modelIdentifier: string
-  modelType: string
-  defaultModel: boolean
-}
-
-export interface ModelTestPayload {
-  providerConfigCode?: string
+export interface ModelConnectionTestPayload {
+  modelCode?: string
   providerEnum?: string
   baseUrl?: string | null
   apiKey?: string | null
-  testModelIdentifier?: string
+  modelIdentifier?: string
+  temperature?: number | null
+  topP?: number | null
+  presencePenalty?: number | null
+  frequencyPenalty?: number | null
+  maxTokens?: number | null
   testPrompt?: string | null
 }
 

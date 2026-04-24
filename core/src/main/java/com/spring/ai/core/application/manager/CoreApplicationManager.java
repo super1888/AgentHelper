@@ -1,8 +1,6 @@
 package com.spring.ai.core.application.manager;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spring.ai.common.enums.ErrorCodeEnum;
 import com.spring.ai.common.enums.ModelProviderEnum;
 import com.spring.ai.common.exception.BusinessException;
@@ -13,16 +11,17 @@ import com.spring.ai.common.repository.service.AgentVersionService;
 import com.spring.ai.common.repository.service.ModelDefinitionService;
 import com.spring.ai.common.repository.service.ModelProviderConfigService;
 import com.spring.ai.common.security.ModelSecretCryptoService;
+import com.spring.ai.common.utils.CommonJsonUtils;
+import com.spring.ai.common.utils.CommonMaskingUtils;
+import com.spring.ai.common.utils.CommonTextUtils;
 import com.spring.ai.common.web.CurrentUserContextSupport;
-import com.spring.ai.core.domain.request.ModelDefinitionSaveRequest;
-import com.spring.ai.core.domain.request.ModelProviderConfigSaveRequest;
-import com.spring.ai.core.domain.request.ModelProviderTestRequest;
-import com.spring.ai.core.domain.request.ModelTestRequest;
+import com.spring.ai.core.application.assembler.CoreAssembler;
+import com.spring.ai.core.domain.request.ModelConnectionSaveRequest;
+import com.spring.ai.core.domain.request.ModelConnectionTestRequest;
 import com.spring.ai.core.domain.dto.ChatModelRequest;
 import com.spring.ai.core.domain.dto.ChatOptionsDTO;
-import com.spring.ai.core.domain.response.ModelDefinitionResponse;
+import com.spring.ai.core.domain.response.ModelConnectionResponse;
 import com.spring.ai.core.domain.response.ModelOptionResponse;
-import com.spring.ai.core.domain.response.ModelProviderConfigResponse;
 import com.spring.ai.core.domain.response.ModelTestResponse;
 import com.spring.ai.core.domain.response.ProviderCatalogResponse;
 import com.spring.ai.core.facotry.DynamicChatModelFactory;
@@ -31,7 +30,10 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
@@ -40,9 +42,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 /**
- * 核心模块应用层编排入口。
- * 负责串联租户上下文、模型提供商配置、模型配置、密钥解密以及模型测试调用，
- * 对外提供统一的模型管理能力。
+ * 核心模块应用层编排入口。 负责串联租户上下文、模型提供商配置、模型配置、密钥解密以及模型测试调用， 对外提供统一的模型管理能力。
  */
 @Component
 public class CoreApplicationManager {
@@ -63,7 +63,7 @@ public class CoreApplicationManager {
     private ModelSecretCryptoService modelSecretCryptoService;
 
     @Resource
-    private ObjectMapper objectMapper;
+    private CommonJsonUtils commonJsonUtils;
 
     @Resource
     private DynamicChatModelFactory dynamicChatModelFactory;
@@ -73,84 +73,90 @@ public class CoreApplicationManager {
      */
     public List<ProviderCatalogResponse> listProviderCatalog() {
         return Arrays.stream(ModelProviderEnum.values())
-                .map(item -> ProviderCatalogResponse.builder()
-                        .providerEnum(item.name())
-                        .providerLabel(item.name())
-                        .build())
+                .map(item -> CoreAssembler.toProviderCatalogResponse(item.name()))
                 .toList();
     }
 
-    /**
-     * 查询当前租户下的模型提供商配置列表。
-     */
-    public List<ModelProviderConfigResponse> listProviderConfigs() {
+    public List<ModelConnectionResponse> listModelConnections() {
         Long tenantId = currentUserContextSupport.getCurrentTenantIdWithAutoInit();
-        return modelProviderConfigService.listByTenantId(tenantId).stream()
-                .map(this::toProviderResponse)
+        Map<String, ModelProviderConfig> providerMap = modelProviderConfigService.listByTenantId(tenantId).stream()
+                .collect(Collectors.toMap(ModelProviderConfig::getProviderConfigCode, Function.identity(), (left, right) -> left));
+        return modelDefinitionService.listByTenantId(tenantId).stream()
+                .map(model -> buildModelConnectionResponse(model, providerMap.get(model.getProviderConfigCode())))
                 .toList();
     }
 
-    /**
-     * 新增模型提供商配置，并补齐租户与创建人信息。
-     */
     @Transactional(rollbackFor = Exception.class)
-    public ModelProviderConfigResponse createProviderConfig(ModelProviderConfigSaveRequest request) {
-        validateProviderRequest(request, true);
-        Long tenantId = currentUserContextSupport.getCurrentTenantIdWithAutoInit();
-        Long currentUserId = currentUserContextSupport.getCurrentUserId();
-        String currentUserName = currentUserContextSupport.getCurrentUserName();
-        validateProviderNameUnique(tenantId, request.getProviderName(), null);
-
-        ModelProviderConfig entity = new ModelProviderConfig();
-        entity.setProviderConfigCode(UUID.randomUUID().toString());
-        entity.setProviderEnum(normalizeProviderEnum(request.getProviderEnum()));
-        entity.setProviderName(request.getProviderName().trim());
-        entity.setBaseUrl(trimToNull(request.getBaseUrl()));
-        entity.setApiKeyCipherText(modelSecretCryptoService.encrypt(request.getApiKey()));
-        entity.setOrganizationId(trimToNull(request.getOrganizationId()));
-        entity.setDefaultHeadersJson(normalizeJson(request.getDefaultHeadersJson(), "defaultHeadersJson"));
-        entity.setRemark(trimToNull(request.getRemark()));
-        entity.setStatus(defaultStatus(request.getStatus()));
-        entity.setTenantId(tenantId);
-        entity.setOwnerUserId(currentUserId);
-        entity.setOwnerUserName(currentUserName);
-        modelProviderConfigService.save(entity);
-        return toProviderResponse(entity);
-    }
-
-    /**
-     * 更新模型提供商配置。
-     * 更新时允许不传 apiKey，此时继续沿用原有密钥。
-     */
-    @Transactional(rollbackFor = Exception.class)
-    public ModelProviderConfigResponse updateProviderConfig(String providerConfigCode, ModelProviderConfigSaveRequest request) {
-        validateProviderRequest(request, false);
-        ModelProviderConfig entity = requireProvider(providerConfigCode);
-        validateProviderNameUnique(entity.getTenantId(), request.getProviderName(), entity.getId());
-
-        entity.setProviderEnum(normalizeProviderEnum(request.getProviderEnum()));
-        entity.setProviderName(request.getProviderName().trim());
-        entity.setBaseUrl(trimToNull(request.getBaseUrl()));
-        if (StringUtils.hasText(request.getApiKey())) {
-            entity.setApiKeyCipherText(modelSecretCryptoService.encrypt(request.getApiKey()));
+    public ModelConnectionResponse saveModelConnection(ModelConnectionSaveRequest request) {
+        validateModelConnectionRequest(request);
+        if (!StringUtils.hasText(request.getModelCode())) {
+            return createModelConnection(request);
         }
-        entity.setOrganizationId(trimToNull(request.getOrganizationId()));
-        entity.setDefaultHeadersJson(normalizeJson(request.getDefaultHeadersJson(), "defaultHeadersJson"));
-        entity.setRemark(trimToNull(request.getRemark()));
-        entity.setStatus(defaultStatus(request.getStatus()));
-        modelProviderConfigService.updateById(entity);
-        return toProviderResponse(entity);
+        return updateModelConnection(request);
     }
 
-    /**
-     * 按条件查询模型配置列表。
-     */
-    public List<ModelDefinitionResponse> listModels(Boolean enabledOnly) {
-        Long tenantId = currentUserContextSupport.getCurrentTenantIdWithAutoInit();
-        List<ModelDefinition> entities = Boolean.TRUE.equals(enabledOnly)
-                ? modelDefinitionService.listEnabledByTenantId(tenantId)
-                : modelDefinitionService.listByTenantId(tenantId);
-        return entities.stream().map(this::toModelResponse).toList();
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteModelConnection(String modelCode) {
+        ModelDefinition model = requireModel(modelCode);
+        ModelProviderConfig provider = requireProvider(model.getProviderConfigCode());
+        deleteModel(modelCode);
+        if (countModelsByProviderId(provider.getTenantId(), provider.getId()) == 0) {
+            modelProviderConfigService.removeById(provider.getId());
+        }
+    }
+
+    public ModelTestResponse testModelConnection(ModelConnectionTestRequest request) {
+        if (request == null) {
+            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "模型连接测试请求不能为空");
+        }
+        ModelDefinition storedModel = StringUtils.hasText(request.getModelCode())
+                ? requireModel(request.getModelCode())
+                : null;
+        ModelProviderConfig storedProvider = storedModel == null ? null : requireProvider(storedModel.getProviderConfigCode());
+        String providerEnum = StringUtils.hasText(request.getProviderEnum())
+                ? request.getProviderEnum().trim()
+                : (storedProvider == null ? null : storedProvider.getProviderEnum());
+        String modelIdentifier = StringUtils.hasText(request.getModelIdentifier())
+                ? request.getModelIdentifier().trim()
+                : (storedModel == null ? null : storedModel.getModelIdentifier());
+        String apiKey = StringUtils.hasText(request.getApiKey())
+                ? request.getApiKey().trim()
+                : (storedProvider == null ? null : modelSecretCryptoService.decrypt(storedProvider.getApiKeyCipherText()));
+        if (!StringUtils.hasText(providerEnum)) {
+            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "请选择模型提供商");
+        }
+        if (!StringUtils.hasText(modelIdentifier)) {
+            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "模型标识不能为空");
+        }
+        if (!StringUtils.hasText(apiKey)) {
+            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "API Key 不能为空");
+        }
+        ChatModelRequest modelRequest = new ChatModelRequest();
+        modelRequest.setProvider(normalizeProviderEnum(providerEnum));
+        modelRequest.setModel(modelIdentifier);
+        modelRequest.setApiKey(apiKey);
+        modelRequest.setBaseUrl(StringUtils.hasText(request.getBaseUrl())
+                ? CommonTextUtils.trimToNull(request.getBaseUrl())
+                : (storedProvider == null ? null : storedProvider.getBaseUrl()));
+        ChatOptionsDTO options = storedModel == null ? new ChatOptionsDTO() : toChatOptions(storedModel);
+        options.setModel(modelIdentifier);
+        if (request.getTemperature() != null) {
+            options.setTemperature(request.getTemperature());
+        }
+        if (request.getTopP() != null) {
+            options.setTopP(request.getTopP());
+        }
+        if (request.getPresencePenalty() != null) {
+            options.setPresencePenalty(request.getPresencePenalty());
+        }
+        if (request.getFrequencyPenalty() != null) {
+            options.setFrequencyPenalty(request.getFrequencyPenalty());
+        }
+        if (request.getMaxTokens() != null) {
+            options.setMaxTokens(request.getMaxTokens());
+        }
+        modelRequest.setOptions(options);
+        return doTest(modelRequest, defaultPrompt(request.getTestPrompt()));
     }
 
     /**
@@ -158,71 +164,11 @@ public class CoreApplicationManager {
      */
     public List<ModelOptionResponse> listEnabledModelOptions() {
         Long tenantId = currentUserContextSupport.getCurrentTenantIdWithAutoInit();
+        Map<Long, ModelProviderConfig> providerMap = modelProviderConfigService.listByTenantId(tenantId).stream()
+                .collect(Collectors.toMap(ModelProviderConfig::getId, Function.identity(), (left, right) -> left));
         return modelDefinitionService.listEnabledByTenantId(tenantId).stream()
-                .map(this::toModelOption)
+                .map(model -> CoreAssembler.toModelOptionResponse(model, providerMap.get(model.getProviderConfigId())))
                 .toList();
-    }
-
-    /**
-     * 新增模型配置。
-     * 创建完成后，如果当前模型被设置为默认模型，会同步重置同提供商下的其他默认项。
-     */
-    @Transactional(rollbackFor = Exception.class)
-    public ModelDefinitionResponse createModel(ModelDefinitionSaveRequest request) {
-        validateModelRequest(request);
-        Long tenantId = currentUserContextSupport.getCurrentTenantIdWithAutoInit();
-        Long currentUserId = currentUserContextSupport.getCurrentUserId();
-        String currentUserName = currentUserContextSupport.getCurrentUserName();
-        ModelProviderConfig provider = requireEnabledProvider(request.getProviderConfigCode());
-        validateModelNameUnique(tenantId, request.getModelName(), null);
-
-        ModelDefinition entity = buildModelEntity(request, provider);
-        entity.setModelCode(UUID.randomUUID().toString());
-        entity.setTenantId(tenantId);
-        entity.setOwnerUserId(currentUserId);
-        entity.setOwnerUserName(currentUserName);
-        modelDefinitionService.save(entity);
-        resetOtherDefaultModels(entity);
-        return toModelResponse(entity);
-    }
-
-    /**
-     * 更新模型配置，并保持默认模型的唯一性约束。
-     */
-    @Transactional(rollbackFor = Exception.class)
-    public ModelDefinitionResponse updateModel(String modelCode, ModelDefinitionSaveRequest request) {
-        validateModelRequest(request);
-        ModelDefinition entity = requireModel(modelCode);
-        ModelProviderConfig provider = requireEnabledProvider(request.getProviderConfigCode());
-        validateModelNameUnique(entity.getTenantId(), request.getModelName(), entity.getId());
-
-        ModelDefinition source = buildModelEntity(request, provider);
-        entity.setModelName(source.getModelName());
-        entity.setProviderConfigId(source.getProviderConfigId());
-        entity.setProviderConfigCode(source.getProviderConfigCode());
-        entity.setProviderEnum(source.getProviderEnum());
-        entity.setModelType(source.getModelType());
-        entity.setModelIdentifier(source.getModelIdentifier());
-        entity.setTemperature(source.getTemperature());
-        entity.setTopP(source.getTopP());
-        entity.setPresencePenalty(source.getPresencePenalty());
-        entity.setFrequencyPenalty(source.getFrequencyPenalty());
-        entity.setMaxTokens(source.getMaxTokens());
-        entity.setContextWindow(source.getContextWindow());
-        entity.setRpmLimit(source.getRpmLimit());
-        entity.setTpmLimit(source.getTpmLimit());
-        entity.setTimeoutMs(source.getTimeoutMs());
-        entity.setSupportStreaming(source.getSupportStreaming());
-        entity.setSupportTools(source.getSupportTools());
-        entity.setSupportVision(source.getSupportVision());
-        entity.setSupportJsonSchema(source.getSupportJsonSchema());
-        entity.setIsDefault(source.getIsDefault());
-        entity.setStatus(source.getStatus());
-        entity.setAdvancedConfigJson(source.getAdvancedConfigJson());
-        entity.setRemark(source.getRemark());
-        modelDefinitionService.updateById(entity);
-        resetOtherDefaultModels(entity);
-        return toModelResponse(entity);
     }
 
     /**
@@ -240,33 +186,13 @@ public class CoreApplicationManager {
      * 获取指定模型的轻量级选项信息。
      */
     public ModelOptionResponse getEnabledModelOption(String modelCode) {
-        return toModelOption(requireEnabledModelByCode(modelCode));
+        ModelDefinition model = requireEnabledModelByCode(modelCode);
+        ModelProviderConfig provider = modelProviderConfigService.getById(model.getProviderConfigId());
+        return CoreAssembler.toModelOptionResponse(model, provider);
     }
 
     /**
-     * 删除模型提供商配置。
-     * 删除前会校验是否仍有关联模型，避免产生悬挂引用。
-     */
-    @Transactional(rollbackFor = Exception.class)
-    public void deleteProviderConfig(String providerConfigCode) {
-        ModelProviderConfig provider = requireProvider(providerConfigCode);
-        long modelCount = modelDefinitionService.count(Wrappers.lambdaQuery(ModelDefinition.class)
-                .eq(ModelDefinition::getTenantId, provider.getTenantId())
-                .eq(ModelDefinition::getProviderConfigId, provider.getId()));
-        if (modelCount > 0) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "该提供商配置下仍存在模型，请先删除或迁移模型");
-        }
-        boolean removed = modelProviderConfigService.remove(Wrappers.lambdaQuery(ModelProviderConfig.class)
-                .eq(ModelProviderConfig::getTenantId, provider.getTenantId())
-                .eq(ModelProviderConfig::getProviderConfigCode, provider.getProviderConfigCode()));
-        if (!removed) {
-            throw new BusinessException(ErrorCodeEnum.NOT_FOUND, HttpStatus.NOT_FOUND, "未找到模型提供商配置或删除失败");
-        }
-    }
-
-    /**
-     * 删除模型配置。
-     * 若模型已被 Agent 版本引用，则禁止直接删除。
+     * 删除模型配置。 若模型已被 Agent 版本引用，则禁止直接删除。
      */
     @Transactional(rollbackFor = Exception.class)
     public void deleteModel(String modelCode) {
@@ -301,65 +227,84 @@ public class CoreApplicationManager {
     }
 
     /**
-     * 测试模型提供商连通性。
-     * 优先使用请求中显式传入的参数；若传入已有配置编码，则自动补全存量配置中的缺失信息。
-     */
-    public ModelTestResponse testProviderConnection(ModelProviderTestRequest request) {
-        if (request == null) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "测试请求不能为空");
-        }
-        ModelProviderConfig storedProvider = StringUtils.hasText(request.getProviderConfigCode())
-                ? requireProvider(request.getProviderConfigCode())
-                : null;
-        String providerEnum = storedProvider != null ? storedProvider.getProviderEnum() : request.getProviderEnum();
-        String baseUrl = storedProvider != null ? storedProvider.getBaseUrl() : request.getBaseUrl();
-        String apiKey = StringUtils.hasText(request.getApiKey())
-                ? request.getApiKey().trim()
-                : (storedProvider == null ? null : modelSecretCryptoService.decrypt(storedProvider.getApiKeyCipherText()));
-        if (!StringUtils.hasText(providerEnum)) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "请选择模型提供商");
-        }
-        if (!StringUtils.hasText(apiKey)) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "API Key 不能为空");
-        }
-        String resolvedProviderEnum = normalizeProviderEnum(providerEnum);
-        String testModelIdentifier = StringUtils.hasText(request.getTestModelIdentifier())
-                ? request.getTestModelIdentifier().trim()
-                : resolveDefaultTestModel(resolvedProviderEnum);
-        ChatModelRequest modelRequest = new ChatModelRequest();
-        modelRequest.setProvider(resolvedProviderEnum);
-        modelRequest.setModel(testModelIdentifier);
-        modelRequest.setApiKey(apiKey);
-        modelRequest.setBaseUrl(trimToNull(baseUrl));
-        ChatOptionsDTO options = new ChatOptionsDTO();
-        options.setModel(testModelIdentifier);
-        options.setTemperature(0.2D);
-        options.setMaxTokens(128);
-        modelRequest.setOptions(options);
-        return doTest(modelRequest, defaultPrompt(request.getTestPrompt()));
-    }
-
-    /**
-     * 使用已保存的模型配置执行一次真实调用测试。
-     */
-    public ModelTestResponse testModel(String modelCode, ModelTestRequest request) {
-        ModelDefinition model = requireEnabledModelByCode(modelCode);
-        ModelProviderConfig provider = requireEnabledProvider(model.getProviderConfigCode());
-        ChatModelRequest modelRequest = new ChatModelRequest();
-        modelRequest.setProvider(model.getProviderEnum());
-        modelRequest.setModel(model.getModelIdentifier());
-        modelRequest.setApiKey(modelSecretCryptoService.decrypt(provider.getApiKeyCipherText()));
-        modelRequest.setBaseUrl(provider.getBaseUrl());
-        modelRequest.setOptions(toChatOptions(model));
-        return doTest(modelRequest, defaultPrompt(request == null ? null : request.getTestPrompt()));
-    }
-
-    /**
      * 将前端提交的模型表单转换为数据库实体，并在构建过程中统一处理默认值与范围校验。
      */
-    private ModelDefinition buildModelEntity(ModelDefinitionSaveRequest request, ModelProviderConfig provider) {
-        ModelDefinition entity = new ModelDefinition();
-        entity.setModelName(request.getModelName().trim());
+    private ModelConnectionResponse createModelConnection(ModelConnectionSaveRequest request) {
+        Long tenantId = currentUserContextSupport.getCurrentTenantIdWithAutoInit();
+        Long currentUserId = currentUserContextSupport.getCurrentUserId();
+        String currentUserName = currentUserContextSupport.getCurrentUserName();
+        validateModelNameUnique(tenantId, request.getConnectionName(), null);
+
+        ModelProviderConfig provider = buildProviderEntity(request, null);
+        provider.setProviderConfigCode(UUID.randomUUID().toString());
+        provider.setTenantId(tenantId);
+        provider.setOwnerUserId(currentUserId);
+        provider.setOwnerUserName(currentUserName);
+        provider.setProviderName(generateProviderName(tenantId, request.getConnectionName(), null));
+        modelProviderConfigService.save(provider);
+
+        ModelDefinition model = buildModelEntity(request, provider, null);
+        model.setModelCode(UUID.randomUUID().toString());
+        model.setTenantId(tenantId);
+        model.setOwnerUserId(currentUserId);
+        model.setOwnerUserName(currentUserName);
+        modelDefinitionService.save(model);
+        resetOtherDefaultModels(model);
+        return buildModelConnectionResponse(model, provider);
+    }
+
+    private ModelConnectionResponse updateModelConnection(ModelConnectionSaveRequest request) {
+        ModelDefinition model = requireModel(request.getModelCode());
+        ModelProviderConfig currentProvider = requireProvider(model.getProviderConfigCode());
+        validateModelNameUnique(model.getTenantId(), request.getConnectionName(), model.getId());
+
+        ModelProviderConfig targetProvider = currentProvider;
+        boolean providerChanged = hasProviderConfigChanged(request, currentProvider);
+        long providerReferenceCount = countModelsByProviderId(currentProvider.getTenantId(), currentProvider.getId());
+        if (providerChanged) {
+            if (providerReferenceCount > 1) {
+                targetProvider = buildProviderEntity(request, null);
+                if (!StringUtils.hasText(request.getApiKey())) {
+                    targetProvider.setApiKeyCipherText(currentProvider.getApiKeyCipherText());
+                }
+                targetProvider.setProviderConfigCode(UUID.randomUUID().toString());
+                targetProvider.setTenantId(currentProvider.getTenantId());
+                targetProvider.setOwnerUserId(currentUserContextSupport.getCurrentUserId());
+                targetProvider.setOwnerUserName(currentUserContextSupport.getCurrentUserName());
+                targetProvider.setProviderName(generateProviderName(currentProvider.getTenantId(), request.getConnectionName(), null));
+                modelProviderConfigService.save(targetProvider);
+            } else {
+                targetProvider = buildProviderEntity(request, currentProvider);
+                targetProvider.setProviderName(
+                        generateProviderName(currentProvider.getTenantId(), request.getConnectionName(), currentProvider.getId()));
+                modelProviderConfigService.updateById(targetProvider);
+            }
+        }
+
+        ModelDefinition source = buildModelEntity(request, targetProvider, model);
+        applyModelEntity(model, source);
+        modelDefinitionService.updateById(model);
+        resetOtherDefaultModels(model);
+        return buildModelConnectionResponse(model, targetProvider);
+    }
+
+    private ModelProviderConfig buildProviderEntity(ModelConnectionSaveRequest request, ModelProviderConfig existingProvider) {
+        ModelProviderConfig entity = existingProvider == null ? new ModelProviderConfig() : existingProvider;
+        entity.setProviderEnum(normalizeProviderEnum(request.getProviderEnum()));
+        entity.setBaseUrl(CommonTextUtils.trimToNull(request.getBaseUrl()));
+        if (existingProvider == null || StringUtils.hasText(request.getApiKey())) {
+            entity.setApiKeyCipherText(modelSecretCryptoService.encrypt(request.getApiKey()));
+        }
+        entity.setOrganizationId(CommonTextUtils.trimToNull(request.getOrganizationId()));
+        entity.setDefaultHeadersJson(commonJsonUtils.normalizeJsonOrNull(request.getDefaultHeadersJson(), "defaultHeadersJson"));
+        entity.setRemark(CommonTextUtils.trimToNull(request.getRemark()));
+        entity.setStatus(defaultStatus(request.getStatus()));
+        return entity;
+    }
+
+    private ModelDefinition buildModelEntity(ModelConnectionSaveRequest request, ModelProviderConfig provider, ModelDefinition existingModel) {
+        ModelDefinition entity = existingModel == null ? new ModelDefinition() : existingModel;
+        entity.setModelName(request.getConnectionName().trim());
         entity.setProviderConfigId(provider.getId());
         entity.setProviderConfigCode(provider.getProviderConfigCode());
         entity.setProviderEnum(provider.getProviderEnum());
@@ -380,58 +325,55 @@ public class CoreApplicationManager {
         entity.setSupportJsonSchema(toFlag(request.getSupportJsonSchema(), false));
         entity.setIsDefault(toFlag(request.getDefaultModel(), false));
         entity.setStatus(defaultStatus(request.getStatus()));
-        entity.setAdvancedConfigJson(normalizeJson(request.getAdvancedConfigJson(), "advancedConfigJson"));
-        entity.setRemark(trimToNull(request.getRemark()));
+        entity.setAdvancedConfigJson(commonJsonUtils.normalizeJsonOrNull(request.getAdvancedConfigJson(), "advancedConfigJson"));
+        entity.setRemark(CommonTextUtils.trimToNull(request.getRemark()));
         return entity;
     }
 
-    /**
-     * 校验模型提供商配置请求。
-     * 创建时 apiKey 为必填，更新时允许保留原值。
-     */
-    private void validateProviderRequest(ModelProviderConfigSaveRequest request, boolean create) {
-        if (request == null) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "模型提供商配置不能为空");
-        }
-        if (!StringUtils.hasText(request.getProviderEnum())) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "请选择模型提供商");
-        }
-        if (!StringUtils.hasText(request.getProviderName())) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "模型提供商配置名称不能为空");
-        }
-        if (create && !StringUtils.hasText(request.getApiKey())) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "API Key 不能为空");
-        }
+    private void applyModelEntity(ModelDefinition target, ModelDefinition source) {
+        target.setModelName(source.getModelName());
+        target.setProviderConfigId(source.getProviderConfigId());
+        target.setProviderConfigCode(source.getProviderConfigCode());
+        target.setProviderEnum(source.getProviderEnum());
+        target.setModelType(source.getModelType());
+        target.setModelIdentifier(source.getModelIdentifier());
+        target.setTemperature(source.getTemperature());
+        target.setTopP(source.getTopP());
+        target.setPresencePenalty(source.getPresencePenalty());
+        target.setFrequencyPenalty(source.getFrequencyPenalty());
+        target.setMaxTokens(source.getMaxTokens());
+        target.setContextWindow(source.getContextWindow());
+        target.setRpmLimit(source.getRpmLimit());
+        target.setTpmLimit(source.getTpmLimit());
+        target.setTimeoutMs(source.getTimeoutMs());
+        target.setSupportStreaming(source.getSupportStreaming());
+        target.setSupportTools(source.getSupportTools());
+        target.setSupportVision(source.getSupportVision());
+        target.setSupportJsonSchema(source.getSupportJsonSchema());
+        target.setIsDefault(source.getIsDefault());
+        target.setStatus(source.getStatus());
+        target.setAdvancedConfigJson(source.getAdvancedConfigJson());
+        target.setRemark(source.getRemark());
     }
 
     /**
      * 校验模型配置请求中的核心字段。
      */
-    private void validateModelRequest(ModelDefinitionSaveRequest request) {
+    private void validateModelConnectionRequest(ModelConnectionSaveRequest request) {
         if (request == null) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "模型配置不能为空");
+            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "模型连接配置不能为空");
         }
-        if (!StringUtils.hasText(request.getModelName())) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "模型名称不能为空");
+        if (!StringUtils.hasText(request.getConnectionName())) {
+            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "连接配置名称不能为空");
         }
-        if (!StringUtils.hasText(request.getProviderConfigCode())) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "请选择模型提供商配置");
+        if (!StringUtils.hasText(request.getProviderEnum())) {
+            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "请选择模型提供商");
         }
         if (!StringUtils.hasText(request.getModelIdentifier())) {
             throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "模型标识不能为空");
         }
-    }
-
-    /**
-     * 校验同一租户下的提供商配置名称是否重复。
-     */
-    private void validateProviderNameUnique(Long tenantId, String providerName, Long excludeId) {
-        long count = modelProviderConfigService.count(Wrappers.lambdaQuery(ModelProviderConfig.class)
-                .eq(ModelProviderConfig::getTenantId, tenantId)
-                .eq(ModelProviderConfig::getProviderName, providerName.trim())
-                .ne(excludeId != null, ModelProviderConfig::getId, excludeId));
-        if (count > 0) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "模型提供商配置名称已存在");
+        if (!StringUtils.hasText(request.getModelCode()) && !StringUtils.hasText(request.getApiKey())) {
+            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "首次创建时 API Key 不能为空");
         }
     }
 
@@ -449,8 +391,7 @@ public class CoreApplicationManager {
     }
 
     /**
-     * 默认模型只允许在同一提供商配置下存在一个。
-     * 当当前模型被标记为默认时，需要将其他模型的默认标记清零。
+     * 默认模型只允许在同一提供商配置下存在一个。 当当前模型被标记为默认时，需要将其他模型的默认标记清零。
      */
     private void resetOtherDefaultModels(ModelDefinition currentModel) {
         if (!Integer.valueOf(1).equals(currentModel.getIsDefault())) {
@@ -502,95 +443,10 @@ public class CoreApplicationManager {
     }
 
     /**
-     * 将模型提供商配置实体转换为返回给前端的视图对象。
-     */
-    private ModelProviderConfigResponse toProviderResponse(ModelProviderConfig entity) {
-        return ModelProviderConfigResponse.builder()
-                .providerConfigCode(entity.getProviderConfigCode())
-                .providerEnum(entity.getProviderEnum())
-                .providerName(entity.getProviderName())
-                .baseUrl(entity.getBaseUrl())
-                .organizationId(entity.getOrganizationId())
-                .defaultHeadersJson(entity.getDefaultHeadersJson())
-                .status(entity.getStatus())
-                .apiKeyMasked(maskSecret(entity.getApiKeyCipherText()))
-                .apiKeyConfigured(StringUtils.hasText(entity.getApiKeyCipherText()))
-                .ownerUserName(entity.getOwnerUserName())
-                .updateTime(toEpochMilli(entity.getUpdateTime()))
-                .remark(entity.getRemark())
-                .build();
-    }
-
-    /**
-     * 将模型配置实体转换为详情视图对象。
-     */
-    private ModelDefinitionResponse toModelResponse(ModelDefinition entity) {
-        ModelProviderConfig provider = modelProviderConfigService.getById(entity.getProviderConfigId());
-        return ModelDefinitionResponse.builder()
-                .modelCode(entity.getModelCode())
-                .modelName(entity.getModelName())
-                .providerConfigCode(entity.getProviderConfigCode())
-                .providerEnum(entity.getProviderEnum())
-                .providerName(provider == null ? null : provider.getProviderName())
-                .modelType(entity.getModelType())
-                .modelIdentifier(entity.getModelIdentifier())
-                .temperature(entity.getTemperature())
-                .topP(entity.getTopP())
-                .presencePenalty(entity.getPresencePenalty())
-                .frequencyPenalty(entity.getFrequencyPenalty())
-                .maxTokens(entity.getMaxTokens())
-                .contextWindow(entity.getContextWindow())
-                .rpmLimit(entity.getRpmLimit())
-                .tpmLimit(entity.getTpmLimit())
-                .timeoutMs(entity.getTimeoutMs())
-                .supportStreaming(toBoolean(entity.getSupportStreaming()))
-                .supportTools(toBoolean(entity.getSupportTools()))
-                .supportVision(toBoolean(entity.getSupportVision()))
-                .supportJsonSchema(toBoolean(entity.getSupportJsonSchema()))
-                .defaultModel(toBoolean(entity.getIsDefault()))
-                .status(entity.getStatus())
-                .advancedConfigJson(entity.getAdvancedConfigJson())
-                .remark(entity.getRemark())
-                .updateTime(toEpochMilli(entity.getUpdateTime()))
-                .build();
-    }
-
-    /**
-     * 将模型配置实体转换为轻量级选项对象。
-     */
-    private ModelOptionResponse toModelOption(ModelDefinition entity) {
-        ModelProviderConfig provider = modelProviderConfigService.getById(entity.getProviderConfigId());
-        return ModelOptionResponse.builder()
-                .modelCode(entity.getModelCode())
-                .modelName(entity.getModelName())
-                .providerConfigCode(entity.getProviderConfigCode())
-                .providerEnum(entity.getProviderEnum())
-                .providerName(provider == null ? null : provider.getProviderName())
-                .modelIdentifier(entity.getModelIdentifier())
-                .modelType(entity.getModelType())
-                .defaultModel(toBoolean(entity.getIsDefault()))
-                .build();
-    }
-
-    /**
      * 统一规范化模型提供商枚举值，兼容前端可能传入的不同大小写格式。
      */
     private String normalizeProviderEnum(String providerEnum) {
         return ModelProviderEnum.fromValue(providerEnum).name();
-    }
-
-    /**
-     * 为供应商补齐默认测试模型，避免测试连接时必须手工输入。
-     */
-    private String resolveDefaultTestModel(String providerEnum) {
-        return switch (providerEnum) {
-            case "OPENAI" -> "gpt-4.1";
-            case "DEEPSEEK" -> "deepseek-chat";
-            case "DASHSCOPE" -> "qwen-max";
-            case "ANTHROPIC" -> "claude-3-7-sonnet-latest";
-            case "ZHIPU" -> "glm-4-plus";
-            default -> throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "暂未配置该供应商的默认测试模型");
-        };
     }
 
     /**
@@ -615,13 +471,12 @@ public class CoreApplicationManager {
         try {
             ChatClient chatClient = dynamicChatModelFactory.createChatClient(request);
             String content = chatClient.prompt(prompt).call().content();
-            return ModelTestResponse.builder()
-                    .success(Boolean.TRUE)
-                    .providerEnum(request.getProvider())
-                    .modelIdentifier(request.getModel())
-                    .responseContent(content)
-                    .elapsedMs(System.currentTimeMillis() - start)
-                    .build();
+            return CoreAssembler.toModelTestResponse(
+                    request.getProvider(),
+                    request.getModel(),
+                    content,
+                    System.currentTimeMillis() - start
+            );
         } catch (Exception ex) {
             throw buildModelInvokeException(request, ex);
         }
@@ -690,55 +545,6 @@ public class CoreApplicationManager {
     }
 
     /**
-     * 将 JSON 字符串规范化为紧凑格式，并提前拦截非法 JSON。
-     */
-    private String normalizeJson(String rawJson, String fieldName) {
-        String value = trimToNull(rawJson);
-        if (value == null) {
-            return null;
-        }
-        try {
-            return objectMapper.writeValueAsString(objectMapper.readTree(value));
-        } catch (JsonProcessingException ex) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, fieldName + " 不是合法 JSON");
-        }
-    }
-
-    /**
-     * 仅向前端返回脱敏后的密钥内容，避免泄露完整密钥。
-     */
-    private String maskSecret(String cipherText) {
-        if (!StringUtils.hasText(cipherText)) {
-            return null;
-        }
-        String plainText = modelSecretCryptoService.decrypt(cipherText);
-        if (!StringUtils.hasText(plainText)) {
-            return null;
-        }
-        int visible = Math.min(4, plainText.length());
-        return "*".repeat(Math.max(0, plainText.length() - visible)) + plainText.substring(plainText.length() - visible);
-    }
-
-    /**
-     * 去除首尾空白；若结果为空串则统一返回 null。
-     */
-    private String trimToNull(String value) {
-        return StringUtils.hasText(value) ? value.trim() : "";
-    }
-
-
-    /**
-     * 移除误配置到 baseUrl 中的具体接口路径，保留服务根地址供各家 SDK 自行拼接。
-     */
-    private String removeTrailingApiPath(String baseUrl) {
-        return baseUrl
-                .replaceAll("/chat/completions/?$", "")
-                .replaceAll("/responses/?$", "")
-                .replaceAll("/messages/?$", "")
-                .replaceAll("/completions/?$", "");
-    }
-
-    /**
      * 将底层模型调用异常包装为可读业务异常，便于前端直接展示问题原因。
      */
     private BusinessException buildModelInvokeException(ChatModelRequest request, Exception exception) {
@@ -770,16 +576,62 @@ public class CoreApplicationManager {
         while (current != null && current.getCause() != null && current.getCause() != current) {
             current = current.getCause();
         }
-        return current == null ? null : trimToNull(current.getMessage());
+        return current == null ? null : CommonTextUtils.trimToNull(current.getMessage());
     }
 
-    /**
-     * 将时间统一转换为毫秒时间戳，便于前端直接格式化展示。
-     */
-    private Long toEpochMilli(LocalDateTime time) {
-        if (time == null) {
+    private long countModelsByProviderId(Long tenantId, Long providerId) {
+        return modelDefinitionService.count(Wrappers.lambdaQuery(ModelDefinition.class)
+                .eq(ModelDefinition::getTenantId, tenantId)
+                .eq(ModelDefinition::getProviderConfigId, providerId));
+    }
+
+    private boolean hasProviderConfigChanged(ModelConnectionSaveRequest request, ModelProviderConfig provider) {
+        if (!normalizeProviderEnum(request.getProviderEnum()).equals(provider.getProviderEnum())) {
+            return true;
+        }
+        if (!CommonTextUtils.equalsNullableBlank(CommonTextUtils.trimToNull(request.getBaseUrl()), provider.getBaseUrl())) {
+            return true;
+        }
+        if (!CommonTextUtils.equalsNullableBlank(CommonTextUtils.trimToNull(request.getOrganizationId()), provider.getOrganizationId())) {
+            return true;
+        }
+        if (!CommonTextUtils.equalsNullableBlank(
+                commonJsonUtils.normalizeJsonOrNull(request.getDefaultHeadersJson(), "defaultHeadersJson"),
+                provider.getDefaultHeadersJson())) {
+            return true;
+        }
+        if (!CommonTextUtils.equalsNullableBlank(defaultStatus(request.getStatus()), provider.getStatus())) {
+            return true;
+        }
+        if (!CommonTextUtils.equalsNullableBlank(CommonTextUtils.trimToNull(request.getRemark()), provider.getRemark())) {
+            return true;
+        }
+        return StringUtils.hasText(request.getApiKey());
+    }
+
+    private String generateProviderName(Long tenantId, String connectionName, Long excludeId) {
+        String baseName = connectionName.trim() + "-provider";
+        String candidate = baseName;
+        int suffix = 2;
+        while (modelProviderConfigService.count(Wrappers.lambdaQuery(ModelProviderConfig.class)
+                .eq(ModelProviderConfig::getTenantId, tenantId)
+                .eq(ModelProviderConfig::getProviderName, candidate)
+                .ne(excludeId != null, ModelProviderConfig::getId, excludeId)) > 0) {
+            candidate = baseName + "-" + suffix;
+            suffix++;
+        }
+        return candidate;
+    }
+
+    private ModelConnectionResponse buildModelConnectionResponse(ModelDefinition model, ModelProviderConfig provider) {
+        String maskedApiKey = provider == null ? null : maskSecret(provider.getApiKeyCipherText());
+        return CoreAssembler.toModelConnectionResponse(model, provider, maskedApiKey);
+    }
+
+    private String maskSecret(String cipherText) {
+        if (!StringUtils.hasText(cipherText)) {
             return null;
         }
-        return time.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+        return CommonMaskingUtils.maskKeepTail(modelSecretCryptoService.decrypt(cipherText), 4);
     }
 }

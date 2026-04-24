@@ -29,5 +29,7 @@ public class PromptTemplateResolvedDTO {
 
     Map<String, String> promptVariables;
 
+    PromptTemplateEnterpriseConfigDTO enterpriseConfig;
+
     String effectiveSystemPrompt;
 }

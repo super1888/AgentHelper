@@ -9,7 +9,7 @@ let unauthorizedHandler: UnauthorizedHandler | null = null
 
 export const apiClient = axios.create({
   baseURL: appConfig.apiBaseUrl,
-  timeout: 15000,
+  timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
   },

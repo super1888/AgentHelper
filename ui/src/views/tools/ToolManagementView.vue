@@ -73,7 +73,7 @@ const form = reactive({
   riskLevel: 'LOW',
   executionMode: 'SYNC',
   sortWeight: 100,
-  timeoutMs: 15000,
+  timeoutMs: 10000,
   authRequired: 0,
   builtinToolKey: '',
   endpointUrl: '',
@@ -81,7 +81,7 @@ const form = reactive({
   tagsText: 'builtin,default',
   requestSchemaJson: '{\n  "type": "object",\n  "properties": {}\n}',
   authConfigJson: '{\n  "enabled": false\n}',
-  runtimeConfigJson: '{\n  "timeoutSeconds": 15\n}',
+  runtimeConfigJson: '{\n  "timeoutSeconds": 10\n}',
   testPayloadJson: '{\n  "query": "hello"\n}',
   remark: '',
 })
@@ -144,7 +144,7 @@ function resetForm() {
   form.riskLevel = 'LOW'
   form.executionMode = 'SYNC'
   form.sortWeight = 100
-  form.timeoutMs = 15000
+  form.timeoutMs = 10000
   form.authRequired = 0
   form.builtinToolKey = ''
   form.endpointUrl = ''
@@ -152,7 +152,7 @@ function resetForm() {
   form.tagsText = 'builtin,default'
   form.requestSchemaJson = '{\n  "type": "object",\n  "properties": {}\n}'
   form.authConfigJson = '{\n  "enabled": false\n}'
-  form.runtimeConfigJson = '{\n  "timeoutSeconds": 15\n}'
+  form.runtimeConfigJson = '{\n  "timeoutSeconds": 10\n}'
   form.testPayloadJson = '{\n  "query": "hello"\n}'
   form.remark = ''
   debugForm.requestPayloadJson = '{\n  "query": "hello"\n}'
@@ -171,7 +171,7 @@ function fillForm(tool: ToolItem) {
   form.riskLevel = tool.riskLevel
   form.executionMode = tool.executionMode
   form.sortWeight = tool.sortWeight ?? 100
-  form.timeoutMs = tool.timeoutMs ?? 15000
+  form.timeoutMs = tool.timeoutMs ?? 10000
   form.authRequired = tool.authRequired ?? 0
   form.builtinToolKey = tool.builtinToolKey ?? ''
   form.endpointUrl = tool.endpointUrl ?? ''
