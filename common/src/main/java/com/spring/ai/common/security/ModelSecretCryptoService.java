@@ -90,10 +90,11 @@ public class ModelSecretCryptoService {
     }
 
     private SecretKeySpec buildKey() {
-        if (!StringUtils.hasText(properties.getAesKey())) {
+        String aesKey = properties.getAesKey();
+        if (!StringUtils.hasText(aesKey)) {
             throw new BusinessException(ErrorCodeEnum.INTERNAL_SERVER_ERROR, "未配置模型密钥加密主密钥");
         }
-        byte[] decoded = Base64.getDecoder().decode(properties.getAesKey().trim());
+        byte[] decoded = Base64.getDecoder().decode(aesKey.trim());
         if (decoded.length != 16 && decoded.length != 24 && decoded.length != 32) {
             throw new BusinessException(ErrorCodeEnum.INTERNAL_SERVER_ERROR, "模型密钥主密钥长度不合法");
         }

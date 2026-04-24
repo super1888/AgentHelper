@@ -9,6 +9,10 @@ import org.springframework.ai.zhipuai.api.ZhiPuAiApi;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+/**
+ * 各供应商底层 API 客户端创建器。
+ * 优先使用调用方显式传入的密钥与地址；若未传入，则回退到系统配置。
+ */
 @Component
 public class ScopeApi {
 
@@ -27,12 +31,18 @@ public class ScopeApi {
     @Value("${spring.ai.zhipuai.api-key:}")
     private String zhiPuAiApiKey;
 
+    /**
+     * 创建 DashScope API 客户端，地址使用框架默认值。
+     */
     public DashScopeApi getDashScopeApi(String apiKey) {
         return DashScopeApi.builder()
                 .apiKey(resolveApiKey(apiKey, dashscopeApiKey, "dashscope"))
                 .build();
     }
 
+    /**
+     * 创建 DashScope API 客户端，并允许覆盖默认服务地址。
+     */
     public DashScopeApi getDashScopeApi(String apiKey, String baseUrl) {
         DashScopeApi.Builder builder = DashScopeApi.builder()
                 .apiKey(resolveApiKey(apiKey, dashscopeApiKey, "dashscope"));
@@ -42,12 +52,18 @@ public class ScopeApi {
         return builder.build();
     }
 
+    /**
+     * 创建 DeepSeek API 客户端，地址使用框架默认值。
+     */
     public DeepSeekApi getDeepSeekApi(String apiKey) {
         return DeepSeekApi.builder()
                 .apiKey(resolveApiKey(apiKey, deepseekApiKey, "deepseek"))
                 .build();
     }
 
+    /**
+     * 创建 DeepSeek API 客户端，并允许覆盖默认服务地址。
+     */
     public DeepSeekApi getDeepSeekApi(String apiKey, String baseUrl) {
         DeepSeekApi.Builder builder = DeepSeekApi.builder()
                 .apiKey(resolveApiKey(apiKey, deepseekApiKey, "deepseek"));
@@ -57,12 +73,18 @@ public class ScopeApi {
         return builder.build();
     }
 
+    /**
+     * 创建 Anthropic API 客户端，地址使用框架默认值。
+     */
     public AnthropicApi getAnthropicApi(String apiKey) {
         return AnthropicApi.builder()
                 .apiKey(resolveApiKey(apiKey, anthropicApiKey, "anthropic"))
                 .build();
     }
 
+    /**
+     * 创建 Anthropic API 客户端，并允许覆盖默认服务地址。
+     */
     public AnthropicApi getAnthropicApi(String apiKey, String baseUrl) {
         AnthropicApi.Builder builder = AnthropicApi.builder()
                 .apiKey(resolveApiKey(apiKey, anthropicApiKey, "anthropic"));
@@ -72,12 +94,18 @@ public class ScopeApi {
         return builder.build();
     }
 
+    /**
+     * 创建 OpenAI API 客户端，地址使用框架默认值。
+     */
     public OpenAiApi getOpenAiApi(String apiKey) {
         return OpenAiApi.builder()
                 .apiKey(resolveApiKey(apiKey, openAiApiKey, "openai"))
                 .build();
     }
 
+    /**
+     * 创建 OpenAI API 客户端，并允许覆盖默认服务地址。
+     */
     public OpenAiApi getOpenAiApi(String apiKey, String baseUrl) {
         OpenAiApi.Builder builder = OpenAiApi.builder()
                 .apiKey(resolveApiKey(apiKey, openAiApiKey, "openai"));
@@ -87,12 +115,18 @@ public class ScopeApi {
         return builder.build();
     }
 
+    /**
+     * 创建智谱 API 客户端，地址使用框架默认值。
+     */
     public ZhiPuAiApi getZhiPuAiApi(String apiKey) {
         return ZhiPuAiApi.builder()
                 .apiKey(resolveApiKey(apiKey, zhiPuAiApiKey, "zhipuai"))
                 .build();
     }
 
+    /**
+     * 创建智谱 API 客户端，并允许覆盖默认服务地址。
+     */
     public ZhiPuAiApi getZhiPuAiApi(String apiKey, String baseUrl) {
         ZhiPuAiApi.Builder builder = ZhiPuAiApi.builder()
                 .apiKey(resolveApiKey(apiKey, zhiPuAiApiKey, "zhipuai"));
@@ -102,10 +136,13 @@ public class ScopeApi {
         return builder.build();
     }
 
+    /**
+     * 解析最终使用的 API Key，优先级为请求参数高于系统配置。
+     */
     private String resolveApiKey(String requestApiKey, String configuredApiKey, String provider) {
         String resolved = StringUtils.isBlank(requestApiKey) ? configuredApiKey : requestApiKey;
         if (StringUtils.isBlank(resolved)) {
-            throw new IllegalArgumentException("未配置模型提供商访问密钥：" + provider);
+            throw new IllegalArgumentException("\u672a\u914d\u7f6e\u6a21\u578b\u63d0\u4f9b\u5546\u8bbf\u95ee\u5bc6\u94a5\uff1a" + provider);
         }
         return resolved;
     }

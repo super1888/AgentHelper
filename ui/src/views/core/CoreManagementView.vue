@@ -233,10 +233,14 @@ async function loadData(successMessage?: string) {
     providerCatalog.value = catalog
     providers.value = providerList
     models.value = modelList
-    if (!selectedProviderCode.value) selectedProviderCode.value = providerList[0]?.providerConfigCode ?? ''
-    if (!selectedModelCode.value) selectedModelCode.value = modelList[0]?.modelCode ?? ''
+    if (!providerList.some((item) => item.providerConfigCode === selectedProviderCode.value)) {
+      selectedProviderCode.value = providerList[0]?.providerConfigCode ?? ''
+    }
+    if (!modelList.some((item) => item.modelCode === selectedModelCode.value)) {
+      selectedModelCode.value = modelList[0]?.modelCode ?? ''
+    }
     if (!providerForm.providerEnum) resetProviderForm()
-    if (!modelForm.providerConfigCode) resetModelForm()
+    if (!providerList.some((item) => item.providerConfigCode === modelForm.providerConfigCode)) resetModelForm()
     if (successMessage) setFeedback('success', successMessage)
   } catch (error) {
     setFeedback('error', getErrorMessage(error, '核心配置加载失败。'))

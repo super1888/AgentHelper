@@ -32,12 +32,18 @@ import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.http.HttpStatus;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+/**
+ * 核心模块应用层编排入口。
+ * 负责串联租户上下文、模型提供商配置、模型配置、密钥解密以及模型测试调用，
+ * 对外提供统一的模型管理能力。
+ */
 @Component
 public class CoreApplicationManager {
 
@@ -62,6 +68,9 @@ public class CoreApplicationManager {
     @Resource
     private DynamicChatModelFactory dynamicChatModelFactory;
 
+    /**
+     * 返回系统内置支持的模型提供商目录。
+     */
     public List<ProviderCatalogResponse> listProviderCatalog() {
         return Arrays.stream(ModelProviderEnum.values())
                 .map(item -> ProviderCatalogResponse.builder()
@@ -71,6 +80,9 @@ public class CoreApplicationManager {
                 .toList();
     }
 
+    /**
+     * 查询当前租户下的模型提供商配置列表。
+     */
     public List<ModelProviderConfigResponse> listProviderConfigs() {
         Long tenantId = currentUserContextSupport.getCurrentTenantIdWithAutoInit();
         return modelProviderConfigService.listByTenantId(tenantId).stream()
@@ -78,6 +90,9 @@ public class CoreApplicationManager {
                 .toList();
     }
 
+    /**
+     * 新增模型提供商配置，并补齐租户与创建人信息。
+     */
     @Transactional(rollbackFor = Exception.class)
     public ModelProviderConfigResponse createProviderConfig(ModelProviderConfigSaveRequest request) {
         validateProviderRequest(request, true);
@@ -103,6 +118,10 @@ public class CoreApplicationManager {
         return toProviderResponse(entity);
     }
 
+    /**
+     * 更新模型提供商配置。
+     * 更新时允许不传 apiKey，此时继续沿用原有密钥。
+     */
     @Transactional(rollbackFor = Exception.class)
     public ModelProviderConfigResponse updateProviderConfig(String providerConfigCode, ModelProviderConfigSaveRequest request) {
         validateProviderRequest(request, false);
@@ -123,6 +142,9 @@ public class CoreApplicationManager {
         return toProviderResponse(entity);
     }
 
+    /**
+     * 按条件查询模型配置列表。
+     */
     public List<ModelDefinitionResponse> listModels(Boolean enabledOnly) {
         Long tenantId = currentUserContextSupport.getCurrentTenantIdWithAutoInit();
         List<ModelDefinition> entities = Boolean.TRUE.equals(enabledOnly)
@@ -131,6 +153,9 @@ public class CoreApplicationManager {
         return entities.stream().map(this::toModelResponse).toList();
     }
 
+    /**
+     * 返回所有启用模型的轻量级选项信息。
+     */
     public List<ModelOptionResponse> listEnabledModelOptions() {
         Long tenantId = currentUserContextSupport.getCurrentTenantIdWithAutoInit();
         return modelDefinitionService.listEnabledByTenantId(tenantId).stream()
@@ -138,6 +163,10 @@ public class CoreApplicationManager {
                 .toList();
     }
 
+    /**
+     * 新增模型配置。
+     * 创建完成后，如果当前模型被设置为默认模型，会同步重置同提供商下的其他默认项。
+     */
     @Transactional(rollbackFor = Exception.class)
     public ModelDefinitionResponse createModel(ModelDefinitionSaveRequest request) {
         validateModelRequest(request);
@@ -157,6 +186,9 @@ public class CoreApplicationManager {
         return toModelResponse(entity);
     }
 
+    /**
+     * 更新模型配置，并保持默认模型的唯一性约束。
+     */
     @Transactional(rollbackFor = Exception.class)
     public ModelDefinitionResponse updateModel(String modelCode, ModelDefinitionSaveRequest request) {
         validateModelRequest(request);
@@ -193,6 +225,9 @@ public class CoreApplicationManager {
         return toModelResponse(entity);
     }
 
+    /**
+     * 按编码获取启用中的模型配置。
+     */
     public ModelDefinition requireEnabledModelByCode(String modelCode) {
         ModelDefinition entity = requireModel(modelCode);
         if (!"ENABLED".equals(entity.getStatus())) {
@@ -201,10 +236,17 @@ public class CoreApplicationManager {
         return entity;
     }
 
+    /**
+     * 获取指定模型的轻量级选项信息。
+     */
     public ModelOptionResponse getEnabledModelOption(String modelCode) {
         return toModelOption(requireEnabledModelByCode(modelCode));
     }
 
+    /**
+     * 删除模型提供商配置。
+     * 删除前会校验是否仍有关联模型，避免产生悬挂引用。
+     */
     @Transactional(rollbackFor = Exception.class)
     public void deleteProviderConfig(String providerConfigCode) {
         ModelProviderConfig provider = requireProvider(providerConfigCode);
@@ -214,9 +256,18 @@ public class CoreApplicationManager {
         if (modelCount > 0) {
             throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "该提供商配置下仍存在模型，请先删除或迁移模型");
         }
-        modelProviderConfigService.removeById(provider.getId());
+        boolean removed = modelProviderConfigService.remove(Wrappers.lambdaQuery(ModelProviderConfig.class)
+                .eq(ModelProviderConfig::getTenantId, provider.getTenantId())
+                .eq(ModelProviderConfig::getProviderConfigCode, provider.getProviderConfigCode()));
+        if (!removed) {
+            throw new BusinessException(ErrorCodeEnum.NOT_FOUND, HttpStatus.NOT_FOUND, "未找到模型提供商配置或删除失败");
+        }
     }
 
+    /**
+     * 删除模型配置。
+     * 若模型已被 Agent 版本引用，则禁止直接删除。
+     */
     @Transactional(rollbackFor = Exception.class)
     public void deleteModel(String modelCode) {
         ModelDefinition model = requireModel(modelCode);
@@ -226,9 +277,17 @@ public class CoreApplicationManager {
         if (referenceCount > 0) {
             throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "该模型已被 Agent 版本引用，不能直接删除");
         }
-        modelDefinitionService.removeById(model.getId());
+        boolean removed = modelDefinitionService.remove(Wrappers.lambdaQuery(ModelDefinition.class)
+                .eq(ModelDefinition::getTenantId, model.getTenantId())
+                .eq(ModelDefinition::getModelCode, model.getModelCode()));
+        if (!removed) {
+            throw new BusinessException(ErrorCodeEnum.NOT_FOUND, HttpStatus.NOT_FOUND, "未找到模型配置或删除失败");
+        }
     }
 
+    /**
+     * 基于数据库中的模型配置动态创建 ChatModel。
+     */
     public ChatModel createChatModel(String modelCode) {
         ModelDefinition model = requireEnabledModelByCode(modelCode);
         ModelProviderConfig provider = requireEnabledProvider(model.getProviderConfigCode());
@@ -241,6 +300,10 @@ public class CoreApplicationManager {
         return dynamicChatModelFactory.create(request);
     }
 
+    /**
+     * 测试模型提供商连通性。
+     * 优先使用请求中显式传入的参数；若传入已有配置编码，则自动补全存量配置中的缺失信息。
+     */
     public ModelTestResponse testProviderConnection(ModelProviderTestRequest request) {
         if (request == null) {
             throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "测试请求不能为空");
@@ -276,6 +339,9 @@ public class CoreApplicationManager {
         return doTest(modelRequest, defaultPrompt(request.getTestPrompt()));
     }
 
+    /**
+     * 使用已保存的模型配置执行一次真实调用测试。
+     */
     public ModelTestResponse testModel(String modelCode, ModelTestRequest request) {
         ModelDefinition model = requireEnabledModelByCode(modelCode);
         ModelProviderConfig provider = requireEnabledProvider(model.getProviderConfigCode());
@@ -288,6 +354,9 @@ public class CoreApplicationManager {
         return doTest(modelRequest, defaultPrompt(request == null ? null : request.getTestPrompt()));
     }
 
+    /**
+     * 将前端提交的模型表单转换为数据库实体，并在构建过程中统一处理默认值与范围校验。
+     */
     private ModelDefinition buildModelEntity(ModelDefinitionSaveRequest request, ModelProviderConfig provider) {
         ModelDefinition entity = new ModelDefinition();
         entity.setModelName(request.getModelName().trim());
@@ -316,6 +385,10 @@ public class CoreApplicationManager {
         return entity;
     }
 
+    /**
+     * 校验模型提供商配置请求。
+     * 创建时 apiKey 为必填，更新时允许保留原值。
+     */
     private void validateProviderRequest(ModelProviderConfigSaveRequest request, boolean create) {
         if (request == null) {
             throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "模型提供商配置不能为空");
@@ -331,6 +404,9 @@ public class CoreApplicationManager {
         }
     }
 
+    /**
+     * 校验模型配置请求中的核心字段。
+     */
     private void validateModelRequest(ModelDefinitionSaveRequest request) {
         if (request == null) {
             throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "模型配置不能为空");
@@ -346,6 +422,9 @@ public class CoreApplicationManager {
         }
     }
 
+    /**
+     * 校验同一租户下的提供商配置名称是否重复。
+     */
     private void validateProviderNameUnique(Long tenantId, String providerName, Long excludeId) {
         long count = modelProviderConfigService.count(Wrappers.lambdaQuery(ModelProviderConfig.class)
                 .eq(ModelProviderConfig::getTenantId, tenantId)
@@ -356,6 +435,9 @@ public class CoreApplicationManager {
         }
     }
 
+    /**
+     * 校验同一租户下的模型名称是否重复。
+     */
     private void validateModelNameUnique(Long tenantId, String modelName, Long excludeId) {
         long count = modelDefinitionService.count(Wrappers.lambdaQuery(ModelDefinition.class)
                 .eq(ModelDefinition::getTenantId, tenantId)
@@ -366,6 +448,10 @@ public class CoreApplicationManager {
         }
     }
 
+    /**
+     * 默认模型只允许在同一提供商配置下存在一个。
+     * 当当前模型被标记为默认时，需要将其他模型的默认标记清零。
+     */
     private void resetOtherDefaultModels(ModelDefinition currentModel) {
         if (!Integer.valueOf(1).equals(currentModel.getIsDefault())) {
             return;
@@ -377,6 +463,9 @@ public class CoreApplicationManager {
                 .set(ModelDefinition::getIsDefault, 0));
     }
 
+    /**
+     * 根据配置编码获取模型提供商配置，并校验其归属当前租户。
+     */
     private ModelProviderConfig requireProvider(String providerConfigCode) {
         Long tenantId = currentUserContextSupport.getCurrentTenantIdWithAutoInit();
         ModelProviderConfig entity = modelProviderConfigService.getByProviderConfigCode(tenantId, providerConfigCode);
@@ -386,6 +475,9 @@ public class CoreApplicationManager {
         return entity;
     }
 
+    /**
+     * 获取启用中的模型提供商配置，并确保已经配置可用密钥。
+     */
     private ModelProviderConfig requireEnabledProvider(String providerConfigCode) {
         ModelProviderConfig entity = requireProvider(providerConfigCode);
         if (!"ENABLED".equals(entity.getStatus())) {
@@ -397,6 +489,9 @@ public class CoreApplicationManager {
         return entity;
     }
 
+    /**
+     * 根据模型编码获取当前租户下的模型配置。
+     */
     private ModelDefinition requireModel(String modelCode) {
         Long tenantId = currentUserContextSupport.getCurrentTenantIdWithAutoInit();
         ModelDefinition entity = modelDefinitionService.getByModelCode(tenantId, modelCode);
@@ -406,6 +501,9 @@ public class CoreApplicationManager {
         return entity;
     }
 
+    /**
+     * 将模型提供商配置实体转换为返回给前端的视图对象。
+     */
     private ModelProviderConfigResponse toProviderResponse(ModelProviderConfig entity) {
         return ModelProviderConfigResponse.builder()
                 .providerConfigCode(entity.getProviderConfigCode())
@@ -423,6 +521,9 @@ public class CoreApplicationManager {
                 .build();
     }
 
+    /**
+     * 将模型配置实体转换为详情视图对象。
+     */
     private ModelDefinitionResponse toModelResponse(ModelDefinition entity) {
         ModelProviderConfig provider = modelProviderConfigService.getById(entity.getProviderConfigId());
         return ModelDefinitionResponse.builder()
@@ -454,6 +555,9 @@ public class CoreApplicationManager {
                 .build();
     }
 
+    /**
+     * 将模型配置实体转换为轻量级选项对象。
+     */
     private ModelOptionResponse toModelOption(ModelDefinition entity) {
         ModelProviderConfig provider = modelProviderConfigService.getById(entity.getProviderConfigId());
         return ModelOptionResponse.builder()
@@ -468,6 +572,9 @@ public class CoreApplicationManager {
                 .build();
     }
 
+    /**
+     * 统一规范化模型提供商枚举值，兼容前端可能传入的不同大小写格式。
+     */
     private String normalizeProviderEnum(String providerEnum) {
         return ModelProviderEnum.fromValue(providerEnum).name();
     }
@@ -486,6 +593,9 @@ public class CoreApplicationManager {
         };
     }
 
+    /**
+     * 将模型配置中的采样参数整理为底层模型工厂可识别的选项对象。
+     */
     private ChatOptionsDTO toChatOptions(ModelDefinition model) {
         ChatOptionsDTO options = new ChatOptionsDTO();
         options.setModel(model.getModelIdentifier());
@@ -497,40 +607,65 @@ public class CoreApplicationManager {
         return options;
     }
 
+    /**
+     * 执行一次真实模型调用，并返回耗时与响应内容。
+     */
     private ModelTestResponse doTest(ChatModelRequest request, String prompt) {
         long start = System.currentTimeMillis();
-        ChatClient chatClient = dynamicChatModelFactory.createChatClient(request);
-        String content = chatClient.prompt(prompt).call().content();
-        return ModelTestResponse.builder()
-                .success(Boolean.TRUE)
-                .providerEnum(request.getProvider())
-                .modelIdentifier(request.getModel())
-                .responseContent(content)
-                .elapsedMs(System.currentTimeMillis() - start)
-                .build();
+        try {
+            ChatClient chatClient = dynamicChatModelFactory.createChatClient(request);
+            String content = chatClient.prompt(prompt).call().content();
+            return ModelTestResponse.builder()
+                    .success(Boolean.TRUE)
+                    .providerEnum(request.getProvider())
+                    .modelIdentifier(request.getModel())
+                    .responseContent(content)
+                    .elapsedMs(System.currentTimeMillis() - start)
+                    .build();
+        } catch (Exception ex) {
+            throw buildModelInvokeException(request, ex);
+        }
     }
 
+    /**
+     * 当调用方未传入测试提示词时，使用统一的健康检查提示词。
+     */
     private String defaultPrompt(String prompt) {
         return StringUtils.hasText(prompt) ? prompt.trim() : "请只回复：MODEL_OK";
     }
 
+    /**
+     * 默认状态为启用，避免前端遗漏状态字段时出现不可用脏数据。
+     */
     private String defaultStatus(String status) {
         return StringUtils.hasText(status) ? status.trim().toUpperCase() : "ENABLED";
     }
 
+    /**
+     * 默认模型类型为 CHAT。
+     */
     private String defaultModelType(String modelType) {
         return StringUtils.hasText(modelType) ? modelType.trim().toUpperCase() : "CHAT";
     }
 
+    /**
+     * 将布尔值转换为数据库中使用的 0/1 标记。
+     */
     private Integer toFlag(Boolean value, boolean defaultValue) {
         boolean resolved = value == null ? defaultValue : value;
         return resolved ? 1 : 0;
     }
 
+    /**
+     * 将数据库中的 0/1 标记还原为布尔值。
+     */
     private Boolean toBoolean(Integer value) {
         return Integer.valueOf(1).equals(value);
     }
 
+    /**
+     * 校验并返回小数字段，统一处理上下限约束。
+     */
     private Double normalizeDecimal(Double value, Double min, Double max, String fieldName) {
         if (value == null) {
             return null;
@@ -541,6 +676,9 @@ public class CoreApplicationManager {
         return value;
     }
 
+    /**
+     * 校验并返回整数字段，统一处理上下限约束。
+     */
     private Integer normalizeInteger(Integer value, Integer min, Integer max, String fieldName) {
         if (value == null) {
             return null;
@@ -551,6 +689,9 @@ public class CoreApplicationManager {
         return value;
     }
 
+    /**
+     * 将 JSON 字符串规范化为紧凑格式，并提前拦截非法 JSON。
+     */
     private String normalizeJson(String rawJson, String fieldName) {
         String value = trimToNull(rawJson);
         if (value == null) {
@@ -563,6 +704,9 @@ public class CoreApplicationManager {
         }
     }
 
+    /**
+     * 仅向前端返回脱敏后的密钥内容，避免泄露完整密钥。
+     */
     private String maskSecret(String cipherText) {
         if (!StringUtils.hasText(cipherText)) {
             return null;
@@ -575,10 +719,63 @@ public class CoreApplicationManager {
         return "*".repeat(Math.max(0, plainText.length() - visible)) + plainText.substring(plainText.length() - visible);
     }
 
+    /**
+     * 去除首尾空白；若结果为空串则统一返回 null。
+     */
     private String trimToNull(String value) {
-        return StringUtils.hasText(value) ? value.trim() : null;
+        return StringUtils.hasText(value) ? value.trim() : "";
     }
 
+
+    /**
+     * 移除误配置到 baseUrl 中的具体接口路径，保留服务根地址供各家 SDK 自行拼接。
+     */
+    private String removeTrailingApiPath(String baseUrl) {
+        return baseUrl
+                .replaceAll("/chat/completions/?$", "")
+                .replaceAll("/responses/?$", "")
+                .replaceAll("/messages/?$", "")
+                .replaceAll("/completions/?$", "");
+    }
+
+    /**
+     * 将底层模型调用异常包装为可读业务异常，便于前端直接展示问题原因。
+     */
+    private BusinessException buildModelInvokeException(ChatModelRequest request, Exception exception) {
+        StringBuilder message = new StringBuilder("模型调用失败");
+        if (StringUtils.hasText(request.getProvider())) {
+            message.append("，provider=").append(request.getProvider());
+        }
+        if (StringUtils.hasText(request.getModel())) {
+            message.append("，model=").append(request.getModel());
+        }
+        if (StringUtils.hasText(request.getBaseUrl())) {
+            message.append("，baseUrl=").append(request.getBaseUrl());
+        }
+        String rootMessage = rootCauseMessage(exception);
+        if (StringUtils.hasText(rootMessage)) {
+            message.append("，原因：").append(rootMessage);
+        }
+        if (rootMessage != null && rootMessage.contains("404")) {
+            message.append("。请检查模型供应商 baseUrl 是否填写为服务根地址，而不是 /chat/completions 等具体接口路径");
+        }
+        return new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.BAD_REQUEST, message.toString(), exception);
+    }
+
+    /**
+     * 提取最底层异常消息，避免日志中只剩空白状态码。
+     */
+    private String rootCauseMessage(Throwable throwable) {
+        Throwable current = throwable;
+        while (current != null && current.getCause() != null && current.getCause() != current) {
+            current = current.getCause();
+        }
+        return current == null ? null : trimToNull(current.getMessage());
+    }
+
+    /**
+     * 将时间统一转换为毫秒时间戳，便于前端直接格式化展示。
+     */
     private Long toEpochMilli(LocalDateTime time) {
         if (time == null) {
             return null;

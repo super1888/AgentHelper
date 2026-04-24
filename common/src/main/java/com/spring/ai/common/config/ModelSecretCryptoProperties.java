@@ -1,13 +1,17 @@
 package com.spring.ai.common.config;
 
+import lombok.Getter;
+import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 /**
  * Model secret crypto properties.
  */
+@Setter
+@Getter
 @Component
-@ConfigurationProperties(prefix = "agent-helper.model-secret")
+@ConfigurationProperties(prefix = "app.model-secret")
 public class ModelSecretCryptoProperties {
 
     /**
@@ -15,11 +19,4 @@ public class ModelSecretCryptoProperties {
      */
     private String aesKey;
 
-    public String getAesKey() {
-        return aesKey;
-    }
-
-    public void setAesKey(String aesKey) {
-        this.aesKey = aesKey;
-    }
 }
