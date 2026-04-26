@@ -32,6 +32,7 @@ import com.spring.ai.interceptors.domain.response.InterceptorTestCaseResponse;
 import jakarta.annotation.Resource;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -510,7 +511,7 @@ public class InterceptorApplicationManager {
 
     private Map<String, Object> simulateToolRetry(Map<String, Object> config, Map<String, Object> requestPayload, Map<String, Object> trace) {
         boolean failure = "FAILED".equalsIgnoreCase(String.valueOf(requestPayload.getOrDefault("toolStatus", "SUCCESS")));
-        int maxRetries = numberValue(config.get("maxRetries"), 2);
+        int maxRetries = interceptorSupportManager.numberValue(config.get("maxRetries"), 2);
         trace.put("retryPlan", Map.of("maxRetries", maxRetries, "backoffFactor", config.getOrDefault("backoffFactor", 1.0)));
         return interceptorSupportManager.orderedMap(
                 "action", failure ? "RETRY" : "PASS",
