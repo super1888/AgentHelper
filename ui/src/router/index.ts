@@ -50,6 +50,14 @@ const router = createRouter({
       },
     },
     {
+      path: '/image-studio',
+      name: 'image-studio',
+      component: () => import('@/views/images/ImageStudioView.vue'),
+      meta: {
+        requiresAuth: true,
+      },
+    },
+    {
       path: '/prompts',
       name: 'prompts',
       component: () => import('@/views/prompts/PromptTemplateManagementView.vue'),

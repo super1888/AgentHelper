@@ -8,6 +8,7 @@ import {
   Database,
   FileCode2,
   GitBranch,
+  Image,
   LogOut,
   ShieldCheck,
   Sparkles,
@@ -37,6 +38,13 @@ const navItems = [
     description: '模型提供商、模型参数与密钥托管',
     icon: Cpu,
     isActive: () => route.name === 'core-config',
+  },
+  {
+    to: '/image-studio',
+    label: 'Image Studio',
+    description: 'Prompt, render, preview, and export',
+    icon: Image,
+    isActive: () => route.name === 'image-studio',
   },
   {
     to: '/prompts',
