@@ -116,7 +116,7 @@ function clearFeedback() {
 }
 
 function formatTime(value?: number | null) {
-  if (!value) return 'Not recorded'
+  if (!value) return '未记录'
   return new Intl.DateTimeFormat('zh-CN', {
     year: 'numeric',
     month: '2-digit',
@@ -124,6 +124,42 @@ function formatTime(value?: number | null) {
     hour: '2-digit',
     minute: '2-digit',
   }).format(value)
+}
+
+function formatPublishStatus(status?: string | null) {
+  const map: Record<string, string> = {
+    DRAFT: '草稿',
+    PUBLISHED: '已发布',
+    OFFLINE: '已下线',
+  }
+  return map[status || ''] || status || '-'
+}
+
+function formatServerType(type?: string | null) {
+  const map: Record<string, string> = {
+    BUILTIN: '内置',
+    REMOTE: '远程',
+  }
+  return map[type || ''] || type || '-'
+}
+
+function formatTransportType(type?: string | null) {
+  const map: Record<string, string> = {
+    STDIO: 'STDIO',
+    SSE: 'SSE',
+    STREAMABLE_HTTP: '流式 HTTP',
+  }
+  return map[type || ''] || type || '-'
+}
+
+function formatExecuteStatus(status?: string | null) {
+  const map: Record<string, string> = {
+    SUCCESS: '成功',
+    FAILED: '失败',
+    TIMEOUT: '超时',
+    RUNNING: '执行中',
+  }
+  return map[status || ''] || status || '-'
 }
 
 function resetForm() {
@@ -252,7 +288,7 @@ async function refreshAll(keepSelection = true) {
       }
     }
   } catch (error) {
-    showFeedback('error', getErrorMessage(error, 'Failed to load MCP data.'))
+    showFeedback('error', getErrorMessage(error, '加载 MCP 数据失败。'))
   } finally {
     loading.value = false
   }
@@ -263,32 +299,32 @@ async function handleSave() {
   try {
     if (selectedServerId.value) {
       await updateMcpServer(selectedServerId.value, buildPayload())
-      showFeedback('success', 'MCP server updated.')
+      showFeedback('success', 'MCP 服务已更新。')
     } else {
       const created = await createMcpServer(buildPayload())
-      showFeedback('success', 'MCP server created.')
+      showFeedback('success', 'MCP 服务已创建。')
       await refreshAll(false)
       await selectServer(created.serverId)
       return
     }
     await refreshAll()
   } catch (error) {
-    showFeedback('error', getErrorMessage(error, 'Failed to save MCP server.'))
+    showFeedback('error', getErrorMessage(error, '保存 MCP 服务失败。'))
   } finally {
     saving.value = false
   }
 }
 
 async function handleDelete() {
-  if (!selectedServerId.value || !window.confirm('Delete the current MCP server?')) return
+  if (!selectedServerId.value || !window.confirm('确认删除当前 MCP 服务吗？')) return
   actionLoading.value = true
   try {
     await removeMcpServer(selectedServerId.value)
-    showFeedback('success', 'MCP server deleted.')
+    showFeedback('success', 'MCP 服务已删除。')
     resetForm()
     await refreshAll(false)
   } catch (error) {
-    showFeedback('error', getErrorMessage(error, 'Failed to delete MCP server.'))
+    showFeedback('error', getErrorMessage(error, '删除 MCP 服务失败。'))
   } finally {
     actionLoading.value = false
   }
@@ -299,10 +335,10 @@ async function handlePublish() {
   actionLoading.value = true
   try {
     await publishMcpServer(selectedServerId.value)
-    showFeedback('success', 'MCP server published.')
+    showFeedback('success', 'MCP 服务已发布。')
     await refreshAll()
   } catch (error) {
-    showFeedback('error', getErrorMessage(error, 'Failed to publish MCP server.'))
+    showFeedback('error', getErrorMessage(error, '发布 MCP 服务失败。'))
   } finally {
     actionLoading.value = false
   }
@@ -313,10 +349,10 @@ async function handleOffline() {
   actionLoading.value = true
   try {
     await offlineMcpServer(selectedServerId.value)
-    showFeedback('success', 'MCP server offline.')
+    showFeedback('success', 'MCP 服务已下线。')
     await refreshAll()
   } catch (error) {
-    showFeedback('error', getErrorMessage(error, 'Failed to offline MCP server.'))
+    showFeedback('error', getErrorMessage(error, '下线 MCP 服务失败。'))
   } finally {
     actionLoading.value = false
   }
@@ -324,7 +360,7 @@ async function handleOffline() {
 
 async function handleDebug() {
   if (!selectedServerId.value) {
-    showFeedback('info', 'Select or create an MCP server first.')
+    showFeedback('info', '请先选择或创建一个 MCP 服务。')
     return
   }
   actionLoading.value = true
@@ -336,9 +372,9 @@ async function handleDebug() {
     })
     await loadLogs()
     await refreshAll()
-    showFeedback('success', 'MCP debug finished.')
+    showFeedback('success', 'MCP 调试已完成。')
   } catch (error) {
-    showFeedback('error', getErrorMessage(error, 'Failed to debug MCP server.'))
+    showFeedback('error', getErrorMessage(error, '调试 MCP 服务失败。'))
   } finally {
     actionLoading.value = false
   }
@@ -363,24 +399,24 @@ onMounted(async () => {
       <article class="panel-card hero-panel">
         <div class="hero-panel__head">
           <div>
-            <p class="section-kicker">MCP Registry</p>
-            <h2>MCP Service Console</h2>
-            <p class="hero-panel__summary">Manage builtin and remote MCP servers, runtime configuration, debug records, publish state, and agent-ready service bindings.</p>
+            <p class="section-kicker">MCP 注册中心</p>
+            <h2>MCP 服务管理台</h2>
+            <p class="hero-panel__summary">统一管理内置与远程 MCP 服务、运行配置、调试记录、发布状态以及面向智能体的服务绑定。</p>
           </div>
           <div class="toolbar-actions">
-            <button class="app-button app-button--secondary" type="button" @click="resetForm">New Server</button>
+            <button class="app-button app-button--secondary" type="button" @click="resetForm">新建服务</button>
             <button class="app-button" type="button" :disabled="saving" @click="handleSave">
-              {{ saving ? 'Saving...' : 'Save Server' }}
+              {{ saving ? '保存中...' : '保存服务' }}
             </button>
           </div>
         </div>
 
         <div class="stats-strip">
-          <div class="metric-card"><span>Total</span><strong>{{ stats.totalCount }}</strong></div>
-          <div class="metric-card"><span>Enabled</span><strong>{{ stats.enabledCount }}</strong></div>
-          <div class="metric-card"><span>Published</span><strong>{{ stats.publishedCount }}</strong></div>
-          <div class="metric-card"><span>Remote</span><strong>{{ stats.remoteCount }}</strong></div>
-          <div class="metric-card"><span>Logs</span><strong>{{ stats.totalLogCount }}</strong></div>
+          <div class="metric-card"><span>服务总数</span><strong>{{ stats.totalCount }}</strong></div>
+          <div class="metric-card"><span>启用数量</span><strong>{{ stats.enabledCount }}</strong></div>
+          <div class="metric-card"><span>已发布</span><strong>{{ stats.publishedCount }}</strong></div>
+          <div class="metric-card"><span>远程服务</span><strong>{{ stats.remoteCount }}</strong></div>
+          <div class="metric-card"><span>日志总数</span><strong>{{ stats.totalLogCount }}</strong></div>
         </div>
       </article>
 
@@ -388,28 +424,28 @@ onMounted(async () => {
         <article class="panel-card section-panel section-panel--sidebar">
           <div class="section-panel__head">
             <div>
-              <h3>Server Catalog</h3>
-              <p>Filter by status, publish state, and service type.</p>
+              <h3>服务目录</h3>
+              <p>按状态、发布情况和服务类型筛选。</p>
             </div>
           </div>
 
           <div class="filter-grid">
-            <input v-model="filters.keyword" class="app-input" type="text" placeholder="Search code, name, builtin key" />
+            <input v-model="filters.keyword" class="app-input" type="text" placeholder="搜索编码、名称、内置标识" />
             <select v-model="filters.serverStatus" class="app-select">
-              <option value="ALL">All status</option>
-              <option value="ENABLED">ENABLED</option>
-              <option value="DISABLED">DISABLED</option>
+              <option value="ALL">全部状态</option>
+              <option value="ENABLED">启用</option>
+              <option value="DISABLED">停用</option>
             </select>
             <select v-model="filters.publishStatus" class="app-select">
-              <option value="ALL">All publish state</option>
-              <option value="DRAFT">DRAFT</option>
-              <option value="PUBLISHED">PUBLISHED</option>
-              <option value="OFFLINE">OFFLINE</option>
+              <option value="ALL">全部发布状态</option>
+              <option value="DRAFT">草稿</option>
+              <option value="PUBLISHED">已发布</option>
+              <option value="OFFLINE">已下线</option>
             </select>
             <select v-model="filters.serverType" class="app-select">
-              <option value="ALL">All types</option>
-              <option value="BUILTIN">BUILTIN</option>
-              <option value="REMOTE">REMOTE</option>
+              <option value="ALL">全部类型</option>
+              <option value="BUILTIN">内置</option>
+              <option value="REMOTE">远程</option>
             </select>
           </div>
 
@@ -425,8 +461,8 @@ onMounted(async () => {
             </button>
           </div>
 
-          <div v-if="loading" class="empty-state">Loading...</div>
-          <div v-else-if="filteredServers.length === 0" class="empty-state">No MCP server data.</div>
+          <div v-if="loading" class="empty-state">加载中...</div>
+          <div v-else-if="filteredServers.length === 0" class="empty-state">暂无 MCP 服务数据。</div>
           <div v-else class="server-list">
             <button
               v-for="item in filteredServers"
@@ -438,7 +474,7 @@ onMounted(async () => {
             >
               <strong>{{ item.serverName }}</strong>
               <span>{{ item.serverCode }}</span>
-              <small>{{ item.serverType }} / {{ item.publishStatus }} / {{ item.transportType }}</small>
+              <small>{{ formatServerType(item.serverType) }} / {{ formatPublishStatus(item.publishStatus) }} / {{ formatTransportType(item.transportType) }}</small>
             </button>
           </div>
         </article>
@@ -446,85 +482,85 @@ onMounted(async () => {
         <article class="panel-card section-panel">
           <div class="section-panel__head">
             <div>
-              <h3>Server Config</h3>
-              <p>{{ selectedServer ? `${selectedServer.serverName} / ${selectedServer.serverCode}` : 'Create a new MCP server definition' }}</p>
+              <h3>服务配置</h3>
+              <p>{{ selectedServer ? `${selectedServer.serverName} / ${selectedServer.serverCode}` : '创建新的 MCP 服务定义' }}</p>
             </div>
             <div class="toolbar-actions">
-              <button class="app-button app-button--secondary" type="button" :disabled="!selectedServerId" @click="handlePublish">Publish</button>
-              <button class="app-button app-button--secondary" type="button" :disabled="!selectedServerId" @click="handleOffline">Offline</button>
-              <button class="app-button app-button--secondary" type="button" :disabled="!selectedServerId || actionLoading" @click="handleDelete">Delete</button>
+              <button class="app-button app-button--secondary" type="button" :disabled="!selectedServerId" @click="handlePublish">发布</button>
+              <button class="app-button app-button--secondary" type="button" :disabled="!selectedServerId" @click="handleOffline">下线</button>
+              <button class="app-button app-button--secondary" type="button" :disabled="!selectedServerId || actionLoading" @click="handleDelete">删除</button>
             </div>
           </div>
 
           <div class="form-grid form-grid--double">
-            <label class="field"><span class="field__label">Server Code</span><input v-model="form.serverCode" class="app-input" type="text" /></label>
-            <label class="field"><span class="field__label">Server Name</span><input v-model="form.serverName" class="app-input" type="text" /></label>
-            <label class="field"><span class="field__label">Server Type</span><select v-model="form.serverType" class="app-select"><option>BUILTIN</option><option>REMOTE</option></select></label>
-            <label class="field"><span class="field__label">Transport</span><select v-model="form.transportType" class="app-select"><option>STDIO</option><option>SSE</option><option>STREAMABLE_HTTP</option></select></label>
-            <label class="field"><span class="field__label">Server Status</span><select v-model="form.serverStatus" class="app-select"><option>ENABLED</option><option>DISABLED</option></select></label>
-            <label class="field"><span class="field__label">Risk Level</span><select v-model="form.riskLevel" class="app-select"><option>LOW</option><option>MEDIUM</option><option>HIGH</option></select></label>
-            <label class="field"><span class="field__label">Timeout Ms</span><input v-model.number="form.timeoutMs" class="app-input" type="number" /></label>
-            <label class="field"><span class="field__label">Sort Weight</span><input v-model.number="form.sortWeight" class="app-input" type="number" /></label>
-            <label class="field"><span class="field__label">Builtin Key</span><input v-model="form.builtinServerKey" class="app-input" type="text" /></label>
-            <label class="field"><span class="field__label">Endpoint URL</span><input v-model="form.endpointUrl" class="app-input" type="text" /></label>
+            <label class="field"><span class="field__label">服务编码</span><input v-model="form.serverCode" class="app-input" type="text" /></label>
+            <label class="field"><span class="field__label">服务名称</span><input v-model="form.serverName" class="app-input" type="text" /></label>
+            <label class="field"><span class="field__label">服务类型</span><select v-model="form.serverType" class="app-select"><option value="BUILTIN">内置</option><option value="REMOTE">远程</option></select></label>
+            <label class="field"><span class="field__label">传输方式</span><select v-model="form.transportType" class="app-select"><option value="STDIO">STDIO</option><option value="SSE">SSE</option><option value="STREAMABLE_HTTP">流式 HTTP</option></select></label>
+            <label class="field"><span class="field__label">服务状态</span><select v-model="form.serverStatus" class="app-select"><option value="ENABLED">启用</option><option value="DISABLED">停用</option></select></label>
+            <label class="field"><span class="field__label">风险等级</span><select v-model="form.riskLevel" class="app-select"><option value="LOW">低</option><option value="MEDIUM">中</option><option value="HIGH">高</option></select></label>
+            <label class="field"><span class="field__label">超时时间（毫秒）</span><input v-model.number="form.timeoutMs" class="app-input" type="number" /></label>
+            <label class="field"><span class="field__label">排序权重</span><input v-model.number="form.sortWeight" class="app-input" type="number" /></label>
+            <label class="field"><span class="field__label">内置标识</span><input v-model="form.builtinServerKey" class="app-input" type="text" /></label>
+            <label class="field"><span class="field__label">接口地址</span><input v-model="form.endpointUrl" class="app-input" type="text" /></label>
           </div>
 
-          <label class="field"><span class="field__label">Description</span><textarea v-model="form.description" class="app-textarea" rows="3" /></label>
-          <label class="field"><span class="field__label">Tags</span><input v-model="form.tagsText" class="app-input" type="text" placeholder="database, weather, builtin" /></label>
-          <label class="field"><span class="field__label">Tool Prompt Hint</span><textarea v-model="form.toolPromptHint" class="app-textarea" rows="4" placeholder="Describe tool scope, guardrails, and intended usage." /></label>
-          <label class="field field--inline"><span class="field__label">Auth Required</span><input v-model="form.authRequired" type="checkbox" :true-value="1" :false-value="0" /></label>
+          <label class="field"><span class="field__label">服务描述</span><textarea v-model="form.description" class="app-textarea" rows="3" /></label>
+          <label class="field"><span class="field__label">标签</span><input v-model="form.tagsText" class="app-input" type="text" placeholder="database, weather, builtin" /></label>
+          <label class="field"><span class="field__label">工具提示词说明</span><textarea v-model="form.toolPromptHint" class="app-textarea" rows="4" placeholder="描述工具能力边界、限制条件和推荐使用方式。" /></label>
+          <label class="field field--inline"><span class="field__label">需要鉴权</span><input v-model="form.authRequired" type="checkbox" :true-value="1" :false-value="0" /></label>
 
           <div class="form-grid form-grid--double">
-            <label class="field"><span class="field__label">Runtime Config JSON</span><textarea v-model="form.runtimeConfigJson" class="app-textarea code-area" rows="9" /></label>
-            <label class="field"><span class="field__label">Auth Config JSON</span><textarea v-model="form.authConfigJson" class="app-textarea code-area" rows="9" /></label>
-            <label class="field"><span class="field__label">Test Payload JSON</span><textarea v-model="form.testPayloadJson" class="app-textarea code-area" rows="9" /></label>
+            <label class="field"><span class="field__label">运行配置 JSON</span><textarea v-model="form.runtimeConfigJson" class="app-textarea code-area" rows="9" /></label>
+            <label class="field"><span class="field__label">鉴权配置 JSON</span><textarea v-model="form.authConfigJson" class="app-textarea code-area" rows="9" /></label>
+            <label class="field"><span class="field__label">测试请求 JSON</span><textarea v-model="form.testPayloadJson" class="app-textarea code-area" rows="9" /></label>
             <div class="field field--meta">
-              <span class="field__label">Runtime Summary</span>
-              <strong>{{ selectedServer ? `logs ${selectedServer.logCount ?? 0} / ${selectedServer.publishStatus}` : 'No selection' }}</strong>
+              <span class="field__label">运行摘要</span>
+              <strong>{{ selectedServer ? `日志 ${selectedServer.logCount ?? 0} 条 / ${formatPublishStatus(selectedServer.publishStatus)}` : '尚未选择服务' }}</strong>
             </div>
           </div>
 
-          <label class="field"><span class="field__label">Remark</span><input v-model="form.remark" class="app-input" type="text" /></label>
+          <label class="field"><span class="field__label">备注</span><input v-model="form.remark" class="app-input" type="text" /></label>
 
           <div class="section-panel__sub">
             <div>
-              <h4>Online Debug</h4>
-              <p>Execute one debug call and persist request/response logs.</p>
+              <h4>在线调试</h4>
+              <p>执行一次调试调用，并保存请求与响应日志。</p>
             </div>
-            <button class="app-button app-button--secondary" type="button" :disabled="actionLoading" @click="handleDebug">Run Debug</button>
+            <button class="app-button app-button--secondary" type="button" :disabled="actionLoading" @click="handleDebug">执行调试</button>
           </div>
 
           <div class="form-grid form-grid--double">
-            <label class="field"><span class="field__label">Debug Source</span><select v-model="debugForm.sourceType" class="app-select"><option>DEBUG</option><option>RUNTIME</option></select></label>
+            <label class="field"><span class="field__label">调试来源</span><select v-model="debugForm.sourceType" class="app-select"><option value="DEBUG">调试</option><option value="RUNTIME">运行时</option></select></label>
             <div class="field field--meta">
-              <span class="field__label">Mounted Capability</span>
-              <strong>{{ selectedServer?.builtinServerKey || selectedServer?.serverType || 'Pending selection' }}</strong>
+              <span class="field__label">挂载能力</span>
+              <strong>{{ selectedServer?.builtinServerKey || (selectedServer?.serverType ? formatServerType(selectedServer.serverType) : '待选择服务') }}</strong>
             </div>
           </div>
-          <label class="field"><span class="field__label">Debug Request JSON</span><textarea v-model="debugForm.requestPayloadJson" class="app-textarea code-area" rows="8" /></label>
+          <label class="field"><span class="field__label">调试请求 JSON</span><textarea v-model="debugForm.requestPayloadJson" class="app-textarea code-area" rows="8" /></label>
           <pre v-if="debugResult" class="result-box">{{ JSON.stringify(debugResult, null, 2) }}</pre>
 
           <div class="section-panel__sub">
             <div>
-              <h4>Execution Logs</h4>
-              <p>Inspect debug and runtime invocation results.</p>
+              <h4>执行日志</h4>
+              <p>查看调试与运行时调用结果。</p>
             </div>
-            <button class="app-button app-button--secondary" type="button" @click="loadLogs">Refresh Logs</button>
+            <button class="app-button app-button--secondary" type="button" @click="loadLogs">刷新日志</button>
           </div>
 
           <div class="form-grid form-grid--double">
-            <label class="field"><span class="field__label">Source Type</span><input v-model="logQuery.sourceType" class="app-input" type="text" /></label>
-            <label class="field"><span class="field__label">Success Flag</span><select v-model="logQuery.successFlag" class="app-select"><option value="">All</option><option value="1">Success</option><option value="0">Failed</option></select></label>
+            <label class="field"><span class="field__label">来源类型</span><input v-model="logQuery.sourceType" class="app-input" type="text" /></label>
+            <label class="field"><span class="field__label">执行结果</span><select v-model="logQuery.successFlag" class="app-select"><option value="">全部</option><option value="1">成功</option><option value="0">失败</option></select></label>
           </div>
 
-          <div v-if="logs.length === 0" class="empty-state empty-state--compact">No logs yet.</div>
+          <div v-if="logs.length === 0" class="empty-state empty-state--compact">暂无日志。</div>
           <div v-else class="log-list">
             <article v-for="item in logs" :key="item.logId" class="log-card">
               <div class="log-card__head">
                 <strong>{{ item.toolName || item.serverName || item.serverCode }}</strong>
-                <span>{{ item.executeStatus }} / {{ formatTime(item.createTime) }}</span>
+                <span>{{ formatExecuteStatus(item.executeStatus) }} / {{ formatTime(item.createTime) }}</span>
               </div>
-              <p>{{ item.failureReason || 'Execution succeeded.' }}</p>
+              <p>{{ item.failureReason || '执行成功。' }}</p>
               <pre class="result-box">{{ item.responsePayloadJson || item.requestPayloadJson || '{}' }}</pre>
             </article>
           </div>
