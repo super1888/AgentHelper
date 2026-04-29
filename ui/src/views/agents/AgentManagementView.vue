@@ -7,10 +7,12 @@ import MainShell from '@/components/MainShell.vue'
 import { batchMigrateAgentModels, createAgent, createAgentSession, disableAgent, fetchAgentDetail, publishAgent, queryAgents, removeAgent, updateAgent } from '@/api/agent'
 import { queryEnabledModels } from '@/api/core'
 import { queryHooks } from '@/api/hook'
+import { queryMcpServers } from '@/api/mcp'
 import { queryPromptTemplates } from '@/api/prompt'
 import type { AgentCreatePayload, AgentDetail, AgentPromptConfig, AgentSessionResult, AgentSummary, AgentVersion } from '@/types/agent'
 import type { ModelOption } from '@/types/core'
 import type { HookItem } from '@/types/hook'
+import type { McpItem } from '@/types/mcp'
 import type { PromptTemplateItem, PromptTemplateVariable } from '@/types/prompt'
 import { getErrorMessage } from '@/utils/errors'
 
@@ -24,6 +26,7 @@ const loading = ref(false)
 const detailLoading = ref(false)
 const promptTemplatesLoading = ref(false)
 const hooksLoading = ref(false)
+const mcpLoading = ref(false)
 const modelsLoading = ref(false)
 const submitting = ref(false)
 const actionPending = ref<PendingAction>(null)
@@ -32,6 +35,7 @@ const feedbackTone = ref<'success' | 'error' | 'info'>('info')
 const agents = ref<AgentSummary[]>([])
 const promptTemplates = ref<PromptTemplateItem[]>([])
 const hooks = ref<HookItem[]>([])
+const mcpServers = ref<McpItem[]>([])
 const availableModels = ref<ModelOption[]>([])
 const selectedAgentId = ref('')
 const selectedAgentDetail = ref<AgentDetail | null>(null)
@@ -49,6 +53,7 @@ const form = reactive({
   description: '',
   selectedCapabilitiesText: 'knowledge_search, session_management, failover_recovery',
   selectedHookCodes: [] as string[],
+  selectedMcpServerIds: [] as string[],
   modelConfigCode: '',
   promptMode: 'template' as PromptMode,
   selectedPromptTemplateId: '',
@@ -84,6 +89,9 @@ const selectedPromptVariables = computed<PromptTemplateVariable[]>(() => selecte
 const capabilityPreview = computed(() => parseCapabilities(form.selectedCapabilitiesText))
 const availableHooks = computed(() =>
   hooks.value.filter((item) => item.hookStatus === 'ENABLED' && item.publishStatus === 'PUBLISHED'),
+)
+const availableMcpServers = computed(() =>
+  mcpServers.value.filter((item) => item.serverStatus === 'ENABLED' && item.publishStatus === 'PUBLISHED'),
 )
 const selectedModel = computed(() => availableModels.value.find((item) => item.modelCode === form.modelConfigCode) ?? null)
 const totalAgentsLabel = computed(() => `共 ${agents.value.length} 个智能体`)
@@ -123,6 +131,7 @@ function resetForm() {
   form.description = ''
   form.selectedCapabilitiesText = 'knowledge_search, session_management, failover_recovery'
   form.selectedHookCodes = []
+  form.selectedMcpServerIds = []
   form.modelConfigCode = availableModels.value.find((item) => item.defaultModel)?.modelCode ?? availableModels.value[0]?.modelCode ?? ''
   form.promptMode = 'template'
   form.selectedPromptTemplateId = promptTemplates.value[0] ? String(promptTemplates.value[0].id) : ''
@@ -158,6 +167,7 @@ function enterEditMode() {
   form.description = selectedAgentDetail.value.description ?? ''
   form.selectedCapabilitiesText = version.selectedCapabilities.join(', ')
   form.selectedHookCodes = [...(version.selectedHookCodes ?? [])]
+  form.selectedMcpServerIds = [...(version.selectedMcpServerIds ?? [])]
   form.modelConfigCode = version.modelCode || ''
   requestAnimationFrame(() => {
     formPanelRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -206,6 +216,7 @@ function buildPayload(): AgentCreatePayload {
     systemPrompt: form.promptMode === 'custom-inline' ? form.customPromptContent.trim() || null : null,
     selectedCapabilities: parseCapabilities(form.selectedCapabilitiesText),
     selectedHookCodes: [...form.selectedHookCodes],
+    selectedMcpServerIds: [...form.selectedMcpServerIds],
     modelConfigCode: form.modelConfigCode,
     agentType: 'REACT',
     promptConfig: buildPromptConfig(),
@@ -265,6 +276,17 @@ async function loadHooks() {
     setFeedback('error', getErrorMessage(error, '钩子列表加载失败。'))
   } finally {
     hooksLoading.value = false
+  }
+}
+
+async function loadMcpServers() {
+  mcpLoading.value = true
+  try {
+    mcpServers.value = await queryMcpServers()
+  } catch (error) {
+    setFeedback('error', getErrorMessage(error, 'MCP 服务列表加载失败。'))
+  } finally {
+    mcpLoading.value = false
   }
 }
 
@@ -471,7 +493,7 @@ async function handleBatchMigrateModel() {
 }
 
 onMounted(() => {
-  void Promise.all([loadAgents(), loadPromptTemplates(), loadHooks(), loadModels()])
+  void Promise.all([loadAgents(), loadPromptTemplates(), loadHooks(), loadMcpServers(), loadModels()])
 })
 </script>
 
@@ -626,6 +648,33 @@ onMounted(() => {
               </div>
             </section>
 
+            <section class="section-grid__full hook-panel">
+              <div class="section-head">
+                <div>
+                  <strong>MCP 绑定</strong>
+                  <p class="muted">仅展示已发布且启用的 MCP 服务，智能体运行时按版本快照挂载这些服务。</p>
+                </div>
+                <small class="muted">{{ mcpLoading ? '正在加载 MCP...' : `可选 ${availableMcpServers.length} 个` }}</small>
+              </div>
+              <div v-if="availableMcpServers.length === 0" class="empty empty--compact">暂无可绑定的 MCP 服务。</div>
+              <div v-else class="hook-grid">
+                <label
+                  v-for="server in availableMcpServers"
+                  :key="server.serverId"
+                  class="hook-card"
+                  :class="{ 'hook-card--active': form.selectedMcpServerIds.includes(String(server.serverId)) }"
+                >
+                  <input v-model="form.selectedMcpServerIds" type="checkbox" :value="String(server.serverId)" />
+                  <div class="hook-card__head">
+                    <strong>{{ server.serverName }}</strong>
+                    <span class="version-pill">{{ server.transportType }}</span>
+                  </div>
+                  <p class="muted">{{ server.description || server.serverCode }}</p>
+                  <small class="muted">类型：{{ server.serverType }} · 风险：{{ server.riskLevel }}</small>
+                </label>
+              </div>
+            </section>
+
             <label class="field section-grid__full">
               <span class="field__label">绑定模型</span>
               <select v-model="form.modelConfigCode" class="app-select" :disabled="modelsLoading">
@@ -647,6 +696,12 @@ onMounted(() => {
 
           <div v-if="form.selectedHookCodes.length > 0" class="chip-row">
             <span v-for="hookCode in form.selectedHookCodes" :key="hookCode" class="chip chip--hook">{{ hookCode }}</span>
+          </div>
+
+          <div v-if="form.selectedMcpServerIds.length > 0" class="chip-row">
+            <span v-for="serverId in form.selectedMcpServerIds" :key="serverId" class="chip chip--mcp">
+              {{ mcpServers.find((item) => String(item.serverId) === serverId)?.serverName || `MCP#${serverId}` }}
+            </span>
           </div>
 
           <button class="app-button full-width" :disabled="submitting" @click="handleSubmit">
@@ -783,6 +838,11 @@ onMounted(() => {
               <div v-if="version.selectedHookCodes?.length" class="chip-row">
                 <span v-for="hookCode in version.selectedHookCodes" :key="`${version.versionId}-${hookCode}`" class="chip chip--hook">
                   {{ hookCode }}
+                </span>
+              </div>
+              <div v-if="version.selectedMcpServerIds?.length" class="chip-row">
+                <span v-for="serverId in version.selectedMcpServerIds" :key="`${version.versionId}-${serverId}`" class="chip chip--mcp">
+                  {{ mcpServers.find((item) => String(item.serverId) === serverId)?.serverName || `MCP#${serverId}` }}
                 </span>
               </div>
               <p class="muted">模型绑定：{{ formatModelBinding(version) }}</p>
@@ -989,6 +1049,10 @@ onMounted(() => {
 .chip--hook {
   color: #ffe6b8;
   background: rgba(255, 176, 86, 0.16);
+}
+.chip--mcp {
+  color: #d8fff6;
+  background: rgba(72, 201, 176, 0.18);
 }
 .status-pill--published,
 .version-pill {

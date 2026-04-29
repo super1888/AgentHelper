@@ -10,6 +10,7 @@ import {
   GitBranch,
   Image,
   LogOut,
+  PlugZap,
   ShieldCheck,
   Sparkles,
   Users,
@@ -66,6 +67,13 @@ const navItems = [
     description: '工具注册、调试、发布与风险控制',
     icon: Wrench,
     isActive: () => route.name === 'tools',
+  },
+  {
+    to: '/mcp',
+    label: 'MCP 管理',
+    description: 'MCP 目录、配置、调试、发布与日志审计',
+    icon: PlugZap,
+    isActive: () => route.name === 'mcp',
   },
   {
     to: '/hooks',

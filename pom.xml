@@ -59,6 +59,19 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter</artifactId>
+<!--            <exclusions>-->
+<!--                &lt;!&ndash; 排除自带的 logback → 让 slf4j-simple 生效 &ndash;&gt;-->
+<!--                <exclusion>-->
+<!--                    <groupId>ch.qos.logback</groupId>-->
+<!--                    <artifactId>logback-classic</artifactId>-->
+<!--                </exclusion>-->
+<!--            </exclusions>-->
+        </dependency>
+
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <scope>provided</scope> <!-- 或直接删除这个依赖 -->
         </dependency>
 
         <dependency>

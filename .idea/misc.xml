@@ -17,6 +17,7 @@
         <option value="$PROJECT_DIR$/core/pom.xml" />
         <option value="$PROJECT_DIR$/a2a/pom.xml" />
         <option value="$PROJECT_DIR$/Graph/pom.xml" />
+        <option value="$PROJECT_DIR$/mcp/pom.xml" />
       </list>
     </option>
     <option name="ignoredFiles">

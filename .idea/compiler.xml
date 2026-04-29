@@ -17,6 +17,7 @@
         <module name="common" />
         <module name="websocket" />
         <module name="vectorStore" />
+        <module name="mcp" />
         <module name="hooks" />
         <module name="prompt" />
         <module name="user" />
@@ -36,6 +37,7 @@
       <module name="graph" options="-parameters" />
       <module name="hooks" options="-parameters" />
       <module name="interceptors" options="-parameters" />
+      <module name="mcp" options="-parameters" />
       <module name="model" options="-parameters" />
       <module name="prompt" options="-parameters" />
       <module name="quickStart" options="-parameters" />

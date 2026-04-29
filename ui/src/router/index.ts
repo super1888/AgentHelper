@@ -82,6 +82,14 @@ const router = createRouter({
       },
     },
     {
+      path: '/mcp',
+      name: 'mcp',
+      component: () => import('@/views/mcp/McpManagementView.vue'),
+      meta: {
+        requiresAuth: true,
+      },
+    },
+    {
       path: '/hooks',
       name: 'hooks',
       component: () => import('@/views/hooks/HookManagementView.vue'),

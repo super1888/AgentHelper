@@ -34,6 +34,7 @@ export interface AgentVersion {
   systemPrompt: string | null
   selectedCapabilities: string[]
   selectedHookCodes: string[]
+  selectedMcpServerIds: string[]
   promptTemplateId?: string | null
   promptTemplateCode?: string | null
   promptTemplateName?: string | null
@@ -73,6 +74,7 @@ export interface AgentCreatePayload {
   systemPrompt: string | null
   selectedCapabilities: string[]
   selectedHookCodes: string[]
+  selectedMcpServerIds: string[]
   agentType?: string
   promptConfig?: AgentPromptConfig | null
   modelConfigCode: string
@@ -84,6 +86,7 @@ export interface AgentCreateResult {
   description: string | null
   selectedCapabilities: string[]
   selectedHookCodes: string[]
+  selectedMcpServerIds: string[]
   currentVersionNo: number | null
   publishedVersionNo: number | null
   websocketEndpoint: string

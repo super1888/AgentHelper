@@ -1093,6 +1093,80 @@ CREATE TABLE `tool_record`  (
 -- ----------------------------
 -- Table structure for vector_store_file
 -- ----------------------------
+-- ----------------------------
+-- Table structure for mcp_execution_log_record
+-- ----------------------------
+DROP TABLE IF EXISTS `mcp_execution_log_record`;
+CREATE TABLE `mcp_execution_log_record`  (
+  `id` bigint(0) NOT NULL COMMENT '主键ID',
+  `server_id` bigint(0) NULL DEFAULT NULL COMMENT 'MCP服务ID',
+  `server_code` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT 'MCP服务编码',
+  `server_name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT 'MCP服务名称',
+  `tool_name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '调用工具名称',
+  `tenant_id` bigint(0) NOT NULL COMMENT '租户ID',
+  `source_type` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '日志来源 DEBUG/RUNTIME',
+  `request_payload_json` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '请求快照 JSON',
+  `response_payload_json` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '响应快照 JSON',
+  `execute_status` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '执行状态 SUCCESS/FAILED',
+  `success_flag` tinyint(0) NOT NULL DEFAULT 0 COMMENT '是否成功 1-是 0-否',
+  `elapsed_ms` bigint(0) NULL DEFAULT NULL COMMENT '耗时毫秒',
+  `failure_reason` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '失败原因',
+  `operator_user_id` bigint(0) NULL DEFAULT NULL COMMENT '操作人ID',
+  `operator_user_name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '操作人名称',
+  `ext` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '扩展字段',
+  `remark` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '备注',
+  `create_id` bigint(0) NULL DEFAULT NULL COMMENT '创建人ID',
+  `create_name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '创建人名称',
+  `create_time` datetime(0) NULL DEFAULT NULL COMMENT '创建时间',
+  `update_id` bigint(0) NULL DEFAULT NULL COMMENT '更新人ID',
+  `update_name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '更新人名称',
+  `update_time` datetime(0) NULL DEFAULT NULL COMMENT '更新时间',
+  `version` int(0) NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_mcp_execution_log_server`(`tenant_id`, `server_id`) USING BTREE,
+  INDEX `idx_mcp_execution_log_source`(`tenant_id`, `source_type`) USING BTREE,
+  INDEX `idx_mcp_execution_log_success`(`tenant_id`, `success_flag`) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'MCP执行日志表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for mcp_server_record
+-- ----------------------------
+DROP TABLE IF EXISTS `mcp_server_record`;
+CREATE TABLE `mcp_server_record`  (
+  `id` bigint(0) NOT NULL COMMENT '主键ID',
+  `server_code` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'MCP服务编码',
+  `server_name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'MCP服务名称',
+  `description` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT 'MCP服务描述',
+  `server_type` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '服务类型 BUILTIN/REMOTE',
+  `transport_type` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '传输协议 STDIO/SSE/STREAMABLE_HTTP',
+  `server_status` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'ENABLED' COMMENT '服务状态 ENABLED/DISABLED',
+  `publish_status` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'DRAFT' COMMENT '发布状态 DRAFT/PUBLISHED/OFFLINE',
+  `risk_level` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'LOW' COMMENT '风险等级 LOW/MEDIUM/HIGH',
+  `sort_weight` int(0) NOT NULL DEFAULT 0 COMMENT '排序权重',
+  `timeout_ms` int(0) NOT NULL DEFAULT 15000 COMMENT '超时毫秒',
+  `auth_required` tinyint(0) NOT NULL DEFAULT 0 COMMENT '是否需要认证 1-是 0-否',
+  `builtin_server_key` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '内置MCP标识',
+  `endpoint_url` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '远程MCP地址',
+  `deleted_flag` tinyint(0) NOT NULL DEFAULT 0 COMMENT '逻辑删除标记 0-否 1-是',
+  `tenant_id` bigint(0) NOT NULL COMMENT '租户ID',
+  `owner_user_id` bigint(0) NOT NULL COMMENT '负责人用户ID',
+  `owner_user_name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '负责人用户名称',
+  `ext` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT 'MCP扩展配置 JSON',
+  `remark` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '备注',
+  `create_id` bigint(0) NULL DEFAULT NULL COMMENT '创建人ID',
+  `create_name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '创建人名称',
+  `create_time` datetime(0) NULL DEFAULT NULL COMMENT '创建时间',
+  `update_id` bigint(0) NULL DEFAULT NULL COMMENT '更新人ID',
+  `update_name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '更新人名称',
+  `update_time` datetime(0) NULL DEFAULT NULL COMMENT '更新时间',
+  `version` int(0) NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_mcp_server_record_code`(`tenant_id`, `server_code`) USING BTREE,
+  INDEX `idx_mcp_server_record_status`(`tenant_id`, `server_status`) USING BTREE,
+  INDEX `idx_mcp_server_record_publish`(`tenant_id`, `publish_status`) USING BTREE,
+  INDEX `idx_mcp_server_record_deleted`(`tenant_id`, `deleted_flag`) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'MCP服务管理主表' ROW_FORMAT = Dynamic;
+
 DROP TABLE IF EXISTS `vector_store_file`;
 CREATE TABLE `vector_store_file`  (
   `id` bigint(0) NOT NULL COMMENT '主键ID',
