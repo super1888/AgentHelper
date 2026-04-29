@@ -24,6 +24,8 @@ public class SimpleAgentVersionResponse {
 
     List<String> selectedHookCodes;
 
+    List<String> selectedMcpServerIds;
+
     String promptTemplateId;
 
     String promptTemplateCode;

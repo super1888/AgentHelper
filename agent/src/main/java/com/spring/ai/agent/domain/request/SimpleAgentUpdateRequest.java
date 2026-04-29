@@ -17,6 +17,8 @@ public class SimpleAgentUpdateRequest {
 
     private List<String> selectedHookCodes;
 
+    private List<String> selectedMcpServerIds;
+
     private SimpleAgentPromptConfigDTO promptConfig;
 
     private String modelConfigCode;

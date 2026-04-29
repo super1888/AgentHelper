@@ -14,6 +14,7 @@ import com.spring.ai.common.exception.BusinessException;
 import com.spring.ai.common.repository.enitiy.Agent;
 import com.spring.ai.common.repository.enitiy.AgentVersion;
 import com.spring.ai.core.application.manager.CoreApplicationManager;
+import com.spring.ai.mcp.application.manager.McpRuntimeManager;
 import com.spring.ai.prompt.domain.dto.PromptTemplateEnterpriseConfigDTO;
 import jakarta.annotation.Resource;
 import java.util.List;
@@ -41,6 +42,9 @@ public class SimpleAgentRuntimeManager {
     @Resource
     private CoreApplicationManager coreApplicationManager;
 
+    @Resource
+    private McpRuntimeManager mcpRuntimeManager;
+
     public ReactAgent getOrCreate(Agent agent, AgentVersion version) {
         StoredSimpleAgent storedSimpleAgent = simpleAgentRegistry.get(version.getId());
         if (storedSimpleAgent != null) {
@@ -55,6 +59,7 @@ public class SimpleAgentRuntimeManager {
                 .description(buildDescription(config))
                 .instruction(buildInstruction(config))
                 .model(resolveChatModel(modelBinding))
+                .tools(mcpRuntimeManager.resolveToolCallbacks(config.getSelectedMcpServerIds()))
                 .enableLogging(Boolean.FALSE)
                 .build();
 

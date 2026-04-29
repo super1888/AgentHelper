@@ -33,6 +33,7 @@ import com.spring.ai.common.repository.service.AgentVersionService;
 import com.spring.ai.common.web.CurrentUserContextSupport;
 import com.spring.ai.core.application.manager.CoreApplicationManager;
 import com.spring.ai.core.domain.response.ModelOptionResponse;
+import com.spring.ai.mcp.application.manager.McpRuntimeManager;
 import com.spring.ai.prompt.application.manager.PromptTemplateResolver;
 import com.spring.ai.prompt.config.PromptTemplateConstants;
 import com.spring.ai.prompt.domain.dto.PromptTemplateBindDTO;
@@ -75,6 +76,9 @@ public class SimpleAgentApplicationManager {
     @Resource
     private CoreApplicationManager coreApplicationManager;
 
+    @Resource
+    private McpRuntimeManager mcpRuntimeManager;
+
     public List<SimpleAgentSummaryResponse> listAgents() {
         return listAgents(null);
     }
@@ -116,6 +120,7 @@ public class SimpleAgentApplicationManager {
                     .systemPrompt(currentConfig.getSystemPrompt())
                     .selectedCapabilities(currentConfig.getSelectedCapabilities())
                     .selectedHookCodes(currentConfig.getSelectedHookCodes())
+                    .selectedMcpServerIds(currentConfig.getSelectedMcpServerIds())
                     .promptConfig(currentConfig.getPromptConfig())
                     .modelBinding(targetBinding)
                     .build();
@@ -162,6 +167,7 @@ public class SimpleAgentApplicationManager {
                 request.getSystemPrompt(),
                 request.getSelectedCapabilities(),
                 request.getSelectedHookCodes(),
+                request.getSelectedMcpServerIds(),
                 request.getPromptConfig(),
                 request.getModelConfigCode()
         );
@@ -172,7 +178,8 @@ public class SimpleAgentApplicationManager {
                 agent,
                 version,
                 request.getSelectedCapabilities(),
-                request.getSelectedHookCodes()
+                request.getSelectedHookCodes(),
+                request.getSelectedMcpServerIds()
         );
     }
 
@@ -188,6 +195,7 @@ public class SimpleAgentApplicationManager {
                 request.getSystemPrompt(),
                 request.getSelectedCapabilities(),
                 request.getSelectedHookCodes(),
+                request.getSelectedMcpServerIds(),
                 request.getPromptConfig(),
                 request.getModelConfigCode()
         );
@@ -202,7 +210,8 @@ public class SimpleAgentApplicationManager {
                 agent,
                 version,
                 request.getSelectedCapabilities(),
-                request.getSelectedHookCodes()
+                request.getSelectedHookCodes(),
+                request.getSelectedMcpServerIds()
         );
     }
 
@@ -320,12 +329,14 @@ public class SimpleAgentApplicationManager {
             String systemPrompt,
             List<String> selectedCapabilities,
             List<String> selectedHookCodes,
+            List<String> selectedMcpServerIds,
             SimpleAgentPromptConfigDTO promptConfig,
             String modelConfigCode
     ) {
         int nextVersionNo = agent.getLatestVersionNo() == null ? 1 : agent.getLatestVersionNo() + 1;
         List<String> capabilities = SimpleAgentAssembler.normalizeCapabilities(selectedCapabilities);
         List<String> hookCodes = SimpleAgentAssembler.normalizeHookCodes(selectedHookCodes);
+        List<String> mcpServerIds = SimpleAgentAssembler.normalizeBindingIds(selectedMcpServerIds);
         PromptTemplateResolvedDTO promptResolved = resolvePromptConfig(promptConfig, systemPrompt);
         SimpleAgentModelBindingDTO modelBinding = resolveModelBinding(modelConfigCode);
         SimpleAgentVersionConfigDTO config = SimpleAgentAssembler.toVersionConfig(
@@ -334,6 +345,7 @@ public class SimpleAgentApplicationManager {
                 promptResolved.getEffectiveSystemPrompt(),
                 capabilities,
                 hookCodes,
+                mcpServerIds,
                 toAgentPromptConfig(promptResolved, promptConfig),
                 modelBinding
         );
@@ -473,6 +485,7 @@ public class SimpleAgentApplicationManager {
         if (request == null || !StringUtils.hasText(request.getModelConfigCode())) {
             throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "智能体必须绑定模型配置");
         }
+        mcpRuntimeManager.validateSelectedServers(request.getSelectedMcpServerIds());
     }
 
     private void validateUpdateRequest(SimpleAgentUpdateRequest request) {
@@ -482,6 +495,7 @@ public class SimpleAgentApplicationManager {
         if (request == null || !StringUtils.hasText(request.getModelConfigCode())) {
             throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "智能体必须绑定模型配置");
         }
+        mcpRuntimeManager.validateSelectedServers(request.getSelectedMcpServerIds());
     }
 
     private String resolveAgentType(String agentType) {

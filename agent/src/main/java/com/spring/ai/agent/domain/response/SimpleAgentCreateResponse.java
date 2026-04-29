@@ -37,6 +37,11 @@ public class SimpleAgentCreateResponse {
     List<String> selectedHookCodes;
 
     /**
+     * 当前版本快照绑定的 MCP 服务主键列表。
+     */
+    List<String> selectedMcpServerIds;
+
+    /**
      * 当前版本号。
      */
     Integer currentVersionNo;

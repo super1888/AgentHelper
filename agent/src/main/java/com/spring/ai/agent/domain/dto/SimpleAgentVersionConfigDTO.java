@@ -22,6 +22,8 @@ public class SimpleAgentVersionConfigDTO {
 
     private List<String> selectedHookCodes;
 
+    private List<String> selectedMcpServerIds;
+
     private SimpleAgentPromptConfigDTO promptConfig;
 
     private SimpleAgentModelBindingDTO modelBinding;

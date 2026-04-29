@@ -17,6 +17,8 @@ public class SimpleAgentCreateRequest {
 
     private List<String> selectedHookCodes;
 
+    private List<String> selectedMcpServerIds;
+
     private String agentType;
 
     private SimpleAgentPromptConfigDTO promptConfig;

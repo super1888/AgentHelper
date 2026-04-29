@@ -70,6 +70,7 @@ public final class SimpleAgentAssembler {
             String systemPrompt,
             List<String> selectedCapabilities,
             List<String> selectedHookCodes,
+            List<String> selectedMcpServerIds,
             SimpleAgentPromptConfigDTO promptConfig,
             SimpleAgentModelBindingDTO modelBinding
     ) {
@@ -79,6 +80,7 @@ public final class SimpleAgentAssembler {
                 .systemPrompt(trimToNull(systemPrompt))
                 .selectedCapabilities(normalizeCapabilities(selectedCapabilities))
                 .selectedHookCodes(normalizeHookCodes(selectedHookCodes))
+                .selectedMcpServerIds(normalizeBindingIds(selectedMcpServerIds))
                 .promptConfig(promptConfig)
                 .modelBinding(modelBinding)
                 .build();
@@ -168,7 +170,8 @@ public final class SimpleAgentAssembler {
             Agent agent,
             AgentVersion version,
             List<String> selectedCapabilities,
-            List<String> selectedHookCodes
+            List<String> selectedHookCodes,
+            List<String> selectedMcpServerIds
     ) {
         return SimpleAgentCreateResponse.builder()
                 .agentId(agent.getAgentCode())
@@ -176,6 +179,7 @@ public final class SimpleAgentAssembler {
                 .description(agent.getDescription())
                 .selectedCapabilities(normalizeCapabilities(selectedCapabilities))
                 .selectedHookCodes(normalizeHookCodes(selectedHookCodes))
+                .selectedMcpServerIds(normalizeBindingIds(selectedMcpServerIds))
                 .currentVersionNo(version.getVersionNo())
                 .publishedVersionNo(agent.getPublishedVersionNo())
                 .websocketEndpoint("/ws")
@@ -238,6 +242,7 @@ public final class SimpleAgentAssembler {
                 .systemPrompt(version.getSystemPrompt())
                 .selectedCapabilities(normalizeCapabilities(selectedCapabilities))
                 .selectedHookCodes(normalizeHookCodes(config == null ? null : config.getSelectedHookCodes()))
+                .selectedMcpServerIds(normalizeBindingIds(config == null ? null : config.getSelectedMcpServerIds()))
                 .promptTemplateId(promptConfig == null ? null : promptConfig.getPromptTemplateId())
                 .promptTemplateCode(promptConfig == null ? null : promptConfig.getPromptTemplateCode())
                 .promptTemplateName(promptConfig == null ? null : promptConfig.getPromptTemplateName())
@@ -343,6 +348,17 @@ public final class SimpleAgentAssembler {
             return List.of();
         }
         return selectedHookCodes.stream()
+                .filter(StringUtils::hasText)
+                .map(String::trim)
+                .distinct()
+                .toList();
+    }
+
+    public static List<String> normalizeBindingIds(List<String> bindingIds) {
+        if (CollectionUtils.isEmpty(bindingIds)) {
+            return List.of();
+        }
+        return bindingIds.stream()
                 .filter(StringUtils::hasText)
                 .map(String::trim)
                 .distinct()
