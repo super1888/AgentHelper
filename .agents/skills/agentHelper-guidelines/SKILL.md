@@ -27,6 +27,10 @@ This is a multi-module Maven project.
 - Put general reusable code in `common`
 - Put business-specific code in the matching business module
 - Do not dump everything into `quickStart` just to save time
+- If logic is reusable string/data processing, move it into `common` utilities instead of leaving it inside manager/controller classes
+- If code is only responsible for assembling response objects, place it in the module `application/assmbler` package
+- For custom agent flows in the `agent` module, keep `ApplicationManager` focused on orchestration and move stage-specific logic into dedicated services
+- For custom agent internal step data, use explicit DTO classes in `agent/domain/dto` rather than private inner classes in manager files
 
 ## Backend Rules
 
@@ -44,12 +48,15 @@ This is a multi-module Maven project.
 - Do not duplicate `/agentHelper` in controller mappings
 - Prefer dedicated response classes over raw `Map`
 - Reuse existing response and exception styles when possible
+- For built-in custom agents that do not require users to create agent records manually, expose dedicated endpoints under module-owned controllers instead of forcing them through the generic simple-agent creation flow
 
 ## Page Rules
 
 - Use Vue 3 for frontend work
 - Keep page style consistent, clear, and production-ready
 - Use real request paths with the `/agentHelper/...` prefix
+- When adding built-in custom agent capabilities, prefer embedding them into the existing management page as a dedicated panel/window before creating a new standalone route
+- If the backend supports per-stage model selection, the UI should expose stage-level model pickers and clearly show which model each stage actually used
 
 ## Style Rules
 
@@ -84,6 +91,8 @@ Do not add meaningless comments.
 - Keep request parameters clear
 - Keep response structure stable
 - Error messages must be readable and actionable
+- For multi-stage custom agent flows, return structured stage results so the frontend can render stage name, status, model binding, summary, issues, and output content
+- For stage-level model overrides, keep a default model field and let unset stages fall back to that default model
 
 ## Validation Rules
 
@@ -95,6 +104,8 @@ Before submitting, confirm:
 4. Empty, failed, and boundary states are handled
 5. No obvious dead code or unimplemented logic remains
 6. If it cannot compile, state the blocking reason clearly
+7. If adding custom agent orchestration, confirm manager/service/assembler responsibilities are separated cleanly
+8. If extracting common helpers or DTOs, confirm package ownership is coherent and no avoidable coupling is introduced
 
 ## Current Stack
 
