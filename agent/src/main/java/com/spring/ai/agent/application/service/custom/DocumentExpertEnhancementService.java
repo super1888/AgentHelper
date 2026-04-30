@@ -56,7 +56,7 @@ public class DocumentExpertEnhancementService {
                 """.formatted(autoFillMissingInfo, userPrompt);
 
         EnhancementResultDTO result = documentExpertModelSupportService.parseJsonOrNull(
-                documentExpertLlmInvokeService.call(chatClient, prompt),
+                documentExpertLlmInvokeService.call(chatClient, prompt, "提示词增强", "当前阶段模型"),
                 EnhancementResultDTO.class
         );
         if (result == null) {

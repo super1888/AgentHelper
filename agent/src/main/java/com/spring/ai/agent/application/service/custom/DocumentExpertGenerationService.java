@@ -38,7 +38,7 @@ public class DocumentExpertGenerationService {
                 """.formatted(enhancementResult.getStructuredInstruction());
         return new GenerationResultDTO(
                 "已生成正式结构化版本文档。",
-                documentExpertLlmInvokeService.callByModelCode(modelCode, prompt)
+                documentExpertLlmInvokeService.callByModelCode(modelCode, prompt, "双文档生成-A")
         );
     }
 
@@ -63,7 +63,7 @@ public class DocumentExpertGenerationService {
                 """.formatted(enhancementResult.getStructuredInstruction());
         return new GenerationResultDTO(
                 "已生成通俗精简版本文档。",
-                documentExpertLlmInvokeService.callByModelCode(modelCode, prompt)
+                documentExpertLlmInvokeService.callByModelCode(modelCode, prompt, "双文档生成-B")
         );
     }
 }

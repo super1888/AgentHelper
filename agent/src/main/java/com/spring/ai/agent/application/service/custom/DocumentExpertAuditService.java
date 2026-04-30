@@ -77,7 +77,7 @@ public class DocumentExpertAuditService {
         );
 
         AuditResultDTO result = documentExpertModelSupportService.parseJsonOrNull(
-                documentExpertLlmInvokeService.call(chatClient, prompt),
+                documentExpertLlmInvokeService.call(chatClient, prompt, "文档审核", "当前阶段模型"),
                 AuditResultDTO.class
         );
         if (result == null) {

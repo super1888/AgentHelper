@@ -5,6 +5,7 @@ import com.spring.ai.agent.application.service.custom.DocumentExpertAuditService
 import com.spring.ai.agent.application.service.custom.DocumentExpertEnhancementService;
 import com.spring.ai.agent.application.service.custom.DocumentExpertFusionService;
 import com.spring.ai.agent.application.service.custom.DocumentExpertGenerationService;
+import com.spring.ai.agent.application.service.custom.DocumentExpertLlmInvokeService;
 import com.spring.ai.agent.application.service.custom.DocumentExpertModelSupportService;
 import com.spring.ai.agent.application.service.custom.DocumentExpertRoutingService;
 import com.spring.ai.agent.domain.dto.AccessDecisionDTO;
@@ -53,6 +54,9 @@ public class CustomAgentApplicationManager {
     private DocumentExpertGenerationService documentExpertGenerationService;
 
     @Resource
+    private DocumentExpertLlmInvokeService documentExpertLlmInvokeService;
+
+    @Resource
     private DocumentExpertAuditService documentExpertAuditService;
 
     @Resource
@@ -87,7 +91,11 @@ public class CustomAgentApplicationManager {
         ChatClient auditChatClient = documentExpertModelSupportService.createChatClient(stageModels.getAuditModelCode());
         ChatClient fusionChatClient = documentExpertModelSupportService.createChatClient(stageModels.getFusionModelCode());
 
-        AccessDecisionDTO accessDecision = documentExpertRoutingService.route(routeChatClient, userPrompt);
+        AccessDecisionDTO accessDecision = documentExpertLlmInvokeService.executeWithStage(
+                "路由与准入校验",
+                stageModels.getRouteModelCode(),
+                () -> documentExpertRoutingService.route(routeChatClient, userPrompt)
+        );
         StageResult routeStage = CustomAgentAssembler.buildStageResult(
                 "路由与准入校验",
                 Boolean.TRUE.equals(accessDecision.getAllowed()) ? "PASSED" : "REJECTED",
@@ -103,10 +111,14 @@ public class CustomAgentApplicationManager {
                             : DOCUMENT_AGENT_NAME + " 仅受理文档相关需求");
         }
 
-        EnhancementResultDTO enhancementResult = documentExpertEnhancementService.enhance(
-                enhancementChatClient,
-                userPrompt,
-                request.getAutoFillMissingInfo() == null || Boolean.TRUE.equals(request.getAutoFillMissingInfo())
+        EnhancementResultDTO enhancementResult = documentExpertLlmInvokeService.executeWithStage(
+                "提示词增强",
+                stageModels.getEnhancementModelCode(),
+                () -> documentExpertEnhancementService.enhance(
+                        enhancementChatClient,
+                        userPrompt,
+                        request.getAutoFillMissingInfo() == null || Boolean.TRUE.equals(request.getAutoFillMissingInfo())
+                )
         );
         StageResult enhancementStage = CustomAgentAssembler.buildStageResult(
                 "提示词增强",
@@ -130,16 +142,24 @@ public class CustomAgentApplicationManager {
         }
 
         CompletableFuture<GenerationResultDTO> documentAFuture = CompletableFuture.supplyAsync(
-                () -> documentExpertGenerationService.generateStructured(
+                () -> documentExpertLlmInvokeService.executeWithStage(
+                        "双文档生成-A",
                         stageModels.getGenerationAModelCode(),
-                        enhancementResult
+                        () -> documentExpertGenerationService.generateStructured(
+                                stageModels.getGenerationAModelCode(),
+                                enhancementResult
+                        )
                 ),
                 commonAsyncExecutor
         );
         CompletableFuture<GenerationResultDTO> documentBFuture = CompletableFuture.supplyAsync(
-                () -> documentExpertGenerationService.generateReadable(
+                () -> documentExpertLlmInvokeService.executeWithStage(
+                        "双文档生成-B",
                         stageModels.getGenerationBModelCode(),
-                        enhancementResult
+                        () -> documentExpertGenerationService.generateReadable(
+                                stageModels.getGenerationBModelCode(),
+                                enhancementResult
+                        )
                 ),
                 commonAsyncExecutor
         );
@@ -165,12 +185,16 @@ public class CustomAgentApplicationManager {
                 List.of()
         );
 
-        AuditResultDTO auditResult = documentExpertAuditService.audit(
-                auditChatClient,
-                userPrompt,
-                enhancementResult,
-                documentA,
-                documentB
+        AuditResultDTO auditResult = documentExpertLlmInvokeService.executeWithStage(
+                "文档审核",
+                stageModels.getAuditModelCode(),
+                () -> documentExpertAuditService.audit(
+                        auditChatClient,
+                        userPrompt,
+                        enhancementResult,
+                        documentA,
+                        documentB
+                )
         );
         StageResult auditStage = CustomAgentAssembler.buildStageResult(
                 "文档审核",
@@ -181,11 +205,15 @@ public class CustomAgentApplicationManager {
                 auditResult.getIssues()
         );
 
-        FusionResultDTO fusionResult = documentExpertFusionService.fuse(
-                fusionChatClient,
-                userPrompt,
-                enhancementResult,
-                auditResult
+        FusionResultDTO fusionResult = documentExpertLlmInvokeService.executeWithStage(
+                "融合汇总",
+                stageModels.getFusionModelCode(),
+                () -> documentExpertFusionService.fuse(
+                        fusionChatClient,
+                        userPrompt,
+                        enhancementResult,
+                        auditResult
+                )
         );
         StageResult fusionStage = CustomAgentAssembler.buildStageResult(
                 "融合汇总",

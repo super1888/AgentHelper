@@ -59,7 +59,7 @@ public class DocumentExpertRoutingService {
                 """.formatted(userPrompt);
 
         AccessDecisionDTO decision = documentExpertModelSupportService.parseJsonOrNull(
-                documentExpertLlmInvokeService.call(chatClient, prompt),
+                documentExpertLlmInvokeService.call(chatClient, prompt, "路由与准入校验", "当前阶段模型"),
                 AccessDecisionDTO.class
         );
         if (decision == null) {

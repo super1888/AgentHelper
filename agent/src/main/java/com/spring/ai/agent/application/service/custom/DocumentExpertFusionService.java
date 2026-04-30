@@ -62,7 +62,7 @@ public class DocumentExpertFusionService {
         );
         return new FusionResultDTO(
                 "已完成双文档融合并生成最终成稿。",
-                documentExpertLlmInvokeService.call(chatClient, prompt)
+                documentExpertLlmInvokeService.call(chatClient, prompt, "融合汇总", "当前阶段模型")
         );
     }
 }
