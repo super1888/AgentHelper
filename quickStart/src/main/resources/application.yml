@@ -35,6 +35,7 @@ app:
       response-header-enabled: true
     access:
       enabled: true
+      console-enabled: false
       log-request-parameters: true
       log-request-headers: false
       max-body-length: 1000
@@ -42,8 +43,11 @@ app:
         - /favicon.ico
         - /error
         - /actuator
+    exception:
+      console-enabled: true
     sql:
       enabled: false
+      console-enabled: false
       slow-threshold-ms: 1000
       log-parameters: true
       max-sql-length: 4000

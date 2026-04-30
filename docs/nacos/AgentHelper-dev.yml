@@ -49,18 +49,42 @@ app:
   model-secret:
     aesKey: t4f+9kQ2L7xR8sT2G5zH8A==
   logging:
+    app-name: AgentHelper
     path: ./logs
     console-enabled: true
+    rolling:
+      max-file-size: 100MB
+      max-history: 30
+      total-size-cap: 3GB
+      clean-history-on-start: false
+    trace:
+      header-name: X-Trace-Id
+      response-header-enabled: true
+    access:
+      enabled: false
+      console-enabled: false
+      log-request-parameters: true
+      log-request-headers: false
+      max-body-length: 1000
+      exclude-path-prefixes:
+        - /favicon.ico
+        - /error
+        - /actuator
+    exception:
+      console-enabled: false
     sql:
-      enabled: true
-      slow-threshold-ms: 300
-  mybatis-plus:
-    enable-sql-log: false
+      enabled: false
+      console-enabled: false
+      slow-threshold-ms: 1000
+      log-parameters: true
+      max-sql-length: 4000
 
 logging:
   level:
     root: INFO
-    com.spring.ai: DEBUG
+    com.spring.ai: INFO
+    org.springframework.web: INFO
+    com.baomidou: INFO
 ############## Sa-Token 配置 (文档: https://sa-token.cc) ##############
 sa-token:
   # token 名称（同时也是 cookie 名称）

@@ -1,0 +1,2 @@
+2026-04-30 15:19:25.747 [main] INFO  [NO_TRACE] c.b.m.e.s.MybatisPlusApplicationContextAware - Register ApplicationContext instances org.springframework.boot.web.servlet.context.AnnotationConfigServletWebServerApplicationContext@4f93bf0a
+2026-04-30 15:29:38.379 [main] INFO  [NO_TRACE] c.b.m.e.s.MybatisPlusApplicationContextAware - Register ApplicationContext instances org.springframework.boot.web.servlet.context.AnnotationConfigServletWebServerApplicationContext@198536f6

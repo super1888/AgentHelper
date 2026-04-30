@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.5.8</version> <!-- 鏄庣‘鎸囧畾鐗堟湰锛屽拰浣犵殑鏍稿績渚濊禆涓€鑷?-->
-        <relativePath/> <!-- 浼樺厛浠庝粨搴撴媺鍙栵紝閬垮厤鏈湴缂撳瓨骞叉壈 -->
+        <version>3.5.8</version>
+        <relativePath/>
     </parent>
-
 
     <groupId>com.spring.ai</groupId>
     <artifactId>springAi</artifactId>
@@ -56,37 +56,44 @@
     </properties>
 
     <dependencies>
-        <!-- Spring Boot 鏍稿績渚濊禆锛堢増鏈敱鐖跺伐绋嬭嚜鍔ㄧ鐞嗭級 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter</artifactId>
-<!--            <exclusions>-->
-<!--                &lt;!&ndash; 鎺掗櫎鑷甫鐨?logback 鈫?璁?slf4j-simple 鐢熸晥 &ndash;&gt;-->
-<!--                <exclusion>-->
-<!--                    <groupId>ch.qos.logback</groupId>-->
-<!--                    <artifactId>logback-classic</artifactId>-->
-<!--                </exclusion>-->
-<!--            </exclusions>-->
+            <exclusions>
+                <exclusion>
+                    <groupId>commons-logging</groupId>
+                    <artifactId>commons-logging</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>commons-logging</groupId>
+                    <artifactId>commons-logging</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
-        <!-- 娴嬭瘯渚濊禆锛堢増鏈敱鐖跺伐绋嬭嚜鍔ㄧ鐞嗭級 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
 
-        <!-- 闃块噷浜?AI 渚濊禆 -->
         <dependency>
             <groupId>com.alibaba.cloud.ai</groupId>
             <artifactId>spring-ai-alibaba-agent-framework</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>commons-logging</groupId>
+                    <artifactId>commons-logging</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
-
 
         <dependency>
             <groupId>org.projectlombok</groupId>
@@ -94,11 +101,16 @@
             <version>${lombok.version}</version>
         </dependency>
 
-        <!-- MyBatis鍒嗛〉鎻掍欢 -->
         <dependency>
             <groupId>com.github.pagehelper</groupId>
             <artifactId>pagehelper-spring-boot-starter</artifactId>
             <version>${pagehelper.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>commons-logging</groupId>
+                    <artifactId>commons-logging</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>
@@ -106,20 +118,18 @@
             <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
             <version>${mybatis-plus.version}</version>
         </dependency>
-        <!-- Mysql鏁版嵁搴撻┍鍔?-->
+
         <dependency>
             <groupId>com.mysql</groupId>
             <artifactId>mysql-connector-j</artifactId>
             <scope>runtime</scope>
         </dependency>
 
-        <!-- Spring Boot Redis 鏍稿績渚濊禆锛堣嚜鍔ㄩ€傞厤 3.5.8锛?-->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-redis</artifactId>
         </dependency>
 
-        <!-- Redis 杩炴帴姹狅紙蹇呴』鍔狅紝鐢熶骇鐜蹇呭锛?-->
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-pool2</artifactId>
@@ -129,8 +139,18 @@
             <groupId>org.redisson</groupId>
             <artifactId>redisson-spring-boot-starter</artifactId>
             <version>${redisson.vsersion}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>commons-logging</groupId>
+                    <artifactId>commons-logging</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>jcl-over-slf4j</artifactId>
+        </dependency>
     </dependencies>
 
     <dependencyManagement>
@@ -170,25 +190,19 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
-
-            <!-- 寮哄埗缁熶竴 mybatis-plus-extension 鐗堟湰涓?3.5.15 -->
             <dependency>
                 <groupId>com.baomidou</groupId>
                 <artifactId>mybatis-plus-extension</artifactId>
                 <version>${mybatis-plus.version}</version>
             </dependency>
-
         </dependencies>
     </dependencyManagement>
 
-
-    <!-- 鏋勫缓閰嶇疆锛堝彲閫夛紝纭繚鎵撳寘姝ｅ父锛?-->
     <build>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
-                <!-- 鐗堟湰鐢辩埗宸ョ▼鑷姩绠＄悊锛屾棤闇€鎵嬪姩鎸囧畾 -->
             </plugin>
         </plugins>
     </build>
@@ -204,12 +218,11 @@
         </repository>
         <repository>
             <id>spring-milestones</id>
-            <name>Spring Milestones</name>
+            <name>Spring Milestones Repository</name>
             <url>https://repo.spring.io/milestone</url>
             <snapshots>
                 <enabled>false</enabled>
             </snapshots>
         </repository>
     </repositories>
-
 </project>

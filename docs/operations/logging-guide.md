@@ -56,6 +56,7 @@ app:
       response-header-enabled: true
     access:
       enabled: true
+      console-enabled: false
       log-request-parameters: true
       log-request-headers: false
       max-body-length: 1000
@@ -63,8 +64,11 @@ app:
         - /favicon.ico
         - /error
         - /actuator
+    exception:
+      console-enabled: true
     sql:
       enabled: false
+      console-enabled: false
       slow-threshold-ms: 1000
       log-parameters: true
       max-sql-length: 4000
@@ -86,8 +90,11 @@ logging:
 - `app.logging.rolling.total-size-cap`：日志总大小上限
 - `app.logging.trace.header-name`：链路标识请求头名称
 - `app.logging.access.enabled`：是否开启 HTTP 访问日志
+- `app.logging.access.console-enabled`：是否在控制台输出访问日志
 - `app.logging.access.log-request-headers`：默认关闭，避免敏感头落盘
+- `app.logging.exception.console-enabled`：是否在控制台输出异常日志
 - `app.logging.sql.enabled`：是否打印 SQL 内容
+- `app.logging.sql.console-enabled`：是否在控制台输出 SQL
 - `app.logging.sql.slow-threshold-ms`：慢 SQL 阈值
 - `app.mybatis-plus.enable-sql-log`：是否挂载 SQL 日志拦截器，保留原配置兼容
 

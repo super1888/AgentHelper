@@ -49,6 +49,11 @@ public class AgentHelperLoggingProperties {
      */
     private final Sql sql = new Sql();
 
+    /**
+     * 异常日志配置。
+     */
+    private final ExceptionLog exception = new ExceptionLog();
+
     @Getter
     @Setter
     public static class Rolling {
@@ -99,6 +104,11 @@ public class AgentHelperLoggingProperties {
         private boolean enabled = true;
 
         /**
+         * 是否在控制台打印访问日志。
+         */
+        private boolean consoleEnabled = false;
+
+        /**
          * 是否记录请求参数。
          */
         private boolean logRequestParameters = true;
@@ -129,6 +139,11 @@ public class AgentHelperLoggingProperties {
         private boolean enabled = false;
 
         /**
+         * 是否在控制台打印 SQL 日志。
+         */
+        private boolean consoleEnabled = false;
+
+        /**
          * 慢 SQL 阈值，单位毫秒。
          */
         private long slowThresholdMs = 1000L;
@@ -142,5 +157,15 @@ public class AgentHelperLoggingProperties {
          * SQL 文本最大长度。
          */
         private int maxSqlLength = 4000;
+    }
+
+    @Getter
+    @Setter
+    public static class ExceptionLog {
+
+        /**
+         * 是否在控制台打印异常日志。
+         */
+        private boolean consoleEnabled = true;
     }
 }

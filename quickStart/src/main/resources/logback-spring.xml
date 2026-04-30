@@ -7,6 +7,39 @@
     <springProperty scope="context" name="APP_LOG_LEVEL" source="logging.level.com.spring.ai" defaultValue="INFO"/>
     <springProperty scope="context" name="WEB_LOG_LEVEL" source="logging.level.org.springframework.web" defaultValue="INFO"/>
     <springProperty scope="context" name="SQL_LOG_LEVEL" source="logging.level.com.baomidou" defaultValue="INFO"/>
+    <springProperty scope="context" name="ACCESS_CONSOLE_ENABLED" source="app.logging.access.console-enabled" defaultValue="false"/>
+    <springProperty scope="context" name="EXCEPTION_CONSOLE_ENABLED" source="app.logging.exception.console-enabled" defaultValue="true"/>
+    <springProperty scope="context" name="SQL_CONSOLE_ENABLED" source="app.logging.sql.console-enabled" defaultValue="false"/>
+
+    <appender name="ASYNC_ACCESS_CONSOLE" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>512</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <neverBlock>true</neverBlock>
+        <appender-ref ref="CONSOLE"/>
+        <filter class="com.spring.ai.logging.logback.ConsoleEnabledFilter">
+            <consoleEnabled>${ACCESS_CONSOLE_ENABLED}</consoleEnabled>
+        </filter>
+    </appender>
+
+    <appender name="ASYNC_EXCEPTION_CONSOLE" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>512</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <neverBlock>true</neverBlock>
+        <appender-ref ref="CONSOLE"/>
+        <filter class="com.spring.ai.logging.logback.ConsoleEnabledFilter">
+            <consoleEnabled>${EXCEPTION_CONSOLE_ENABLED}</consoleEnabled>
+        </filter>
+    </appender>
+
+    <appender name="ASYNC_SQL_CONSOLE" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>512</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <neverBlock>true</neverBlock>
+        <appender-ref ref="CONSOLE"/>
+        <filter class="com.spring.ai.logging.logback.ConsoleEnabledFilter">
+            <consoleEnabled>${SQL_CONSOLE_ENABLED}</consoleEnabled>
+        </filter>
+    </appender>
 
     <logger name="com.spring.ai" level="${APP_LOG_LEVEL}" additivity="false">
         <appender-ref ref="ASYNC_APP_FILE"/>
@@ -22,32 +55,30 @@
     </logger>
 
     <logger name="com.baomidou" level="${SQL_LOG_LEVEL}" additivity="false">
-        <appender-ref ref="ASYNC_APP_FILE"/>
-        <appender-ref ref="ASYNC_DEBUG_FILE"/>
-        <appender-ref ref="ASYNC_ERROR_FILE"/>
-        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="ASYNC_SQL_FILE"/>
+        <appender-ref ref="ASYNC_SQL_CONSOLE"/>
     </logger>
 
     <logger name="com.spring.ai.logging.access" level="INFO" additivity="false">
         <appender-ref ref="ASYNC_ACCESS_FILE"/>
-        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="ASYNC_ACCESS_CONSOLE"/>
     </logger>
 
     <logger name="com.spring.ai.logging.exception" level="WARN" additivity="false">
         <appender-ref ref="ASYNC_EXCEPTION_FILE"/>
         <appender-ref ref="ASYNC_ERROR_FILE"/>
-        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="ASYNC_EXCEPTION_CONSOLE"/>
     </logger>
 
     <logger name="com.spring.ai.logging.sql" level="INFO" additivity="false">
         <appender-ref ref="ASYNC_SQL_FILE"/>
-        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="ASYNC_SQL_CONSOLE"/>
     </logger>
 
     <logger name="com.spring.ai.logging.sql.slow" level="WARN" additivity="false">
         <appender-ref ref="ASYNC_SLOW_SQL_FILE"/>
         <appender-ref ref="ASYNC_SQL_FILE"/>
-        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="ASYNC_SQL_CONSOLE"/>
     </logger>
 
     <root level="${ROOT_LOG_LEVEL}">
