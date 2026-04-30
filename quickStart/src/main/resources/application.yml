@@ -33,6 +33,22 @@ app:
     trace:
       header-name: X-Trace-Id
       response-header-enabled: true
+    access:
+      enabled: true
+      log-request-parameters: true
+      log-request-headers: false
+      max-body-length: 1000
+      exclude-path-prefixes:
+        - /favicon.ico
+        - /error
+        - /actuator
+    sql:
+      enabled: false
+      slow-threshold-ms: 1000
+      log-parameters: true
+      max-sql-length: 4000
+  mybatis-plus:
+    enable-sql-log: false
 
 logging:
   level:

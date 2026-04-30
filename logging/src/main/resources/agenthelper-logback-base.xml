@@ -78,6 +78,66 @@
         </rollingPolicy>
     </appender>
 
+    <appender name="ACCESS_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/${APP_NAME}/access.log</file>
+        <encoder>
+            <pattern>${LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_PATH}/${APP_NAME}/archive/access.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+            <maxFileSize>${MAX_FILE_SIZE}</maxFileSize>
+            <maxHistory>${MAX_HISTORY}</maxHistory>
+            <totalSizeCap>${TOTAL_SIZE_CAP}</totalSizeCap>
+            <cleanHistoryOnStart>${CLEAN_HISTORY_ON_START}</cleanHistoryOnStart>
+        </rollingPolicy>
+    </appender>
+
+    <appender name="EXCEPTION_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/${APP_NAME}/exception.log</file>
+        <encoder>
+            <pattern>${LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_PATH}/${APP_NAME}/archive/exception.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+            <maxFileSize>${MAX_FILE_SIZE}</maxFileSize>
+            <maxHistory>${MAX_HISTORY}</maxHistory>
+            <totalSizeCap>${TOTAL_SIZE_CAP}</totalSizeCap>
+            <cleanHistoryOnStart>${CLEAN_HISTORY_ON_START}</cleanHistoryOnStart>
+        </rollingPolicy>
+    </appender>
+
+    <appender name="SQL_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/${APP_NAME}/sql.log</file>
+        <encoder>
+            <pattern>${LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_PATH}/${APP_NAME}/archive/sql.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+            <maxFileSize>${MAX_FILE_SIZE}</maxFileSize>
+            <maxHistory>${MAX_HISTORY}</maxHistory>
+            <totalSizeCap>${TOTAL_SIZE_CAP}</totalSizeCap>
+            <cleanHistoryOnStart>${CLEAN_HISTORY_ON_START}</cleanHistoryOnStart>
+        </rollingPolicy>
+    </appender>
+
+    <appender name="SLOW_SQL_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/${APP_NAME}/slow-sql.log</file>
+        <encoder>
+            <pattern>${LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_PATH}/${APP_NAME}/archive/slow-sql.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+            <maxFileSize>${MAX_FILE_SIZE}</maxFileSize>
+            <maxHistory>${MAX_HISTORY}</maxHistory>
+            <totalSizeCap>${TOTAL_SIZE_CAP}</totalSizeCap>
+            <cleanHistoryOnStart>${CLEAN_HISTORY_ON_START}</cleanHistoryOnStart>
+        </rollingPolicy>
+    </appender>
+
     <appender name="ASYNC_APP_FILE" class="ch.qos.logback.classic.AsyncAppender">
         <queueSize>2048</queueSize>
         <discardingThreshold>0</discardingThreshold>
@@ -97,5 +157,33 @@
         <discardingThreshold>0</discardingThreshold>
         <neverBlock>true</neverBlock>
         <appender-ref ref="ERROR_FILE"/>
+    </appender>
+
+    <appender name="ASYNC_ACCESS_FILE" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>2048</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <neverBlock>true</neverBlock>
+        <appender-ref ref="ACCESS_FILE"/>
+    </appender>
+
+    <appender name="ASYNC_EXCEPTION_FILE" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>1024</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <neverBlock>true</neverBlock>
+        <appender-ref ref="EXCEPTION_FILE"/>
+    </appender>
+
+    <appender name="ASYNC_SQL_FILE" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>1024</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <neverBlock>true</neverBlock>
+        <appender-ref ref="SQL_FILE"/>
+    </appender>
+
+    <appender name="ASYNC_SLOW_SQL_FILE" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>512</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <neverBlock>true</neverBlock>
+        <appender-ref ref="SLOW_SQL_FILE"/>
     </appender>
 </included>

@@ -28,6 +28,28 @@
         <appender-ref ref="CONSOLE"/>
     </logger>
 
+    <logger name="com.spring.ai.logging.access" level="INFO" additivity="false">
+        <appender-ref ref="ASYNC_ACCESS_FILE"/>
+        <appender-ref ref="CONSOLE"/>
+    </logger>
+
+    <logger name="com.spring.ai.logging.exception" level="WARN" additivity="false">
+        <appender-ref ref="ASYNC_EXCEPTION_FILE"/>
+        <appender-ref ref="ASYNC_ERROR_FILE"/>
+        <appender-ref ref="CONSOLE"/>
+    </logger>
+
+    <logger name="com.spring.ai.logging.sql" level="INFO" additivity="false">
+        <appender-ref ref="ASYNC_SQL_FILE"/>
+        <appender-ref ref="CONSOLE"/>
+    </logger>
+
+    <logger name="com.spring.ai.logging.sql.slow" level="WARN" additivity="false">
+        <appender-ref ref="ASYNC_SLOW_SQL_FILE"/>
+        <appender-ref ref="ASYNC_SQL_FILE"/>
+        <appender-ref ref="CONSOLE"/>
+    </logger>
+
     <root level="${ROOT_LOG_LEVEL}">
         <appender-ref ref="ASYNC_APP_FILE"/>
         <appender-ref ref="ASYNC_DEBUG_FILE"/>
