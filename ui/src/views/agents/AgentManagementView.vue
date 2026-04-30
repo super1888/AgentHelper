@@ -4,12 +4,12 @@ import { useRouter } from 'vue-router'
 import { MessageSquareText, Plus, RefreshCw, Rocket, Search, ShieldBan, Trash2 } from 'lucide-vue-next'
 import AppFeedbackDialog from '@/components/AppFeedbackDialog.vue'
 import MainShell from '@/components/MainShell.vue'
-import { batchMigrateAgentModels, createAgent, createAgentSession, disableAgent, fetchAgentDetail, publishAgent, queryAgents, removeAgent, updateAgent } from '@/api/agent'
+import { batchMigrateAgentModels, createAgent, createAgentSession, disableAgent, fetchAgentDetail, publishAgent, queryAgents, queryDocumentExpertModels, removeAgent, runDocumentExpertAgent, updateAgent } from '@/api/agent'
 import { queryEnabledModels } from '@/api/core'
 import { queryHooks } from '@/api/hook'
 import { queryMcpServers } from '@/api/mcp'
 import { queryPromptTemplates } from '@/api/prompt'
-import type { AgentCreatePayload, AgentDetail, AgentPromptConfig, AgentSessionResult, AgentSummary, AgentVersion } from '@/types/agent'
+import type { AgentCreatePayload, AgentDetail, AgentPromptConfig, AgentSessionResult, AgentSummary, AgentVersion, CustomAgentDocumentExpertResult, CustomAgentStageResult } from '@/types/agent'
 import type { ModelOption } from '@/types/core'
 import type { HookItem } from '@/types/hook'
 import type { McpItem } from '@/types/mcp'
@@ -37,9 +37,12 @@ const promptTemplates = ref<PromptTemplateItem[]>([])
 const hooks = ref<HookItem[]>([])
 const mcpServers = ref<McpItem[]>([])
 const availableModels = ref<ModelOption[]>([])
+const customAgentModels = ref<ModelOption[]>([])
 const selectedAgentId = ref('')
 const selectedAgentDetail = ref<AgentDetail | null>(null)
 const createdSession = ref<AgentSessionResult | null>(null)
+const customAgentRunning = ref(false)
+const customAgentResult = ref<CustomAgentDocumentExpertResult | null>(null)
 const formMode = ref<FormMode>('create')
 const editingAgentId = ref<string | null>(null)
 const formPanelRef = ref<HTMLElement | null>(null)
@@ -60,6 +63,17 @@ const form = reactive({
   customPromptContent: '',
   customPromptPath: '',
   promptVariableValues: {} as Record<string, string>,
+})
+const customDocumentForm = reactive({
+  modelCode: '',
+  routeModelCode: '',
+  enhancementModelCode: '',
+  generationAModelCode: '',
+  generationBModelCode: '',
+  auditModelCode: '',
+  fusionModelCode: '',
+  userPrompt: '',
+  autoFillMissingInfo: true,
 })
 
 const filteredAgents = computed(() => {
@@ -94,6 +108,9 @@ const availableMcpServers = computed(() =>
   mcpServers.value.filter((item) => item.serverStatus === 'ENABLED' && item.publishStatus === 'PUBLISHED'),
 )
 const selectedModel = computed(() => availableModels.value.find((item) => item.modelCode === form.modelConfigCode) ?? null)
+const selectedCustomDefaultModel = computed(() =>
+  customAgentModels.value.find((item) => item.modelCode === customDocumentForm.modelCode) ?? null,
+)
 const totalAgentsLabel = computed(() => `共 ${agents.value.length} 个智能体`)
 const publishedCountLabel = computed(() => `已发布 ${agents.value.filter((item) => item.agentStatus === 'PUBLISHED').length} 个`)
 const formTitle = computed(() => (formMode.value === 'create' ? '创建智能体' : '编辑智能体'))
@@ -139,6 +156,19 @@ function resetForm() {
   form.customPromptPath = ''
   form.promptVariableValues = {}
   syncPromptVariableValues()
+}
+
+function resetCustomDocumentForm() {
+  const defaultModelCode = customAgentModels.value.find((item) => item.defaultModel)?.modelCode ?? customAgentModels.value[0]?.modelCode ?? ''
+  customDocumentForm.modelCode = defaultModelCode
+  customDocumentForm.routeModelCode = ''
+  customDocumentForm.enhancementModelCode = ''
+  customDocumentForm.generationAModelCode = ''
+  customDocumentForm.generationBModelCode = ''
+  customDocumentForm.auditModelCode = ''
+  customDocumentForm.fusionModelCode = ''
+  customDocumentForm.userPrompt = ''
+  customDocumentForm.autoFillMissingInfo = true
 }
 
 function syncPromptVariableValues(sourceValues?: Record<string, string> | null) {
@@ -301,6 +331,17 @@ async function loadModels() {
     setFeedback('error', getErrorMessage(error, '模型列表加载失败。'))
   } finally {
     modelsLoading.value = false
+  }
+}
+
+async function loadCustomAgentModels() {
+  try {
+    customAgentModels.value = await queryDocumentExpertModels()
+    if (!customDocumentForm.modelCode) {
+      resetCustomDocumentForm()
+    }
+  } catch (error) {
+    setFeedback('error', getErrorMessage(error, '自定义智能体模型列表加载失败。'))
   }
 }
 
@@ -492,8 +533,60 @@ async function handleBatchMigrateModel() {
   }
 }
 
+async function handleRunDocumentExpertAgent() {
+  if (!customDocumentForm.modelCode) {
+    setFeedback('error', '请选择文档专家默认模型。')
+    return
+  }
+  if (!customDocumentForm.userPrompt.trim()) {
+    setFeedback('error', '请输入文档专家需求。')
+    return
+  }
+  customAgentRunning.value = true
+  customAgentResult.value = null
+  try {
+    customAgentResult.value = await runDocumentExpertAgent({
+      modelCode: customDocumentForm.modelCode,
+      routeModelCode: customDocumentForm.routeModelCode || null,
+      enhancementModelCode: customDocumentForm.enhancementModelCode || null,
+      generationAModelCode: customDocumentForm.generationAModelCode || null,
+      generationBModelCode: customDocumentForm.generationBModelCode || null,
+      auditModelCode: customDocumentForm.auditModelCode || null,
+      fusionModelCode: customDocumentForm.fusionModelCode || null,
+      userPrompt: customDocumentForm.userPrompt.trim(),
+      autoFillMissingInfo: customDocumentForm.autoFillMissingInfo,
+    })
+    setFeedback('success', customAgentResult.value.clarificationNeeded ? '文档专家已返回补充问题。' : '文档专家执行完成。')
+  } catch (error) {
+    setFeedback('error', getErrorMessage(error, '执行文档专家智能体失败。'))
+  } finally {
+    customAgentRunning.value = false
+  }
+}
+
+function formatStageStatus(status?: string | null) {
+  if (status === 'PASSED') return '通过'
+  if (status === 'REJECTED') return '拒绝'
+  if (status === 'NEED_CLARIFICATION') return '待补充'
+  if (status === 'WARNING') return '警告'
+  if (status === 'COMPLETED') return '完成'
+  return status || '-'
+}
+
+function customStageList(result: CustomAgentDocumentExpertResult | null): CustomAgentStageResult[] {
+  if (!result) return []
+  return [
+    result.routeStage,
+    result.enhancementStage,
+    result.generationStageA,
+    result.generationStageB,
+    result.auditStage,
+    result.fusionStage,
+  ].filter(Boolean) as CustomAgentStageResult[]
+}
+
 onMounted(() => {
-  void Promise.all([loadAgents(), loadPromptTemplates(), loadHooks(), loadMcpServers(), loadModels()])
+  void Promise.all([loadAgents(), loadPromptTemplates(), loadHooks(), loadMcpServers(), loadModels(), loadCustomAgentModels()])
 })
 </script>
 
@@ -891,6 +984,169 @@ onMounted(() => {
               <p class="muted">绑定智能体：{{ createdSession.agentId }}</p>
               <p class="muted">版本号：v{{ createdSession.agentVersionNo }}</p>
               <p class="muted">连接状态：{{ createdSession.connectionStatus }}</p>
+            </article>
+          </div>
+        </aside>
+      </div>
+
+      <div class="page__grid page__grid--bottom">
+        <article class="card-section panel-card">
+          <div class="section-head">
+            <div>
+              <strong>自定义智能体</strong>
+              <p class="muted">内置场景化能力，无需先创建智能体即可直接调用。</p>
+            </div>
+          </div>
+
+          <section class="summary-card">
+            <div class="section-head">
+              <div>
+                <strong>文档专家 Agent</strong>
+                <p class="muted">支持路由校验、提示词增强、双文档并行生成、审核与融合分阶段独立选模型。</p>
+              </div>
+              <button class="app-button app-button--ghost" :disabled="customAgentRunning" @click="resetCustomDocumentForm">
+                重置
+              </button>
+            </div>
+
+            <div class="section-grid">
+              <label class="field">
+                <span class="field__label">默认模型</span>
+                <select v-model="customDocumentForm.modelCode" class="app-select">
+                  <option value="">请选择默认模型</option>
+                  <option v-for="model in customAgentModels" :key="model.modelCode" :value="model.modelCode">
+                    {{ model.modelName }} / {{ model.providerName || model.providerEnum }}
+                  </option>
+                </select>
+              </label>
+
+              <label class="field">
+                <span class="field__label">路由校验模型</span>
+                <select v-model="customDocumentForm.routeModelCode" class="app-select">
+                  <option value="">跟随默认模型</option>
+                  <option v-for="model in customAgentModels" :key="`route-${model.modelCode}`" :value="model.modelCode">
+                    {{ model.modelName }} / {{ model.providerName || model.providerEnum }}
+                  </option>
+                </select>
+              </label>
+
+              <label class="field">
+                <span class="field__label">提示增强模型</span>
+                <select v-model="customDocumentForm.enhancementModelCode" class="app-select">
+                  <option value="">跟随默认模型</option>
+                  <option v-for="model in customAgentModels" :key="`enhance-${model.modelCode}`" :value="model.modelCode">
+                    {{ model.modelName }} / {{ model.providerName || model.providerEnum }}
+                  </option>
+                </select>
+              </label>
+
+              <label class="field">
+                <span class="field__label">生成 A 模型</span>
+                <select v-model="customDocumentForm.generationAModelCode" class="app-select">
+                  <option value="">跟随默认模型</option>
+                  <option v-for="model in customAgentModels" :key="`ga-${model.modelCode}`" :value="model.modelCode">
+                    {{ model.modelName }} / {{ model.providerName || model.providerEnum }}
+                  </option>
+                </select>
+              </label>
+
+              <label class="field">
+                <span class="field__label">生成 B 模型</span>
+                <select v-model="customDocumentForm.generationBModelCode" class="app-select">
+                  <option value="">跟随默认模型</option>
+                  <option v-for="model in customAgentModels" :key="`gb-${model.modelCode}`" :value="model.modelCode">
+                    {{ model.modelName }} / {{ model.providerName || model.providerEnum }}
+                  </option>
+                </select>
+              </label>
+
+              <label class="field">
+                <span class="field__label">审核模型</span>
+                <select v-model="customDocumentForm.auditModelCode" class="app-select">
+                  <option value="">跟随默认模型</option>
+                  <option v-for="model in customAgentModels" :key="`audit-${model.modelCode}`" :value="model.modelCode">
+                    {{ model.modelName }} / {{ model.providerName || model.providerEnum }}
+                  </option>
+                </select>
+              </label>
+
+              <label class="field">
+                <span class="field__label">融合模型</span>
+                <select v-model="customDocumentForm.fusionModelCode" class="app-select">
+                  <option value="">跟随默认模型</option>
+                  <option v-for="model in customAgentModels" :key="`fusion-${model.modelCode}`" :value="model.modelCode">
+                    {{ model.modelName }} / {{ model.providerName || model.providerEnum }}
+                  </option>
+                </select>
+              </label>
+
+              <label class="field field--inline">
+                <span class="field__label">自动补全缺失信息</span>
+                <input v-model="customDocumentForm.autoFillMissingInfo" type="checkbox" />
+              </label>
+
+              <label class="field section-grid__full">
+                <span class="field__label">文档需求</span>
+                <div class="input-shell input-shell--textarea">
+                  <textarea
+                    v-model="customDocumentForm.userPrompt"
+                    class="app-textarea"
+                    rows="6"
+                    placeholder="例如：为管理层写一份数据中台建设实施方案，突出目标、路径、风险与资源安排。"
+                  />
+                </div>
+              </label>
+            </div>
+
+            <small v-if="selectedCustomDefaultModel" class="muted">
+              默认模型：{{ selectedCustomDefaultModel.modelName }} / {{ selectedCustomDefaultModel.providerName || selectedCustomDefaultModel.providerEnum }}
+            </small>
+
+            <button class="app-button full-width" :disabled="customAgentRunning" @click="handleRunDocumentExpertAgent">
+              {{ customAgentRunning ? '执行中...' : '运行文档专家 Agent' }}
+            </button>
+          </section>
+        </article>
+
+        <aside class="card-section panel-card">
+          <div class="section-head">
+            <div>
+              <strong>执行结果</strong>
+              <p class="muted">展示自定义智能体各阶段输出与最终成稿。</p>
+            </div>
+          </div>
+
+          <div v-if="!customAgentResult" class="empty">运行文档专家 Agent 后，这里会展示阶段结果。</div>
+          <div v-else class="stack">
+            <article class="summary-card">
+              <strong>默认模型：{{ customAgentResult.modelCode }}</strong>
+              <p v-if="customAgentResult.clarificationNeeded" class="muted">
+                需要补充信息：{{ customAgentResult.clarificationQuestion || '请补充必要信息。' }}
+              </p>
+              <p v-else class="muted">已完成文档专家链路处理。</p>
+            </article>
+
+            <article v-for="stage in customStageList(customAgentResult)" :key="stage.stageName" class="version-card">
+              <div class="list-item__head">
+                <strong>{{ stage.stageName }}</strong>
+                <span class="version-pill">{{ formatStageStatus(stage.status) }}</span>
+              </div>
+              <p class="muted">模型：{{ stage.modelCode || customAgentResult.modelCode }}</p>
+              <p class="muted">{{ stage.summary }}</p>
+              <div v-if="stage.issues?.length" class="chip-row">
+                <span v-for="issue in stage.issues" :key="`${stage.stageName}-${issue}`" class="chip chip--hook">{{ issue }}</span>
+              </div>
+              <pre class="prompt-preview">{{ stage.content || '暂无阶段内容' }}</pre>
+            </article>
+
+            <article v-if="customAgentResult.finalDocument" class="summary-card">
+              <div class="section-head">
+                <div>
+                  <strong>最终文档</strong>
+                  <p class="muted">已融合汇总后的最终成稿。</p>
+                </div>
+              </div>
+              <pre class="prompt-preview">{{ customAgentResult.finalDocument }}</pre>
             </article>
           </div>
         </aside>

@@ -155,3 +155,39 @@ export interface AgentBatchMigratePayload {
   targetModelConfigCode: string
   migrationMode?: 'DRAFT_ONLY' | 'PUBLISH_NEW_VERSION'
 }
+
+export interface CustomAgentDocumentExpertPayload {
+  modelCode: string
+  routeModelCode?: string | null
+  enhancementModelCode?: string | null
+  generationAModelCode?: string | null
+  generationBModelCode?: string | null
+  auditModelCode?: string | null
+  fusionModelCode?: string | null
+  userPrompt: string
+  autoFillMissingInfo?: boolean | null
+}
+
+export interface CustomAgentStageResult {
+  stageName: string
+  status: string
+  modelCode?: string | null
+  summary: string
+  content: string
+  issues: string[]
+}
+
+export interface CustomAgentDocumentExpertResult {
+  modelCode: string
+  userPrompt: string
+  clarificationNeeded: boolean
+  clarificationQuestion?: string | null
+  routeStage?: CustomAgentStageResult | null
+  enhancementStage?: CustomAgentStageResult | null
+  generationStageA?: CustomAgentStageResult | null
+  generationStageB?: CustomAgentStageResult | null
+  auditStage?: CustomAgentStageResult | null
+  fusionStage?: CustomAgentStageResult | null
+  finalDocument?: string | null
+  warnings?: string[] | null
+}

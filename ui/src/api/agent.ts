@@ -4,6 +4,8 @@ import type {
   AgentCreatePayload,
   AgentCreateResult,
   AgentBatchMigratePayload,
+  CustomAgentDocumentExpertPayload,
+  CustomAgentDocumentExpertResult,
   AgentDetail,
   AgentReconnectPayload,
   AgentReconnectResult,
@@ -56,6 +58,16 @@ export async function removeAgent(agentId: string) {
 export async function batchMigrateAgentModels(payload: AgentBatchMigratePayload) {
   const response = await apiClient.post('/agents/simple/models/migrate', payload)
   return unwrapResponse<void>(response)
+}
+
+export async function queryDocumentExpertModels() {
+  const response = await apiClient.get('/agents/custom/document-expert/models')
+  return unwrapResponse<import('@/types/core').ModelOption[]>(response)
+}
+
+export async function runDocumentExpertAgent(payload: CustomAgentDocumentExpertPayload) {
+  const response = await apiClient.post('/agents/custom/document-expert/chat', payload)
+  return unwrapResponse<CustomAgentDocumentExpertResult>(response)
 }
 
 export async function createAgentSession(agentId: string, payload?: AgentSessionPayload) {
