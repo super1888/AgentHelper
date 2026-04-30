@@ -59,6 +59,13 @@
 
         <dependency>
             <groupId>com.spring.ai</groupId>
+            <artifactId>logging</artifactId>
+            <version>1.0-SNAPSHOT</version>
+            <scope>compile</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.spring.ai</groupId>
             <artifactId>interceptors</artifactId>
             <version>1.0-SNAPSHOT</version>
             <scope>compile</scope>

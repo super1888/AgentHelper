@@ -31,6 +31,7 @@ This is a multi-module Maven project.
 - If code is only responsible for assembling response objects, place it in the module `application/assmbler` package
 - For custom agent flows in the `agent` module, keep `ApplicationManager` focused on orchestration and move stage-specific logic into dedicated services
 - For custom agent internal step data, use explicit DTO classes in `agent/domain/dto` rather than private inner classes in manager files
+- Cross-cutting enterprise logging should live in an independent `logging` module, while the runtime entry module keeps only startup-level config such as `logback-spring.xml`
 
 ## Backend Rules
 
@@ -57,6 +58,15 @@ This is a multi-module Maven project.
 - Use real request paths with the `/agentHelper/...` prefix
 - When adding built-in custom agent capabilities, prefer embedding them into the existing management page as a dedicated panel/window before creating a new standalone route
 - If the backend supports per-stage model selection, the UI should expose stage-level model pickers and clearly show which model each stage actually used
+
+## Logging Rules
+
+- Use Spring Boot default Logback for enterprise logging unless the user explicitly asks for another stack
+- Do not introduce `slf4j-simple` or other lightweight console-only bindings into this repo
+- Keep log path, rolling size, retention days, total size cap, console switch, and trace header settings configurable in YAML
+- Prefer separate rolling files for app logs, debug logs, and error logs to simplify online troubleshooting
+- Add request-level `traceId` through a shared filter so backend logs can be correlated across controllers and services
+- Log configuration should support file rolling by size and date, and should keep storage bounded
 
 ## Style Rules
 

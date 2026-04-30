@@ -19,3 +19,24 @@ spring:
         refresh-enabled: true
         import-check:
           enabled: true
+
+app:
+  logging:
+    app-name: ${spring.application.name}
+    path: ./logs
+    console-enabled: true
+    rolling:
+      max-file-size: 100MB
+      max-history: 30
+      total-size-cap: 3GB
+      clean-history-on-start: false
+    trace:
+      header-name: X-Trace-Id
+      response-header-enabled: true
+
+logging:
+  level:
+    root: INFO
+    com.spring.ai: INFO
+    org.springframework.web: INFO
+    com.baomidou: INFO

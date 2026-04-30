@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration scan="true" scanPeriod="60 seconds">
+
+    <include resource="agenthelper-logback-base.xml"/>
+
+    <springProperty scope="context" name="ROOT_LOG_LEVEL" source="logging.level.root" defaultValue="INFO"/>
+    <springProperty scope="context" name="APP_LOG_LEVEL" source="logging.level.com.spring.ai" defaultValue="INFO"/>
+    <springProperty scope="context" name="WEB_LOG_LEVEL" source="logging.level.org.springframework.web" defaultValue="INFO"/>
+    <springProperty scope="context" name="SQL_LOG_LEVEL" source="logging.level.com.baomidou" defaultValue="INFO"/>
+
+    <logger name="com.spring.ai" level="${APP_LOG_LEVEL}" additivity="false">
+        <appender-ref ref="ASYNC_APP_FILE"/>
+        <appender-ref ref="ASYNC_DEBUG_FILE"/>
+        <appender-ref ref="ASYNC_ERROR_FILE"/>
+        <appender-ref ref="CONSOLE"/>
+    </logger>
+
+    <logger name="org.springframework.web" level="${WEB_LOG_LEVEL}" additivity="false">
+        <appender-ref ref="ASYNC_APP_FILE"/>
+        <appender-ref ref="ASYNC_ERROR_FILE"/>
+        <appender-ref ref="CONSOLE"/>
+    </logger>
+
+    <logger name="com.baomidou" level="${SQL_LOG_LEVEL}" additivity="false">
+        <appender-ref ref="ASYNC_APP_FILE"/>
+        <appender-ref ref="ASYNC_DEBUG_FILE"/>
+        <appender-ref ref="ASYNC_ERROR_FILE"/>
+        <appender-ref ref="CONSOLE"/>
+    </logger>
+
+    <root level="${ROOT_LOG_LEVEL}">
+        <appender-ref ref="ASYNC_APP_FILE"/>
+        <appender-ref ref="ASYNC_DEBUG_FILE"/>
+        <appender-ref ref="ASYNC_ERROR_FILE"/>
+        <appender-ref ref="CONSOLE"/>
+    </root>
+</configuration>
