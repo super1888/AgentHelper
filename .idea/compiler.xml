@@ -22,6 +22,7 @@
         <module name="hooks" />
         <module name="prompt" />
         <module name="user" />
+        <module name="opencv" />
         <module name="interceptors" />
       </profile>
     </annotationProcessing>
@@ -41,6 +42,7 @@
       <module name="logging" options="-parameters" />
       <module name="mcp" options="-parameters" />
       <module name="model" options="-parameters" />
+      <module name="opencv" options="-parameters" />
       <module name="prompt" options="-parameters" />
       <module name="quickStart" options="-parameters" />
       <module name="skills" options="-parameters" />
