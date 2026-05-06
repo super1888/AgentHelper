@@ -23,15 +23,11 @@
         <dependency>
             <groupId>com.spring.ai</groupId>
             <artifactId>common</artifactId>
-            <version>1.0-SNAPSHOT</version>
-            <scope>compile</scope>
         </dependency>
 
         <dependency>
             <groupId>com.spring.ai</groupId>
             <artifactId>core</artifactId>
-            <version>1.0-SNAPSHOT</version>
-            <scope>compile</scope>
         </dependency>
 
     </dependencies>
