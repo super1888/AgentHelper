@@ -44,12 +44,16 @@
         <dependency>
             <groupId>cn.smartjavaai</groupId>
             <artifactId>smartjavaai-face</artifactId>
-            <version>${smartjavaai.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.microsoft.onnxruntime</groupId>
+                    <artifactId>onnxruntime</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>cn.smartjavaai</groupId>
             <artifactId>smartjavaai-common</artifactId>
-            <version>${smartjavaai.version}</version>
         </dependency>
         <dependency>
             <groupId>com.spring.ai</groupId>

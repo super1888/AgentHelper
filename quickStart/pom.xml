@@ -102,14 +102,54 @@
             <artifactId>opencv</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.microsoft.onnxruntime</groupId>
+            <artifactId>onnxruntime</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>ai.djl.pytorch</groupId>
+            <artifactId>pytorch-jni</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>ai.djl.pytorch</groupId>
+            <artifactId>pytorch-native-cpu</artifactId>
+            <classifier>${face.djl.classifier}</classifier>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.bytedeco</groupId>
+            <artifactId>javacpp</artifactId>
+            <classifier>${face.javacv.classifier}</classifier>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.bytedeco</groupId>
+            <artifactId>ffmpeg</artifactId>
+            <classifier>${face.javacv.classifier}</classifier>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.bytedeco</groupId>
+            <artifactId>openblas</artifactId>
+            <classifier>${face.javacv.classifier}</classifier>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.bytedeco</groupId>
+            <artifactId>opencv</artifactId>
+            <classifier>${face.javacv.classifier}</classifier>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
             <groupId>cn.smartjavaai</groupId>
             <artifactId>smartjavaai-face</artifactId>
-            <version>${smartjavaai.version}</version>
+            <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>cn.smartjavaai</groupId>
             <artifactId>smartjavaai-common</artifactId>
-            <version>${smartjavaai.version}</version>
+            <scope>runtime</scope>
         </dependency>
     </dependencies>
 </project>

@@ -12,7 +12,7 @@ CREATE TABLE `sy_user_face_template`  (
   `face_template_code` varchar(64) NOT NULL,
   `embedding_cipher_text` longtext NOT NULL,
   `embedding_dimension` int NOT NULL,
-  `embedding_version` varchar(32) DEFAULT NULL,
+  `embedding_version` varchar(128) DEFAULT NULL,
   `quality_score` decimal(6,4) DEFAULT NULL,
   `liveness_score` decimal(6,4) DEFAULT NULL,
   `source_image_url` varchar(500) DEFAULT NULL,

@@ -175,3 +175,9 @@ logging:
 - `access.log` 默认不记录请求头，避免 `Authorization`、`Cookie` 等敏感信息落盘
 - 多文件日志输出会增加磁盘占用，生产环境建议显式配置 `total-size-cap`
 - 如需彻底关闭控制台输出，将 `app.logging.console-enabled` 设为 `false`
+
+
+mvn -pl quickStart -am package
+mvn -Pface-platform-linux-x86_64 -pl quickStart -am package
+mvn -Pface-platform-linux-aarch64 -pl quickStart -am package
+mvn -Pface-platform-macos-aarch64 -pl quickStart -am package

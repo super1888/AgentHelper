@@ -61,6 +61,14 @@
         <redisson.version>3.38.1</redisson.version>
         <onnxruntime.version>1.20.0</onnxruntime.version>
         <smartjavaai.version>1.0.19</smartjavaai.version>
+        <smartjavaai.pytorch.jni.version>2.7.1-0.34.0</smartjavaai.pytorch.jni.version>
+        <smartjavaai.pytorch.native.version>2.7.1</smartjavaai.pytorch.native.version>
+        <smartjavaai.javacv.version>1.5.10</smartjavaai.javacv.version>
+        <smartjavaai.ffmpeg.version>6.1.1-1.5.10</smartjavaai.ffmpeg.version>
+        <smartjavaai.openblas.version>0.3.26-1.5.10</smartjavaai.openblas.version>
+        <smartjavaai.opencv.native.version>4.9.0-1.5.10</smartjavaai.opencv.native.version>
+        <face.javacv.classifier>windows-x86_64</face.javacv.classifier>
+        <face.djl.classifier>win-x86_64</face.djl.classifier>
         <swagger.annotations.version>2.2.28</swagger.annotations.version>
         <graalvm.polyglot.version>24.1.0</graalvm.polyglot.version>
         <dashscope.sdk.version>2.22.16</dashscope.sdk.version>
@@ -203,6 +211,13 @@
                 <scope>import</scope>
             </dependency>
             <dependency>
+                <groupId>cn.smartjavaai</groupId>
+                <artifactId>smartjavaai-bom</artifactId>
+                <version>${smartjavaai.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
                 <groupId>com.baomidou</groupId>
                 <artifactId>mybatis-plus-extension</artifactId>
                 <version>${mybatis-plus.version}</version>
@@ -216,6 +231,36 @@
                 <groupId>com.microsoft.onnxruntime</groupId>
                 <artifactId>onnxruntime</artifactId>
                 <version>${onnxruntime.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>ai.djl.pytorch</groupId>
+                <artifactId>pytorch-jni</artifactId>
+                <version>${smartjavaai.pytorch.jni.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>ai.djl.pytorch</groupId>
+                <artifactId>pytorch-native-cpu</artifactId>
+                <version>${smartjavaai.pytorch.native.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.bytedeco</groupId>
+                <artifactId>javacpp</artifactId>
+                <version>${smartjavaai.javacv.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.bytedeco</groupId>
+                <artifactId>ffmpeg</artifactId>
+                <version>${smartjavaai.ffmpeg.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.bytedeco</groupId>
+                <artifactId>openblas</artifactId>
+                <version>${smartjavaai.openblas.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.bytedeco</groupId>
+                <artifactId>opencv</artifactId>
+                <version>${smartjavaai.opencv.native.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.velocity</groupId>
@@ -369,6 +414,14 @@
                 <artifactId>opencv</artifactId>
                 <version>${project.version}</version>
             </dependency>
+            <dependency>
+                <groupId>cn.smartjavaai</groupId>
+                <artifactId>bom</artifactId>
+                <version>${smartjavaai.version}</version>
+                <type>pom</type>
+                <!-- 注意这里是import -->
+                <scope>import</scope>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -380,6 +433,40 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <profile>
+            <id>face-platform-windows-x86_64</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <face.javacv.classifier>windows-x86_64</face.javacv.classifier>
+                <face.djl.classifier>win-x86_64</face.djl.classifier>
+            </properties>
+        </profile>
+        <profile>
+            <id>face-platform-linux-x86_64</id>
+            <properties>
+                <face.javacv.classifier>linux-x86_64</face.javacv.classifier>
+                <face.djl.classifier>linux-x86_64</face.djl.classifier>
+            </properties>
+        </profile>
+        <profile>
+            <id>face-platform-linux-aarch64</id>
+            <properties>
+                <face.javacv.classifier>linux-arm64</face.javacv.classifier>
+                <face.djl.classifier>linux-aarch64</face.djl.classifier>
+            </properties>
+        </profile>
+        <profile>
+            <id>face-platform-macos-aarch64</id>
+            <properties>
+                <face.javacv.classifier>macosx-arm64</face.javacv.classifier>
+                <face.djl.classifier>osx-aarch64</face.djl.classifier>
+            </properties>
+        </profile>
+    </profiles>
 
     <repositories>
         <repository>
