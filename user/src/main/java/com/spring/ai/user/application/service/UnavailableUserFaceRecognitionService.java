@@ -19,7 +19,7 @@ import org.springframework.stereotype.Service;
 public class UnavailableUserFaceRecognitionService implements UserFaceRecognitionService {
 
     private static final String UNAVAILABLE_MESSAGE =
-            "Face recognition is unavailable because SmartJavaAI runtime dependencies are missing from the classpath";
+            "人脸识别服务不可用，当前运行环境缺少 SmartJavaAI 依赖";
 
     /**
      * 依赖缺失时直接返回明确错误。

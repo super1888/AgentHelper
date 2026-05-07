@@ -33,7 +33,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 /**
- * Real face recognition implementation based on YuNet + SFace.
+ * 基于 YuNet + SFace 的人脸识别实现。
  */
 @Service
 @ConditionalOnClass(name = {"org.opencv.core.Mat", "nu.pattern.OpenCV"})
@@ -53,7 +53,7 @@ public class FaceRecognitionServiceImpl implements FaceRecognitionService {
     @Override
     public FaceLoginVerifyResponse verifyFace(FaceLoginVerifyRequest request) {
         if (request == null || !StringUtils.hasText(request.getImageBase64())) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "Image content cannot be empty");
+            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "图片内容不能为空");
         }
         ensureReady();
         BufferedImage image = decodeImage(request.getImageBase64());
@@ -64,22 +64,22 @@ public class FaceRecognitionServiceImpl implements FaceRecognitionService {
             Mat detections = detectFaces(sourceMat);
             int faceCount = detections.rows();
             if (faceCount <= 0) {
-                throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "No face detected");
+                throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "未检测到人脸");
             }
             if (faceCount > 1) {
-                throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "Please keep exactly one face in the image");
+                throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "请保持图片中仅有一张人脸");
             }
 
             Mat bestFace = detections.row(0);
             double qualityScore = computeQualityScore(sourceMat, bestFace);
             if (qualityScore < faceProperties.getQualityThreshold()) {
-                throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "Face image quality is too low");
+                throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "人脸图片质量过低");
             }
 
             double livenessScore = computeLivenessScore(sourceMat, bestFace);
             if (Boolean.TRUE.equals(faceProperties.getEnableLivenessCheck())
                     && livenessScore < faceProperties.getLivenessThreshold()) {
-                throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "Liveness check failed");
+                throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "活体检测失败");
             }
 
             String embedding = extractFaceEmbedding(sourceMat, bestFace);
@@ -126,7 +126,7 @@ public class FaceRecognitionServiceImpl implements FaceRecognitionService {
             return detections;
         }
         if (detections.cols() != FACE_ROW_COLUMNS) {
-            throw new BusinessException(ErrorCodeEnum.INTERNAL_SERVER_ERROR, "Unexpected detector output format");
+            throw new BusinessException(ErrorCodeEnum.INTERNAL_SERVER_ERROR, "检测器输出格式异常");
         }
         return detections;
     }
@@ -275,11 +275,11 @@ public class FaceRecognitionServiceImpl implements FaceRecognitionService {
             byte[] bytes = Base64.getDecoder().decode(imageBase64.trim());
             BufferedImage image = ImageIO.read(new ByteArrayInputStream(bytes));
             if (image == null) {
-                throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "Unsupported image format");
+                throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "不支持的图片格式");
             }
             return image;
         } catch (IllegalArgumentException | IOException ex) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "Cannot decode image content");
+            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "图片内容解码失败");
         }
     }
 
@@ -329,11 +329,11 @@ public class FaceRecognitionServiceImpl implements FaceRecognitionService {
 
     private void validateModelFile(String path, String modelName) {
         if (!StringUtils.hasText(path)) {
-            throw new BusinessException(ErrorCodeEnum.INTERNAL_SERVER_ERROR, modelName + " path is not configured");
+            throw new BusinessException(ErrorCodeEnum.INTERNAL_SERVER_ERROR, modelName + " 路径未配置");
         }
         File file = new File(path.trim());
         if (!file.exists() || !file.isFile()) {
-            throw new BusinessException(ErrorCodeEnum.INTERNAL_SERVER_ERROR, modelName + " file does not exist: " + path);
+            throw new BusinessException(ErrorCodeEnum.INTERNAL_SERVER_ERROR, modelName + " 文件不存在：" + path);
         }
     }
 

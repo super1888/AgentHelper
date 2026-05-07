@@ -23,8 +23,8 @@ import jakarta.annotation.Resource;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.util.Collections;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.List;
 import javax.imageio.ImageIO;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -62,6 +62,7 @@ public class SmartJavaAiFaceService implements UserFaceRecognitionService {
         }
         try {
             DeviceEnum deviceEnum = resolveDevice();
+
             FaceDetConfig faceDetConfig = new FaceDetConfig(FaceDetModelEnum.RETINA_FACE);
             faceDetConfig.setConfidenceThreshold(smartFaceProperties.getDetectionThreshold());
             faceDetConfig.setNmsThresh(smartFaceProperties.getNmsThreshold());
@@ -85,14 +86,14 @@ public class SmartJavaAiFaceService implements UserFaceRecognitionService {
             throw new BusinessException(
                     ErrorCodeEnum.INTERNAL_SERVER_ERROR,
                     org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR,
-                    "SmartJavaAI face model initialization failed: " + exception.getMessage(),
+                    "SmartJavaAI 人脸模型初始化失败：" + exception.getMessage(),
                     exception
             );
         }
     }
 
     /**
-     * 释放 SmartJavaAI 模型资源。
+     * 释放模型资源。
      */
     @PreDestroy
     public void destroy() {
@@ -105,38 +106,38 @@ public class SmartJavaAiFaceService implements UserFaceRecognitionService {
      */
     public FaceLoginVerifyResponse verifyFace(FaceLoginVerifyRequest request) {
         if (!Boolean.TRUE.equals(smartFaceProperties.getEnabled())) {
-            throw new BusinessException(ErrorCodeEnum.INTERNAL_SERVER_ERROR, "SmartJavaAI face recognition is disabled");
+            throw new BusinessException(ErrorCodeEnum.INTERNAL_SERVER_ERROR, "SmartJavaAI 人脸识别已禁用");
         }
         if (request == null || !StringUtils.hasText(request.getImageBase64())) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "Image content cannot be empty");
+            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "图片内容不能为空");
         }
         ensureModelReady();
         BufferedImage image = decodeImage(request.getImageBase64());
         synchronized (modelMonitor) {
             R<DetectionResponse> detectResult = faceDetModel.detect(image);
-            DetectionResponse detectionResponse = unwrapRequiredResult(detectResult, "Face detection failed");
+            DetectionResponse detectionResponse = unwrapRequiredResult(detectResult, "人脸检测失败");
             List<DetectionInfo> detectionInfoList = detectionResponse.getDetectionInfoList();
             if (detectionInfoList == null) {
                 detectionInfoList = Collections.emptyList();
             }
             int faceCount = detectionInfoList.size();
             if (faceCount <= 0) {
-                throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "No face detected");
+                throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "未检测到人脸");
             }
             if (faceCount > 1) {
-                throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "Please keep exactly one face in the image");
+                throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "请保持图片中仅有一张人脸");
             }
 
             DetectionInfo topFace = detectionInfoList.get(0);
             double qualityScore = topFace == null ? 0D : topFace.getScore();
             if (qualityScore < smartFaceProperties.getQualityThreshold()) {
-                throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "Face image quality is too low");
+                throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "人脸图片质量过低");
             }
 
             R<float[]> featureResult = faceRecModel.extractTopFaceFeature(image);
-            float[] feature = unwrapRequiredResult(featureResult, "Face feature extraction failed");
+            float[] feature = unwrapRequiredResult(featureResult, "人脸特征提取失败");
             if (feature.length == 0) {
-                throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "Face feature extraction failed");
+                throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "人脸特征提取失败");
             }
             return FaceLoginVerifyResponse.builder()
                     .faceDetected(true)
@@ -149,7 +150,7 @@ public class SmartJavaAiFaceService implements UserFaceRecognitionService {
     }
 
     /**
-     * 比较两组特征是否属于同一人。
+     * 判断两个人脸特征是否匹配。
      */
     public boolean isSameFace(String sourceEmbedding, String targetEmbedding) {
         ensureModelReady();
@@ -164,14 +165,14 @@ public class SmartJavaAiFaceService implements UserFaceRecognitionService {
     }
 
     /**
-     * 解析特征维度。
+     * 获取特征维度。
      */
     public int resolveEmbeddingDimension(String embedding) {
         return decodeEmbedding(embedding).length;
     }
 
     /**
-     * 返回当前特征版本标识。
+     * 获取当前特征版本。
      */
     public String resolveEmbeddingVersion() {
         return EMBEDDING_VERSION;
@@ -179,10 +180,10 @@ public class SmartJavaAiFaceService implements UserFaceRecognitionService {
 
     private void ensureModelReady() {
         if (!Boolean.TRUE.equals(smartFaceProperties.getEnabled())) {
-            throw new BusinessException(ErrorCodeEnum.INTERNAL_SERVER_ERROR, "SmartJavaAI face recognition is disabled");
+            throw new BusinessException(ErrorCodeEnum.INTERNAL_SERVER_ERROR, "SmartJavaAI 人脸识别已禁用");
         }
         if (faceDetModel == null || faceRecModel == null) {
-            throw new BusinessException(ErrorCodeEnum.INTERNAL_SERVER_ERROR, "SmartJavaAI face model is not initialized");
+            throw new BusinessException(ErrorCodeEnum.INTERNAL_SERVER_ERROR, "SmartJavaAI 人脸模型未初始化");
         }
     }
 
@@ -194,7 +195,7 @@ public class SmartJavaAiFaceService implements UserFaceRecognitionService {
         try {
             return DeviceEnum.valueOf(device.trim().toUpperCase());
         } catch (IllegalArgumentException exception) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "Unsupported face device type: " + device);
+            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "不支持的人脸推理设备类型：" + device);
         }
     }
 
@@ -203,11 +204,11 @@ public class SmartJavaAiFaceService implements UserFaceRecognitionService {
             byte[] bytes = Base64.getDecoder().decode(stripDataPrefix(imageBase64.trim()));
             BufferedImage image = ImageIO.read(new ByteArrayInputStream(bytes));
             if (image == null) {
-                throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "Unsupported image format");
+                throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "不支持的图片格式");
             }
             return image;
         } catch (IllegalArgumentException | IOException exception) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "Cannot decode image content");
+            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "图片内容解码失败");
         }
     }
 
@@ -221,7 +222,7 @@ public class SmartJavaAiFaceService implements UserFaceRecognitionService {
 
     private <T> T unwrapResult(R<T> result, String message) {
         if (result == null || !result.isSuccess()) {
-            String errorMessage = result == null ? message : message + ": " + result.getMessage();
+            String errorMessage = result == null ? message : message + "：" + result.getMessage();
             throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, errorMessage);
         }
         return result.getData();
@@ -230,7 +231,7 @@ public class SmartJavaAiFaceService implements UserFaceRecognitionService {
     private <T> T unwrapRequiredResult(R<T> result, String message) {
         T data = unwrapResult(result, message);
         if (data == null) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, message + ": empty result returned by model");
+            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, message + "：模型返回空结果");
         }
         return data;
     }

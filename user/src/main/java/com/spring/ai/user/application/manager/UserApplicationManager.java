@@ -10,6 +10,8 @@ import com.spring.ai.common.repository.enitiy.SyTenant;
 import com.spring.ai.common.repository.enitiy.SyUser;
 import com.spring.ai.common.repository.service.SyTenantService;
 import com.spring.ai.common.repository.service.SyUserService;
+import com.spring.ai.common.support.TenantResolveSupport;
+import com.spring.ai.common.utils.CommonTextUtils;
 import com.spring.ai.user.application.assmbler.UserAssembler;
 import com.spring.ai.user.domain.request.UserCreateRequest;
 import com.spring.ai.user.domain.request.UserPageQueryRequest;
@@ -45,6 +47,9 @@ public class UserApplicationManager {
 
     @Resource
     private PasswordEncoder passwordEncoder;
+
+    @Resource
+    private TenantResolveSupport tenantResolveSupport;
 
     /**
      * 用户注册。
@@ -129,7 +134,7 @@ public class UserApplicationManager {
      */
     public UserProfileVO getUserDetail(Long userId) {
         SyUser user = requireUser(userId);
-        return UserAssembler.toUserProfileVO(user, resolveTenantName(user.getTenantId()));
+        return UserAssembler.toUserProfileVO(user, tenantResolveSupport.resolveTenantName(user.getTenantId()));
     }
 
     /**
@@ -151,10 +156,10 @@ public class UserApplicationManager {
     public PageInfo<UserProfileVO> pageQueryUsers(UserPageQueryRequest request) {
         PageHelper.startPage(request.getPageNum(), request.getPageSize());
         List<SyUser> syUsers = syUserService.pageQueryUsers(
-                normalize(request.getUsername()),
-                normalize(request.getNickname()),
-                normalize(request.getPhone()),
-                normalize(request.getEmail()),
+                CommonTextUtils.trim(request.getUsername()),
+                CommonTextUtils.trim(request.getNickname()),
+                CommonTextUtils.trim(request.getPhone()),
+                CommonTextUtils.trim(request.getEmail()),
                 normalizeStatus(request.getStatus())
         );
 
@@ -195,7 +200,7 @@ public class UserApplicationManager {
     }
 
     private void validateUnique(Long currentUserId, String username, String phone, String email) {
-        SyUser usernameUser = syUserService.getByUsername(normalize(username));
+        SyUser usernameUser = syUserService.getByUsername(CommonTextUtils.trim(username));
         if (usernameUser != null && !sameUser(currentUserId, usernameUser.getId())) {
             throw new BusinessException(
                     ErrorCodeEnum.USER_ALREADY_EXISTS,
@@ -205,7 +210,7 @@ public class UserApplicationManager {
         }
 
         if (StringUtils.hasText(phone)) {
-            SyUser phoneUser = syUserService.getByPhone(normalize(phone));
+            SyUser phoneUser = syUserService.getByPhone(CommonTextUtils.trim(phone));
             if (phoneUser != null && !sameUser(currentUserId, phoneUser.getId())) {
                 throw new BusinessException(
                         ErrorCodeEnum.USER_ALREADY_EXISTS,
@@ -216,7 +221,7 @@ public class UserApplicationManager {
         }
 
         if (StringUtils.hasText(email)) {
-            SyUser emailUser = syUserService.getByEmail(normalize(email));
+            SyUser emailUser = syUserService.getByEmail(CommonTextUtils.trim(email));
             if (emailUser != null && !sameUser(currentUserId, emailUser.getId())) {
                 throw new BusinessException(
                         ErrorCodeEnum.USER_ALREADY_EXISTS,
@@ -249,14 +254,6 @@ public class UserApplicationManager {
                 .collect(Collectors.toMap(SyTenant::getId, SyTenant::getTenantName, (left, right) -> left));
     }
 
-    private String resolveTenantName(Long tenantId) {
-        if (tenantId == null) {
-            return null;
-        }
-        SyTenant tenant = syTenantService.getDetailById(tenantId);
-        return tenant == null ? null : tenant.getTenantName();
-    }
-
     private boolean sameUser(Long currentUserId, Long targetUserId) {
         return currentUserId != null && currentUserId.equals(targetUserId);
     }
@@ -267,9 +264,5 @@ public class UserApplicationManager {
         }
         UserStatusEnum.fromVal(status);
         return status;
-    }
-
-    private String normalize(String value) {
-        return value == null ? null : value.trim();
     }
 }

@@ -16,7 +16,7 @@ import org.springframework.stereotype.Service;
 public class UnavailableFaceRecognitionServiceImpl implements FaceRecognitionService {
 
     private static final String UNAVAILABLE_MESSAGE =
-            "Face recognition is unavailable because OpenCV dependency is missing from the runtime classpath";
+            "人脸识别服务不可用，当前运行环境缺少 OpenCV 依赖";
 
     /**
      * OpenCV 依赖缺失时，直接返回明确错误。

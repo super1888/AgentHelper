@@ -11,6 +11,7 @@ import com.spring.ai.common.repository.enitiy.SyTenant;
 import com.spring.ai.common.repository.enitiy.SyUser;
 import com.spring.ai.common.repository.service.SyTenantService;
 import com.spring.ai.common.repository.service.SyUserService;
+import com.spring.ai.common.utils.CommonTextUtils;
 import com.spring.ai.user.application.assmbler.TenantAssembler;
 import com.spring.ai.user.domain.request.TenantCreateRequest;
 import com.spring.ai.user.domain.request.TenantPageQueryRequest;
@@ -111,8 +112,8 @@ public class TenantApplicationManager {
     public PageInfo<TenantProfileVO> pageQueryTenants(TenantPageQueryRequest request) {
         PageHelper.startPage(request.getPageNum(), request.getPageSize());
         List<SyTenant> tenants = syTenantService.pageQueryTenants(
-                normalize(request.getTenantName()),
-                normalize(request.getTenantCode()),
+                CommonTextUtils.trim(request.getTenantName()),
+                CommonTextUtils.trim(request.getTenantCode()),
                 normalizeStatus(request.getStatus())
         );
 
@@ -218,7 +219,7 @@ public class TenantApplicationManager {
     }
 
     private void validateTenantCodeUnique(Long currentTenantId, String tenantCode) {
-        SyTenant tenant = syTenantService.getByTenantCode(normalize(tenantCode));
+        SyTenant tenant = syTenantService.getByTenantCode(CommonTextUtils.trim(tenantCode));
         if (tenant != null && !tenant.getId().equals(currentTenantId)) {
             throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, HttpStatus.CONFLICT, "租户编码已存在");
         }
@@ -237,11 +238,7 @@ public class TenantApplicationManager {
     }
 
     private String buildDefaultTenantName(SyUser user) {
-        String baseName = StringUtils.hasText(user.getNickname()) ? user.getNickname().trim() : user.getUsername();
+        String baseName = StringUtils.hasText(user.getNickname()) ? CommonTextUtils.trim(user.getNickname()) : user.getUsername();
         return baseName + "默认租户";
-    }
-
-    private String normalize(String value) {
-        return value == null ? null : value.trim();
     }
 }

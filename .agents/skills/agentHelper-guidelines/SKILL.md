@@ -28,6 +28,7 @@ This is a multi-module Maven project.
 - Put business-specific code in the matching business module
 - Do not dump everything into `quickStart` just to save time
 - If logic is reusable string/data processing, move it into `common` utilities instead of leaving it inside manager/controller classes
+- If tenant parsing, string normalization, digest generation, or similar cross-module helpers already exist in `common`, call the shared helper instead of re-implementing methods such as `resolveTenantName`, `resolveTenantId`, `normalize`, or `sha256`
 - If code is only responsible for assembling response objects, place it in the module `application/assmbler` package
 - For custom agent flows in the `agent` module, keep `ApplicationManager` focused on orchestration and move stage-specific logic into dedicated services
 - For custom agent internal step data, use explicit DTO classes in `agent/domain/dto` rather than private inner classes in manager files
@@ -100,6 +101,7 @@ Do not add meaningless comments.
 - Prefer dedicated response objects over raw `Map`
 - Keep request parameters clear
 - Keep response structure stable
+- User-facing backend success and error messages must be returned in Chinese unless the user explicitly requires another language
 - Error messages must be readable and actionable
 - For multi-stage custom agent flows, return structured stage results so the frontend can render stage name, status, model binding, summary, issues, and output content
 - For stage-level model overrides, keep a default model field and let unset stages fall back to that default model

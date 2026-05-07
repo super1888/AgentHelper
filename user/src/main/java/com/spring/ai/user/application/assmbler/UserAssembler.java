@@ -3,6 +3,7 @@ package com.spring.ai.user.application.assmbler;
 import cn.dev33.satoken.SaManager;
 import cn.dev33.satoken.stp.StpUtil;
 import com.spring.ai.common.repository.enitiy.SyUser;
+import com.spring.ai.common.utils.CommonTextUtils;
 import com.spring.ai.user.domain.request.UserCreateRequest;
 import com.spring.ai.user.domain.request.UserUpdateRequest;
 import com.spring.ai.user.domain.vo.UserProfileVO;
@@ -56,7 +57,7 @@ public final class UserAssembler {
             return Collections.emptyList();
         }
         return users.stream()
-                .map(user -> toUserProfileVO(user, resolveTenantName(tenantNameMap, user.getTenantId())))
+                .map(user -> toUserProfileVO(user, tenantNameMap == null ? null : tenantNameMap.get(user.getTenantId())))
                 .collect(Collectors.toList());
     }
 
@@ -115,24 +116,16 @@ public final class UserAssembler {
         return tokenVO;
     }
 
-    private static String resolveTenantName(Map<Long, String> tenantNameMap, Long tenantId) {
-        if (tenantId == null || tenantNameMap == null) {
-            return null;
-        }
-        return tenantNameMap.get(tenantId);
-    }
-
     private static String resolveNickname(String nickname, String username) {
-        String normalizedNickname = trimToNull(nickname);
+        String normalizedNickname = CommonTextUtils.trimToNull(nickname);
         return StringUtils.hasText(normalizedNickname) ? normalizedNickname : trim(username);
     }
 
     private static String trimToNull(String value) {
-        String trimmed = trim(value);
-        return StringUtils.hasText(trimmed) ? trimmed : null;
+        return CommonTextUtils.trimToNull(value);
     }
 
     private static String trim(String value) {
-        return value == null ? null : value.trim();
+        return CommonTextUtils.trim(value);
     }
 }

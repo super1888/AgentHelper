@@ -5,26 +5,23 @@ import com.spring.ai.common.constants.UserAuthConstants;
 import com.spring.ai.common.enums.ErrorCodeEnum;
 import com.spring.ai.common.enums.user.UserStatusEnum;
 import com.spring.ai.common.exception.BusinessException;
-import com.spring.ai.common.repository.enitiy.SyTenant;
 import com.spring.ai.common.repository.enitiy.SyUser;
 import com.spring.ai.common.repository.enitiy.SyUserFaceTemplate;
-import com.spring.ai.common.repository.service.SyTenantService;
 import com.spring.ai.common.repository.service.SyUserFaceTemplateService;
 import com.spring.ai.common.repository.service.SyUserService;
 import com.spring.ai.common.security.ModelSecretCryptoService;
-import com.spring.ai.user.application.service.UserFaceRecognitionService;
+import com.spring.ai.common.support.TenantResolveSupport;
+import com.spring.ai.common.utils.CommonDigestUtils;
 import com.spring.ai.opencv.domain.request.FaceLoginVerifyRequest;
 import com.spring.ai.opencv.domain.response.FaceLoginVerifyResponse;
 import com.spring.ai.user.application.assmbler.UserAssembler;
+import com.spring.ai.user.application.service.UserFaceRecognitionService;
 import com.spring.ai.user.domain.request.UserFaceBindRequest;
 import com.spring.ai.user.domain.request.UserFaceLoginRequest;
 import com.spring.ai.user.domain.vo.UserAuthLoginVO;
 import com.spring.ai.user.domain.vo.UserFaceBindVO;
 import com.spring.ai.user.domain.vo.UserFaceStatusVO;
 import jakarta.annotation.Resource;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
@@ -43,14 +40,17 @@ public class UserFaceAuthManager {
     private SyUserService syUserService;
 
     @Resource
-    private SyTenantService syTenantService;
-
-    @Resource
     private SyUserFaceTemplateService syUserFaceTemplateService;
 
     @Resource
     private ModelSecretCryptoService modelSecretCryptoService;
 
+    @Resource
+    private TenantResolveSupport tenantResolveSupport;
+
+    /**
+     * 绑定人脸模板。
+     */
     public UserFaceBindVO bindFace(UserFaceBindRequest request) {
         StpUtil.checkLogin();
         Long userId = StpUtil.getLoginIdAsLong();
@@ -62,11 +62,12 @@ public class UserFaceAuthManager {
         ));
         SyUserFaceTemplate existed = syUserFaceTemplateService.getByUserId(userId);
         if (existed != null && !Boolean.TRUE.equals(request.getForceReplace())) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "Face already bound. Use forceReplace=true to rebind");
+            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "人脸已绑定，如需重新采集请传入 forceReplace=true");
         }
+
         SyUserFaceTemplate record = existed == null ? new SyUserFaceTemplate() : existed;
         record.setUserId(userId);
-        record.setTenantId(resolveTenantId(userId));
+        record.setTenantId(tenantResolveSupport.resolveTenantIdByUserId(userId));
         record.setFaceTemplateCode("FACE_" + userId);
         record.setEmbeddingCipherText(modelSecretCryptoService.encrypt(verifyResponse.getFaceEmbedding()));
         record.setEmbeddingDimension(userFaceRecognitionService.resolveEmbeddingDimension(verifyResponse.getFaceEmbedding()));
@@ -74,7 +75,7 @@ public class UserFaceAuthManager {
         record.setQualityScore(verifyResponse.getQualityScore());
         record.setLivenessScore(verifyResponse.getLivenessScore());
         record.setStatus("ENABLE");
-        record.setImageSha256(buildImageSha256(request.getImageBase64()));
+        record.setImageSha256(CommonDigestUtils.sha256Hex(request.getImageBase64(), "人脸图片摘要生成失败"));
         record.setLastVerifiedTime(LocalDateTime.now());
         syUserFaceTemplateService.saveOrUpdate(record);
 
@@ -87,6 +88,9 @@ public class UserFaceAuthManager {
         return bindVO;
     }
 
+    /**
+     * 使用人脸登录。
+     */
     public UserAuthLoginVO faceLogin(UserFaceLoginRequest request) {
         FaceLoginVerifyResponse verifyResponse = userFaceRecognitionService.verifyFace(buildVerifyRequest(
                 request.getImageBase64(),
@@ -106,26 +110,31 @@ public class UserFaceAuthManager {
                 .orElseThrow(() -> new BusinessException(
                         ErrorCodeEnum.UNAUTHORIZED,
                         HttpStatus.UNAUTHORIZED,
-                        "No bound user matched the current face"
+                        "未找到匹配的人脸模板"
                 ));
+
         SyUser user = syUserService.getDetailById(matchedRecord.getUserId());
         if (user == null) {
-            throw new BusinessException(ErrorCodeEnum.NOT_FOUND, HttpStatus.NOT_FOUND, "Matched user does not exist");
+            throw new BusinessException(ErrorCodeEnum.NOT_FOUND, HttpStatus.NOT_FOUND, "匹配的用户不存在");
         }
         if (!UserStatusEnum.ENABLE.getCode().equals(user.getStatus())) {
-            throw new BusinessException(ErrorCodeEnum.USER_DISABLED, HttpStatus.FORBIDDEN, "User is disabled");
+            throw new BusinessException(ErrorCodeEnum.USER_DISABLED, HttpStatus.FORBIDDEN, "用户已停用");
         }
+
         StpUtil.login(user.getId());
         StpUtil.getSession().set(UserAuthConstants.LOGIN_NAME, user.getUsername());
         matchedRecord.setLastVerifiedTime(LocalDateTime.now());
         syUserFaceTemplateService.updateById(matchedRecord);
 
         UserAuthLoginVO loginVO = new UserAuthLoginVO();
-        loginVO.setUser(UserAssembler.toUserProfileVO(user, resolveTenantName(user.getTenantId())));
+        loginVO.setUser(UserAssembler.toUserProfileVO(user, tenantResolveSupport.resolveTenantName(user.getTenantId())));
         loginVO.setToken(UserAssembler.toUserTokenVO(user.getId()));
         return loginVO;
     }
 
+    /**
+     * 获取当前账号的人脸状态。
+     */
     public UserFaceStatusVO faceStatus() {
         StpUtil.checkLogin();
         Long userId = StpUtil.getLoginIdAsLong();
@@ -138,6 +147,9 @@ public class UserFaceAuthManager {
         return statusVO;
     }
 
+    /**
+     * 解绑当前账号的人脸模板。
+     */
     public void unbindFace() {
         StpUtil.checkLogin();
         SyUserFaceTemplate record = syUserFaceTemplateService.getByUserId(StpUtil.getLoginIdAsLong());
@@ -148,7 +160,7 @@ public class UserFaceAuthManager {
 
     private FaceLoginVerifyRequest buildVerifyRequest(String imageBase64, String imageFormat, String deviceId, String clientIp) {
         if (!StringUtils.hasText(imageBase64) || !StringUtils.hasText(imageFormat)) {
-            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "Image content and format cannot be empty");
+            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "图片内容和格式不能为空");
         }
         FaceLoginVerifyRequest verifyRequest = new FaceLoginVerifyRequest();
         verifyRequest.setImageBase64(imageBase64);
@@ -156,35 +168,5 @@ public class UserFaceAuthManager {
         verifyRequest.setDeviceId(deviceId);
         verifyRequest.setClientIp(clientIp);
         return verifyRequest;
-    }
-
-    private String resolveTenantName(Long tenantId) {
-        if (tenantId == null) {
-            return null;
-        }
-        SyTenant tenant = syTenantService.getDetailById(tenantId);
-        return tenant == null ? null : tenant.getTenantName();
-    }
-
-    private Long resolveTenantId(Long userId) {
-        SyUser user = syUserService.getDetailById(userId);
-        return user == null ? null : user.getTenantId();
-    }
-
-    private String buildImageSha256(String imageBase64) {
-        if (!StringUtils.hasText(imageBase64)) {
-            return null;
-        }
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(imageBase64.trim().getBytes(StandardCharsets.UTF_8));
-            StringBuilder builder = new StringBuilder();
-            for (byte item : hash) {
-                builder.append(String.format("%02x", item));
-            }
-            return builder.toString();
-        } catch (NoSuchAlgorithmException ex) {
-            throw new BusinessException(ErrorCodeEnum.INTERNAL_SERVER_ERROR,HttpStatus.FORBIDDEN , "人脸图片摘要生成失败");
-        }
     }
 }

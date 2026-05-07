@@ -43,8 +43,8 @@ const navItems = [
   },
   {
     to: '/image-studio',
-    label: 'Image Studio',
-    description: 'Prompt, render, preview, and export',
+    label: 'gpt-image-2 图片生成',
+    description: '提示、渲染、预览和导出',
     icon: Image,
     isActive: () => route.name === 'image-studio',
   },
