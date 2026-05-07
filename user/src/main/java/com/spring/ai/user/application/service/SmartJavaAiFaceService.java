@@ -23,6 +23,7 @@ import jakarta.annotation.Resource;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Base64;
 import java.util.List;
 import javax.imageio.ImageIO;
@@ -113,9 +114,12 @@ public class SmartJavaAiFaceService implements UserFaceRecognitionService {
         BufferedImage image = decodeImage(request.getImageBase64());
         synchronized (modelMonitor) {
             R<DetectionResponse> detectResult = faceDetModel.detect(image);
-            DetectionResponse detectionResponse = unwrapResult(detectResult, "Face detection failed");
+            DetectionResponse detectionResponse = unwrapRequiredResult(detectResult, "Face detection failed");
             List<DetectionInfo> detectionInfoList = detectionResponse.getDetectionInfoList();
-            int faceCount = detectionInfoList == null ? 0 : detectionInfoList.size();
+            if (detectionInfoList == null) {
+                detectionInfoList = Collections.emptyList();
+            }
+            int faceCount = detectionInfoList.size();
             if (faceCount <= 0) {
                 throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "No face detected");
             }
@@ -130,8 +134,8 @@ public class SmartJavaAiFaceService implements UserFaceRecognitionService {
             }
 
             R<float[]> featureResult = faceRecModel.extractTopFaceFeature(image);
-            float[] feature = unwrapResult(featureResult, "Face feature extraction failed");
-            if (feature == null || feature.length == 0) {
+            float[] feature = unwrapRequiredResult(featureResult, "Face feature extraction failed");
+            if (feature.length == 0) {
                 throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "Face feature extraction failed");
             }
             return FaceLoginVerifyResponse.builder()
@@ -221,6 +225,14 @@ public class SmartJavaAiFaceService implements UserFaceRecognitionService {
             throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, errorMessage);
         }
         return result.getData();
+    }
+
+    private <T> T unwrapRequiredResult(R<T> result, String message) {
+        T data = unwrapResult(result, message);
+        if (data == null) {
+            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, message + ": empty result returned by model");
+        }
+        return data;
     }
 
     private String encodeEmbedding(float[] feature) {

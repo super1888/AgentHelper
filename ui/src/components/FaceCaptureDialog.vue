@@ -13,11 +13,13 @@ const props = withDefaults(
     description?: string
     submitting?: boolean
     forceReplace?: boolean
+    errorMessage?: string
   }>(),
   {
     description: '',
     submitting: false,
     forceReplace: false,
+    errorMessage: '',
   },
 )
 
@@ -48,6 +50,7 @@ const cameraBusy = ref(false)
 const cameraError = ref('')
 const deviceId = ref('')
 const clientIp = ref('')
+const activeErrorMessage = computed(() => props.errorMessage || cameraError.value)
 
 const modeLabel = computed(() => (props.mode === 'bind' ? '绑定人脸' : '人脸登录'))
 const submitLabel = computed(() => (props.mode === 'bind' ? '确认绑定' : '立即登录'))
@@ -188,6 +191,7 @@ watch(
   async (visible) => {
     cameraError.value = ''
     if (visible) {
+      resetPreview()
       await startCamera()
       return
     }
@@ -249,7 +253,7 @@ onBeforeUnmount(() => {
           </label>
         </div>
 
-        <p v-if="cameraError" class="face-dialog__error" role="alert">{{ cameraError }}</p>
+        <p v-if="activeErrorMessage" class="face-dialog__error" role="alert">{{ activeErrorMessage }}</p>
       </section>
 
       <aside class="face-dialog__preview">

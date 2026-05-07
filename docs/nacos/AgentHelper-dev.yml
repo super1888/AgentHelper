@@ -71,7 +71,8 @@ app:
         - /error
         - /actuator
     exception:
-      console-enabled: false
+      # 是否将异常日志同步输出到控制台。排查联调问题时建议开启。
+      console-enabled: true
     sql:
       enabled: false
       console-enabled: false
@@ -122,4 +123,3 @@ sa-token:
   token-style: uuid
   # 是否输出操作日志
   is-log: true
-

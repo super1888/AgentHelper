@@ -26,6 +26,7 @@ const passwordVisible = ref(false)
 const submitting = ref(false)
 const faceDialogOpen = ref(false)
 const faceSubmitting = ref(false)
+const faceErrorMessage = ref('')
 const registeredNoticeDismissed = ref(false)
 
 const apiEndpointLabel = computed(() => {
@@ -93,6 +94,7 @@ function closeAuthFeedback() {
 
 function openFaceDialog() {
   clearErrors()
+  faceErrorMessage.value = ''
   faceDialogOpen.value = true
 }
 
@@ -101,19 +103,16 @@ async function handleSubmit() {
 
   const nextErrors = validateLoginForm(form)
   Object.assign(errors, nextErrors)
-
   if (Object.keys(nextErrors).length > 0) {
     return
   }
 
   submitting.value = true
-
   try {
     await authStore.loginWithPassword({
       username: form.username.trim(),
       password: form.password.trim(),
     })
-
     const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/agents'
     await router.replace(redirect)
   } catch (error) {
@@ -142,10 +141,11 @@ async function handleFaceSubmit(payload: {
       silentLogin: true,
     })
     faceDialogOpen.value = false
+    faceErrorMessage.value = ''
     const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/agents'
     await router.replace(redirect)
   } catch (error) {
-    errors.form = getErrorMessage(error, '人脸登录失败，请重新采集。')
+    faceErrorMessage.value = getErrorMessage(error, '人脸登录失败，请重新采集。')
   } finally {
     faceSubmitting.value = false
   }
@@ -159,24 +159,27 @@ watchEffect(() => {
 </script>
 
 <template>
-    <AppFeedbackDialog
-      :model-value="Boolean(authFeedback)"
-      :tone="authFeedback?.tone ?? 'info'"
-      :message="authFeedback?.message ?? ''"
-      @update:model-value="!$event && closeAuthFeedback()"
-    />
-    <FaceCaptureDialog
-      v-model="faceDialogOpen"
-      mode="login"
-      title="人脸登录"
-      description="对准摄像头采集单人脸，系统会自动完成特征提取并登录。"
-      :submitting="faceSubmitting"
-      @submit="handleFaceSubmit"
-    />
-    <AuthFrame
-      eyebrow="Authentication"
-      title="Agent Helper 控制台"
-    description="统一认证入口与工作台访问控制，收敛账号登录、环境接入和权限校验流程。"
+  <AppFeedbackDialog
+    :model-value="Boolean(authFeedback)"
+    :tone="authFeedback?.tone ?? 'info'"
+    :message="authFeedback?.message ?? ''"
+    @update:model-value="!$event && closeAuthFeedback()"
+  />
+
+  <FaceCaptureDialog
+    v-model="faceDialogOpen"
+    mode="login"
+    title="人脸登录"
+    description="对准摄像头采集单人脸，系统会自动提取特征并完成登录。"
+    :submitting="faceSubmitting"
+    :error-message="faceErrorMessage"
+    @submit="handleFaceSubmit"
+  />
+
+  <AuthFrame
+    eyebrow="Authentication"
+    title="Agent Helper 控制台"
+    description="统一认证入口与工作台访问控制，覆盖账号登录、环境接入和权限校验流程。"
     panel-title="欢迎回来"
     panel-description="登录后进入业务控制台，继续处理 Agent、向量库、提示词和租户管理任务。"
     :highlights="highlights"
@@ -190,14 +193,6 @@ watchEffect(() => {
     </div>
 
     <form class="auth-form" @submit.prevent="handleSubmit">
-      <div v-if="false && registeredNotice" class="feedback-banner feedback-banner--success" aria-live="polite">
-        {{ registeredNotice }}
-      </div>
-
-      <div v-if="false && errors.form" class="feedback-banner feedback-banner--error" role="alert">
-        {{ errors.form }}
-      </div>
-
       <label class="field">
         <span class="field__label">用户名</span>
         <div class="input-shell" :class="{ 'input-shell--invalid': Boolean(errors.username) }">

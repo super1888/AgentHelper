@@ -27,8 +27,8 @@ import { useAuthStore } from '@/stores/auth'
 import type { TenantOption } from '@/types/tenant'
 import type {
   CreateUserPayload,
-  UserFaceStatus,
   UpdateUserPayload,
+  UserFaceStatus,
   UserPageResult,
   UserProfile,
   UserStatistics,
@@ -60,6 +60,7 @@ const selectedUser = ref<UserProfile | null>(null)
 const deleteTarget = ref<UserProfile | null>(null)
 const faceStatus = ref<UserFaceStatus | null>(null)
 const feedback = ref<FeedbackState | null>(null)
+const faceErrorMessage = ref('')
 const authStore = useAuthStore()
 
 const filters = reactive({
@@ -95,10 +96,10 @@ const faceStateLabel = computed(() => {
 
 const faceStateDescription = computed(() => {
   if (!faceStatus.value?.bound) {
-    return '当前账号尚未绑定人脸，绑定后可直接通过摄像头登录。'
+    return '当前账号尚未绑定人脸，绑定后可直接通过摄像头进行登录。'
   }
   return faceStatus.value.lastVerifiedTime
-    ? `最近验证 ${faceStatus.value.lastVerifiedTime}`
+    ? `最近验证时间：${faceStatus.value.lastVerifiedTime}`
     : '已绑定人脸模板，可用于快速登录。'
 })
 
@@ -234,6 +235,7 @@ async function refreshCurrentPage() {
 
 function openFaceBindDialog() {
   clearFeedback()
+  faceErrorMessage.value = ''
   faceDialogOpen.value = true
 }
 
@@ -246,18 +248,20 @@ async function handleFaceBindSubmit(payload: {
   silentLogin?: boolean | null
 }) {
   faceSubmitting.value = true
+  const wasBound = Boolean(faceStatus.value?.bound)
   try {
     await faceBind({
       imageBase64: payload.imageBase64,
       imageFormat: payload.imageFormat,
       deviceId: payload.deviceId ?? null,
       clientIp: payload.clientIp ?? null,
-      forceReplace: Boolean(faceStatus.value?.bound),
+      forceReplace: wasBound,
     })
     faceDialogOpen.value = false
-    await loadFaceStatus(faceStatus.value?.bound ? '人脸模板已更新。' : '人脸绑定成功。')
+    faceErrorMessage.value = ''
+    await loadFaceStatus(wasBound ? '人脸模板已更新。' : '人脸绑定成功。')
   } catch (error) {
-    showFeedback('error', getErrorMessage(error, '人脸绑定失败。'))
+    faceErrorMessage.value = getErrorMessage(error, '人脸绑定失败。')
   } finally {
     faceSubmitting.value = false
   }
@@ -319,9 +323,11 @@ async function handleDialogSubmit(event: { mode: DialogMode; payload: CreateUser
       ])
       return
     }
+
     if (!selectedUser.value) {
       throw new Error('缺少待编辑的用户信息。')
     }
+
     await updateUser(selectedUser.value.id, event.payload as UpdateUserPayload)
     dialogOpen.value = false
     await loadUsers(pageState.value.pageNum, '用户信息已更新。')
@@ -346,6 +352,7 @@ async function confirmDelete() {
   if (!deleteTarget.value) {
     return
   }
+
   deletePending.value = true
   try {
     await removeUser(deleteTarget.value.id)
@@ -378,6 +385,7 @@ onMounted(() => {
       :message="feedback?.message ?? ''"
       @update:model-value="!$event && clearFeedback()"
     />
+
     <FaceCaptureDialog
       v-model="faceDialogOpen"
       mode="bind"
@@ -385,6 +393,7 @@ onMounted(() => {
       description="采集当前登录账号的人脸模板，后续可直接通过摄像头登录。"
       :submitting="faceSubmitting"
       :force-replace="Boolean(faceStatus?.bound)"
+      :error-message="faceErrorMessage"
       @submit="handleFaceBindSubmit"
     />
 
@@ -428,6 +437,7 @@ onMounted(() => {
           <h3>{{ currentUserLabel }}</h3>
           <p>{{ faceStateDescription }}</p>
         </div>
+
         <div class="face-auth-card__status">
           <div class="face-auth-card__badge" :class="{ 'face-auth-card__badge--bound': faceStatus?.bound }">
             <ShieldCheck :size="16" />
@@ -435,6 +445,7 @@ onMounted(() => {
           </div>
           <span class="face-auth-card__template">模板 {{ faceStatus?.faceTemplateCode || '--' }}</span>
         </div>
+
         <div class="face-auth-card__actions">
           <button class="app-button" :disabled="faceStatusLoading" @click="openFaceBindDialog">
             <ShieldCheck :size="16" />
@@ -472,12 +483,14 @@ onMounted(() => {
               <input v-model="filters.username" class="app-input" type="text" placeholder="按用户名搜索" />
             </div>
           </label>
+
           <label class="field">
             <span class="field__label">昵称</span>
             <div class="input-shell">
               <input v-model="filters.nickname" class="app-input" type="text" placeholder="按昵称搜索" />
             </div>
           </label>
+
           <label class="field">
             <span class="field__label">手机号</span>
             <div class="input-shell">
@@ -485,6 +498,7 @@ onMounted(() => {
               <input v-model="filters.phone" class="app-input" type="text" placeholder="按手机号搜索" />
             </div>
           </label>
+
           <label class="field">
             <span class="field__label">邮箱</span>
             <div class="input-shell">
@@ -492,6 +506,7 @@ onMounted(() => {
               <input v-model="filters.email" class="app-input" type="text" placeholder="按邮箱搜索" />
             </div>
           </label>
+
           <label class="field">
             <span class="field__label">状态</span>
             <select v-model="filters.status" class="app-select">
@@ -500,6 +515,7 @@ onMounted(() => {
               <option value="disabled">停用</option>
             </select>
           </label>
+
           <button class="app-button management-filter-grid__submit" :disabled="loading" @click="executeSearch">
             执行搜索
           </button>
@@ -508,7 +524,9 @@ onMounted(() => {
 
       <article class="panel-card management-panel">
         <div v-if="loading" class="management-empty">正在加载用户列表...</div>
-        <div v-else-if="pageState.list.length === 0" class="management-empty">当前没有匹配的用户数据，请调整筛选条件或新建用户。</div>
+        <div v-else-if="pageState.list.length === 0" class="management-empty">
+          当前没有匹配的用户数据，请调整筛选条件或新建用户。
+        </div>
         <div v-else class="management-list">
           <article v-for="user in pageState.list" :key="user.id" class="management-card user-card">
             <div class="management-card__head">
@@ -518,10 +536,12 @@ onMounted(() => {
               </div>
               <StatusBadge :status="user.status" />
             </div>
+
             <div class="management-card__meta">
               <span><Users :size="14" />{{ formatTenant(user) }}</span>
               <span>{{ formatContact(user) }}</span>
             </div>
+
             <div class="management-card__actions">
               <button class="app-button app-button--secondary" @click="openEditDialog(user)">
                 <UserRoundPen :size="16" />
@@ -557,6 +577,7 @@ onMounted(() => {
       :submitting="submitting"
       @submit="handleDialogSubmit"
     />
+
     <ConfirmDialog
       :model-value="deleteTarget !== null"
       title="删除用户"
@@ -566,6 +587,7 @@ onMounted(() => {
       @update:model-value="handleDeleteDialogVisibility"
       @confirm="confirmDelete"
     />
+
     <ConfirmDialog
       :model-value="faceUnbindConfirmOpen"
       title="解除人脸绑定"

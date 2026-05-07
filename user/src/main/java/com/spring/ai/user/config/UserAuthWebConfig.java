@@ -26,6 +26,7 @@ public class UserAuthWebConfig implements WebMvcConfigurer {
                 .excludePathPatterns(
                         "/agentHelper/users/register",
                         "/agentHelper/auth/login",
+                        "/agentHelper/auth/face/login",
                         "/error"
                 );
     }
