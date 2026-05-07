@@ -11,6 +11,7 @@ import {
   Image,
   LogOut,
   PlugZap,
+  ScanSearch,
   ShieldCheck,
   Sparkles,
   Users,
@@ -46,6 +47,13 @@ const navItems = [
     description: 'Prompt, render, preview, and export',
     icon: Image,
     isActive: () => route.name === 'image-studio',
+  },
+  {
+    to: '/opencv',
+    label: 'OpenCV 识别',
+    description: '上传图片，识别食材并叠加框选',
+    icon: ScanSearch,
+    isActive: () => route.name === 'opencv',
   },
   {
     to: '/prompts',

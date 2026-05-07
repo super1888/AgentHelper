@@ -60,6 +60,7 @@
         <nacos.version>3.1.0</nacos.version>
         <redisson.version>3.38.1</redisson.version>
         <onnxruntime.version>1.20.0</onnxruntime.version>
+        <smartjavaai.version>1.0.19</smartjavaai.version>
         <swagger.annotations.version>2.2.28</swagger.annotations.version>
         <graalvm.polyglot.version>24.1.0</graalvm.polyglot.version>
         <dashscope.sdk.version>2.22.16</dashscope.sdk.version>

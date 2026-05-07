@@ -11,9 +11,10 @@ import com.spring.ai.common.repository.enitiy.SyUserFaceTemplate;
 import com.spring.ai.common.repository.service.SyTenantService;
 import com.spring.ai.common.repository.service.SyUserFaceTemplateService;
 import com.spring.ai.common.repository.service.SyUserService;
+import com.spring.ai.common.security.ModelSecretCryptoService;
+import com.spring.ai.user.application.service.UserFaceRecognitionService;
 import com.spring.ai.opencv.domain.request.FaceLoginVerifyRequest;
 import com.spring.ai.opencv.domain.response.FaceLoginVerifyResponse;
-import com.spring.ai.opencv.service.FaceRecognitionService;
 import com.spring.ai.user.application.assmbler.UserAssembler;
 import com.spring.ai.user.domain.request.UserFaceBindRequest;
 import com.spring.ai.user.domain.request.UserFaceLoginRequest;
@@ -21,21 +22,22 @@ import com.spring.ai.user.domain.vo.UserAuthLoginVO;
 import com.spring.ai.user.domain.vo.UserFaceBindVO;
 import com.spring.ai.user.domain.vo.UserFaceStatusVO;
 import jakarta.annotation.Resource;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 /**
- * Face auth manager.
- *
- * <p>Current implementation uses in-memory records for a demo flow.</p>
+ * 人脸认证管理器。
  */
 @Component
 public class UserFaceAuthManager {
 
     @Resource
-    private FaceRecognitionService faceRecognitionService;
+    private UserFaceRecognitionService userFaceRecognitionService;
 
     @Resource
     private SyUserService syUserService;
@@ -46,10 +48,13 @@ public class UserFaceAuthManager {
     @Resource
     private SyUserFaceTemplateService syUserFaceTemplateService;
 
+    @Resource
+    private ModelSecretCryptoService modelSecretCryptoService;
+
     public UserFaceBindVO bindFace(UserFaceBindRequest request) {
         StpUtil.checkLogin();
         Long userId = StpUtil.getLoginIdAsLong();
-        FaceLoginVerifyResponse verifyResponse = faceRecognitionService.verifyFace(buildVerifyRequest(
+        FaceLoginVerifyResponse verifyResponse = userFaceRecognitionService.verifyFace(buildVerifyRequest(
                 request.getImageBase64(),
                 request.getImageFormat(),
                 request.getDeviceId(),
@@ -63,12 +68,13 @@ public class UserFaceAuthManager {
         record.setUserId(userId);
         record.setTenantId(resolveTenantId(userId));
         record.setFaceTemplateCode("FACE_" + userId);
-        record.setEmbeddingCipherText(verifyResponse.getFaceFingerprint());
-        record.setEmbeddingDimension(1);
-        record.setEmbeddingVersion("demo-1.0");
+        record.setEmbeddingCipherText(modelSecretCryptoService.encrypt(verifyResponse.getFaceEmbedding()));
+        record.setEmbeddingDimension(userFaceRecognitionService.resolveEmbeddingDimension(verifyResponse.getFaceEmbedding()));
+        record.setEmbeddingVersion(userFaceRecognitionService.resolveEmbeddingVersion());
         record.setQualityScore(verifyResponse.getQualityScore());
         record.setLivenessScore(verifyResponse.getLivenessScore());
         record.setStatus("ENABLE");
+        record.setImageSha256(buildImageSha256(request.getImageBase64()));
         record.setLastVerifiedTime(LocalDateTime.now());
         syUserFaceTemplateService.saveOrUpdate(record);
 
@@ -82,7 +88,7 @@ public class UserFaceAuthManager {
     }
 
     public UserAuthLoginVO faceLogin(UserFaceLoginRequest request) {
-        FaceLoginVerifyResponse verifyResponse = faceRecognitionService.verifyFace(buildVerifyRequest(
+        FaceLoginVerifyResponse verifyResponse = userFaceRecognitionService.verifyFace(buildVerifyRequest(
                 request.getImageBase64(),
                 request.getImageFormat(),
                 request.getDeviceId(),
@@ -92,7 +98,10 @@ public class UserFaceAuthManager {
                 .eq(SyUserFaceTemplate::getStatus, "ENABLE")
                 .list()
                 .stream()
-                .filter(item -> faceRecognitionService.isSameFace(item.getEmbeddingCipherText(), verifyResponse.getFaceFingerprint()))
+                .filter(item -> userFaceRecognitionService.isSameFace(
+                        modelSecretCryptoService.decrypt(item.getEmbeddingCipherText()),
+                        verifyResponse.getFaceEmbedding()
+                ))
                 .findFirst()
                 .orElseThrow(() -> new BusinessException(
                         ErrorCodeEnum.UNAUTHORIZED,
@@ -160,5 +169,22 @@ public class UserFaceAuthManager {
     private Long resolveTenantId(Long userId) {
         SyUser user = syUserService.getDetailById(userId);
         return user == null ? null : user.getTenantId();
+    }
+
+    private String buildImageSha256(String imageBase64) {
+        if (!StringUtils.hasText(imageBase64)) {
+            return null;
+        }
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(imageBase64.trim().getBytes(StandardCharsets.UTF_8));
+            StringBuilder builder = new StringBuilder();
+            for (byte item : hash) {
+                builder.append(String.format("%02x", item));
+            }
+            return builder.toString();
+        } catch (NoSuchAlgorithmException ex) {
+            throw new BusinessException(ErrorCodeEnum.INTERNAL_SERVER_ERROR,HttpStatus.FORBIDDEN , "人脸图片摘要生成失败");
+        }
     }
 }

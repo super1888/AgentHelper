@@ -14,5 +14,5 @@ public class FaceLoginVerifyResponse {
     private Integer faceCount;
     private Double qualityScore;
     private Double livenessScore;
-    private String faceFingerprint;
+    private String faceEmbedding;
 }

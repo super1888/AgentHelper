@@ -58,6 +58,14 @@ const router = createRouter({
       },
     },
     {
+      path: '/opencv',
+      name: 'opencv',
+      component: () => import('@/views/opencv/OpenCvView.vue'),
+      meta: {
+        requiresAuth: true,
+      },
+    },
+    {
       path: '/prompts',
       name: 'prompts',
       component: () => import('@/views/prompts/PromptTemplateManagementView.vue'),

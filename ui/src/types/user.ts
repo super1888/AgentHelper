@@ -32,6 +32,28 @@ export interface LoginPayload {
   password: string
 }
 
+export interface FaceImagePayload {
+  imageBase64: string
+  imageFormat: string
+  deviceId?: string | null
+  clientIp?: string | null
+}
+
+export interface FaceBindPayload extends FaceImagePayload {
+  forceReplace?: boolean | null
+}
+
+export interface FaceLoginPayload extends FaceImagePayload {
+  silentLogin?: boolean | null
+}
+
+export interface UserFaceStatus {
+  bound: boolean
+  faceTemplateCode: string | null
+  status: string | null
+  lastVerifiedTime: string | null
+}
+
 export interface RegisterPayload {
   username: string
   nickname: string | null

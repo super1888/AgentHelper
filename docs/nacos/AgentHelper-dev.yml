@@ -50,7 +50,7 @@ app:
     aesKey: t4f+9kQ2L7xR8sT2G5zH8A==
   logging:
     app-name: AgentHelper
-    path: ./logs
+    path: D:\AgentHelper-log
     console-enabled: true
     rolling:
       max-file-size: 100MB
@@ -78,7 +78,28 @@ app:
       slow-threshold-ms: 1000
       log-parameters: true
       max-sql-length: 4000
-
+  user:
+    face:
+      # 是否启用 SmartJavaAI 人脸识别能力，false 时人脸绑定/登录不可用
+      enabled: true
+      # 推理设备，支持 CPU / GPU；没有 GPU 环境时保持 CPU
+      device: CPU
+      # RetinaFace 人脸检测置信度阈值，越高越严格
+      detection-threshold: 0.85
+      # RetinaFace NMS 阈值，用于过滤重复人脸框
+      nms-threshold: 0.45
+      # 人脸质量阈值；当前实现直接复用检测分，低于该值拒绝绑定/登录
+      quality-threshold: 0.85
+      # 人脸相似度阈值；建议先用 0.80，误识别高就调大，拒识高就调小
+      match-threshold: 0.80
+      # 提取特征前是否先裁剪人脸区域，建议保持 true
+      crop-face: true
+      # 提取特征前是否做人脸对齐，建议保持 true
+      align: true
+      # RetinaFace 检测模型路径，可填本地绝对路径
+      detect-model-path: D:/models/smartjavaai/retinaface.zip
+      # FaceNet 特征提取模型路径，可填本地绝对路径
+      rec-model-path: D:/models/smartjavaai/face_feature.zip
 logging:
   level:
     root: INFO

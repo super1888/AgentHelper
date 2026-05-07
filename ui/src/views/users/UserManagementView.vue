@@ -3,25 +3,31 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import {
   ChevronLeft,
   ChevronRight,
+  CircleOff,
   Mail,
   Phone,
   Plus,
   RefreshCw,
   Search,
+  ShieldCheck,
   Trash2,
   UserRoundPen,
   Users,
 } from 'lucide-vue-next'
 import AppFeedbackDialog from '@/components/AppFeedbackDialog.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
+import FaceCaptureDialog from '@/components/FaceCaptureDialog.vue'
 import MainShell from '@/components/MainShell.vue'
 import StatusBadge from '@/components/StatusBadge.vue'
 import UserFormDialog from '@/components/UserFormDialog.vue'
+import { faceBind, fetchFaceStatus, faceUnbind } from '@/api/auth'
 import { fetchTenantOptions } from '@/api/tenant'
 import { createUser, fetchUserStats, queryUsers, removeUser, updateUser } from '@/api/user'
+import { useAuthStore } from '@/stores/auth'
 import type { TenantOption } from '@/types/tenant'
 import type {
   CreateUserPayload,
+  UserFaceStatus,
   UpdateUserPayload,
   UserPageResult,
   UserProfile,
@@ -41,13 +47,20 @@ interface FeedbackState {
 const loading = ref(false)
 const statsLoading = ref(false)
 const tenantOptionsLoading = ref(false)
+const faceStatusLoading = ref(false)
 const submitting = ref(false)
 const deletePending = ref(false)
+const faceSubmitting = ref(false)
+const faceUnbindPending = ref(false)
 const dialogOpen = ref(false)
+const faceDialogOpen = ref(false)
+const faceUnbindConfirmOpen = ref(false)
 const dialogMode = ref<DialogMode>('create')
 const selectedUser = ref<UserProfile | null>(null)
 const deleteTarget = ref<UserProfile | null>(null)
+const faceStatus = ref<UserFaceStatus | null>(null)
 const feedback = ref<FeedbackState | null>(null)
+const authStore = useAuthStore()
 
 const filters = reactive({
   username: '',
@@ -67,6 +80,27 @@ const pageState = ref<UserPageResult>({
 
 const statistics = ref<UserStatistics>({ totalCount: 0 })
 const tenantOptions = ref<TenantOption[]>([])
+
+const currentUserLabel = computed(() => authStore.user?.nickname || authStore.user?.username || '当前登录用户')
+
+const faceStateLabel = computed(() => {
+  if (faceStatusLoading.value) {
+    return '状态同步中...'
+  }
+  if (!faceStatus.value?.bound) {
+    return '未绑定'
+  }
+  return faceStatus.value.status || 'ENABLE'
+})
+
+const faceStateDescription = computed(() => {
+  if (!faceStatus.value?.bound) {
+    return '当前账号尚未绑定人脸，绑定后可直接通过摄像头登录。'
+  }
+  return faceStatus.value.lastVerifiedTime
+    ? `最近验证 ${faceStatus.value.lastVerifiedTime}`
+    : '已绑定人脸模板，可用于快速登录。'
+})
 
 const totalUsersLabel = computed(() => (
   statsLoading.value ? '统计刷新中...' : `总用户数 ${statistics.value.totalCount}`
@@ -171,6 +205,20 @@ async function loadTenantOptions() {
   }
 }
 
+async function loadFaceStatus(successMessage?: string) {
+  faceStatusLoading.value = true
+  try {
+    faceStatus.value = await fetchFaceStatus()
+    if (successMessage) {
+      showFeedback('success', successMessage)
+    }
+  } catch (error) {
+    showFeedback('error', getErrorMessage(error, '人脸状态加载失败。'))
+  } finally {
+    faceStatusLoading.value = false
+  }
+}
+
 async function executeSearch() {
   await loadUsers(1)
 }
@@ -180,7 +228,56 @@ async function refreshCurrentPage() {
     loadUsers(pageState.value.pageNum),
     loadStatistics(),
     loadTenantOptions(),
+    loadFaceStatus(),
   ])
+}
+
+function openFaceBindDialog() {
+  clearFeedback()
+  faceDialogOpen.value = true
+}
+
+async function handleFaceBindSubmit(payload: {
+  imageBase64: string
+  imageFormat: string
+  deviceId?: string | null
+  clientIp?: string | null
+  forceReplace?: boolean | null
+  silentLogin?: boolean | null
+}) {
+  faceSubmitting.value = true
+  try {
+    await faceBind({
+      imageBase64: payload.imageBase64,
+      imageFormat: payload.imageFormat,
+      deviceId: payload.deviceId ?? null,
+      clientIp: payload.clientIp ?? null,
+      forceReplace: Boolean(faceStatus.value?.bound),
+    })
+    faceDialogOpen.value = false
+    await loadFaceStatus(faceStatus.value?.bound ? '人脸模板已更新。' : '人脸绑定成功。')
+  } catch (error) {
+    showFeedback('error', getErrorMessage(error, '人脸绑定失败。'))
+  } finally {
+    faceSubmitting.value = false
+  }
+}
+
+function requestFaceUnbind() {
+  faceUnbindConfirmOpen.value = true
+}
+
+async function confirmFaceUnbind() {
+  faceUnbindPending.value = true
+  try {
+    await faceUnbind()
+    faceUnbindConfirmOpen.value = false
+    await loadFaceStatus('人脸绑定已解除。')
+  } catch (error) {
+    showFeedback('error', getErrorMessage(error, '解除人脸绑定失败。'))
+  } finally {
+    faceUnbindPending.value = false
+  }
 }
 
 async function goToPage(pageNum: number) {
@@ -269,7 +366,7 @@ async function confirmDelete() {
 }
 
 onMounted(() => {
-  void Promise.all([loadUsers(), loadStatistics(), loadTenantOptions()])
+  void Promise.all([loadUsers(), loadStatistics(), loadTenantOptions(), loadFaceStatus()])
 })
 </script>
 
@@ -280,6 +377,15 @@ onMounted(() => {
       :tone="feedback?.tone ?? 'info'"
       :message="feedback?.message ?? ''"
       @update:model-value="!$event && clearFeedback()"
+    />
+    <FaceCaptureDialog
+      v-model="faceDialogOpen"
+      mode="bind"
+      title="绑定人脸"
+      description="采集当前登录账号的人脸模板，后续可直接通过摄像头登录。"
+      :submitting="faceSubmitting"
+      :force-replace="Boolean(faceStatus?.bound)"
+      @submit="handleFaceBindSubmit"
     />
 
     <section class="management-page">
@@ -315,6 +421,39 @@ onMounted(() => {
           <strong>{{ tenantOptions.length }}</strong>
         </article>
       </section>
+
+      <article class="panel-card face-auth-card">
+        <div class="face-auth-card__copy">
+          <p class="section-kicker">Face Access</p>
+          <h3>{{ currentUserLabel }}</h3>
+          <p>{{ faceStateDescription }}</p>
+        </div>
+        <div class="face-auth-card__status">
+          <div class="face-auth-card__badge" :class="{ 'face-auth-card__badge--bound': faceStatus?.bound }">
+            <ShieldCheck :size="16" />
+            <span>{{ faceStateLabel }}</span>
+          </div>
+          <span class="face-auth-card__template">模板 {{ faceStatus?.faceTemplateCode || '--' }}</span>
+        </div>
+        <div class="face-auth-card__actions">
+          <button class="app-button" :disabled="faceStatusLoading" @click="openFaceBindDialog">
+            <ShieldCheck :size="16" />
+            {{ faceStatus?.bound ? '重新采集' : '绑定人脸' }}
+          </button>
+          <button class="app-button app-button--secondary" :disabled="faceStatusLoading" @click="loadFaceStatus()">
+            <RefreshCw :size="16" />
+            刷新状态
+          </button>
+          <button
+            class="app-button app-button--danger"
+            :disabled="!faceStatus?.bound || faceStatusLoading"
+            @click="requestFaceUnbind"
+          >
+            <CircleOff :size="16" />
+            解除绑定
+          </button>
+        </div>
+      </article>
 
       <article class="panel-card management-panel">
         <div class="management-head">
@@ -427,6 +566,15 @@ onMounted(() => {
       @update:model-value="handleDeleteDialogVisibility"
       @confirm="confirmDelete"
     />
+    <ConfirmDialog
+      :model-value="faceUnbindConfirmOpen"
+      title="解除人脸绑定"
+      description="解除后该账号将无法继续使用人脸登录，是否继续？"
+      confirm-text="确认解除"
+      :loading="faceUnbindPending"
+      @update:model-value="faceUnbindConfirmOpen = $event"
+      @confirm="confirmFaceUnbind"
+    />
   </MainShell>
 </template>
 
@@ -435,5 +583,72 @@ onMounted(() => {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+}
+
+.face-auth-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) auto;
+  gap: 18px;
+  align-items: center;
+  padding: var(--panel-padding);
+}
+
+.face-auth-card__copy {
+  display: grid;
+  gap: 8px;
+}
+
+.face-auth-card__copy h3 {
+  font-size: 1.4rem;
+}
+
+.face-auth-card__copy p:last-child {
+  color: var(--color-ink-soft);
+  line-height: 1.7;
+}
+
+.face-auth-card__status {
+  display: grid;
+  justify-items: end;
+  gap: 10px;
+}
+
+.face-auth-card__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  color: var(--color-ink-soft);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.face-auth-card__badge--bound {
+  color: #d8fff3;
+  border-color: rgba(100, 216, 190, 0.24);
+  background: rgba(100, 216, 190, 0.12);
+}
+
+.face-auth-card__template {
+  color: var(--color-ink-muted);
+  font-size: 0.84rem;
+}
+
+.face-auth-card__actions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 900px) {
+  .face-auth-card {
+    grid-template-columns: 1fr;
+  }
+
+  .face-auth-card__status {
+    justify-items: start;
+  }
 }
 </style>

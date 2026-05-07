@@ -1,12 +1,14 @@
 import { computed, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
 import {
+  faceLogin as faceLoginRequest,
   fetchCurrentUser,
   login as loginRequest,
   logout as logoutRequest,
   registerAccount,
 } from '@/api/auth'
 import type {
+  FaceLoginPayload,
   LoginPayload,
   RegisterPayload,
   UserAuthLoginResult,
@@ -71,6 +73,12 @@ export const useAuthStore = defineStore('auth', () => {
     return result
   }
 
+  async function loginWithFace(payload: FaceLoginPayload) {
+    const result = await faceLoginRequest(payload)
+    applyAuth(result)
+    return result
+  }
+
   async function registerWithPassword(payload: RegisterPayload) {
     await registerAccount(payload)
   }
@@ -94,6 +102,7 @@ export const useAuthStore = defineStore('auth', () => {
     bootstrap,
     clearAuth,
     loginWithPassword,
+    loginWithFace,
     registerWithPassword,
     signOut,
   }

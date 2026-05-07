@@ -10,5 +10,7 @@ public interface FaceRecognitionService {
 
     FaceLoginVerifyResponse verifyFace(FaceLoginVerifyRequest request);
 
-    boolean isSameFace(String sourceFingerprint, String targetFingerprint);
+    boolean isSameFace(String sourceEmbedding, String targetEmbedding);
+
+    int resolveEmbeddingDimension(String embedding);
 }

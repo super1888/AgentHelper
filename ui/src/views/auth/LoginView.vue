@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watchEffect } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
-import { ArrowRight, Eye, EyeOff, KeyRound, Server, UserRound } from 'lucide-vue-next'
+import { ArrowRight, Eye, EyeOff, KeyRound, ScanFace, Server, UserRound } from 'lucide-vue-next'
 import AppFeedbackDialog from '@/components/AppFeedbackDialog.vue'
+import FaceCaptureDialog from '@/components/FaceCaptureDialog.vue'
 import AuthFrame from '@/components/AuthFrame.vue'
 import { appConfig } from '@/config/env'
 import { useAuthStore } from '@/stores/auth'
@@ -23,6 +24,8 @@ const form = reactive<LoginFormState>({
 const errors = reactive<Partial<Record<LoginField | 'form', string>>>({})
 const passwordVisible = ref(false)
 const submitting = ref(false)
+const faceDialogOpen = ref(false)
+const faceSubmitting = ref(false)
 const registeredNoticeDismissed = ref(false)
 
 const apiEndpointLabel = computed(() => {
@@ -88,6 +91,11 @@ function closeAuthFeedback() {
   registeredNoticeDismissed.value = true
 }
 
+function openFaceDialog() {
+  clearErrors()
+  faceDialogOpen.value = true
+}
+
 async function handleSubmit() {
   clearErrors()
 
@@ -115,6 +123,34 @@ async function handleSubmit() {
   }
 }
 
+async function handleFaceSubmit(payload: {
+  imageBase64: string
+  imageFormat: string
+  deviceId?: string | null
+  clientIp?: string | null
+  forceReplace?: boolean | null
+  silentLogin?: boolean | null
+}) {
+  faceSubmitting.value = true
+  clearErrors()
+  try {
+    await authStore.loginWithFace({
+      imageBase64: payload.imageBase64,
+      imageFormat: payload.imageFormat,
+      deviceId: payload.deviceId ?? null,
+      clientIp: payload.clientIp ?? null,
+      silentLogin: true,
+    })
+    faceDialogOpen.value = false
+    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/agents'
+    await router.replace(redirect)
+  } catch (error) {
+    errors.form = getErrorMessage(error, '人脸登录失败，请重新采集。')
+  } finally {
+    faceSubmitting.value = false
+  }
+}
+
 watchEffect(() => {
   if (!form.username && typeof route.query.username === 'string') {
     form.username = route.query.username
@@ -123,15 +159,23 @@ watchEffect(() => {
 </script>
 
 <template>
-  <AppFeedbackDialog
-    :model-value="Boolean(authFeedback)"
-    :tone="authFeedback?.tone ?? 'info'"
-    :message="authFeedback?.message ?? ''"
-    @update:model-value="!$event && closeAuthFeedback()"
-  />
-  <AuthFrame
-    eyebrow="Authentication"
-    title="Agent Helper 控制台"
+    <AppFeedbackDialog
+      :model-value="Boolean(authFeedback)"
+      :tone="authFeedback?.tone ?? 'info'"
+      :message="authFeedback?.message ?? ''"
+      @update:model-value="!$event && closeAuthFeedback()"
+    />
+    <FaceCaptureDialog
+      v-model="faceDialogOpen"
+      mode="login"
+      title="人脸登录"
+      description="对准摄像头采集单人脸，系统会自动完成特征提取并登录。"
+      :submitting="faceSubmitting"
+      @submit="handleFaceSubmit"
+    />
+    <AuthFrame
+      eyebrow="Authentication"
+      title="Agent Helper 控制台"
     description="统一认证入口与工作台访问控制，收敛账号登录、环境接入和权限校验流程。"
     panel-title="欢迎回来"
     panel-description="登录后进入业务控制台，继续处理 Agent、向量库、提示词和租户管理任务。"
@@ -214,6 +258,16 @@ watchEffect(() => {
         <ArrowRight v-else :size="16" aria-hidden="true" />
         {{ submitting ? '登录中...' : '进入控制台' }}
       </button>
+
+      <button
+        type="button"
+        class="app-button app-button--secondary auth-form__face"
+        :disabled="submitting"
+        @click="openFaceDialog"
+      >
+        <ScanFace :size="16" />
+        人脸登录
+      </button>
     </form>
 
     <div class="auth-links">
@@ -222,3 +276,9 @@ watchEffect(() => {
     </div>
   </AuthFrame>
 </template>
+
+<style scoped>
+.auth-form__face {
+  justify-content: center;
+}
+</style>
