@@ -416,7 +416,7 @@
             </dependency>
             <dependency>
                 <groupId>cn.smartjavaai</groupId>
-                <artifactId>bom</artifactId>
+                <artifactId>smartjavaai-bom</artifactId>
                 <version>${smartjavaai.version}</version>
                 <type>pom</type>
                 <!-- 注意这里是import -->
@@ -468,22 +468,4 @@
         </profile>
     </profiles>
 
-    <repositories>
-        <repository>
-            <id>spring-release</id>
-            <name>Spring Release Repository</name>
-            <url>https://repo.spring.io/release</url>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
-        </repository>
-        <repository>
-            <id>spring-milestones</id>
-            <name>Spring Milestones Repository</name>
-            <url>https://repo.spring.io/milestone</url>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
-        </repository>
-    </repositories>
 </project>

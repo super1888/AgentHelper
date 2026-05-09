@@ -120,35 +120,41 @@
         <dependency>
             <groupId>org.bytedeco</groupId>
             <artifactId>javacpp</artifactId>
+            <version>${smartjavaai.javacv.version}</version>
             <classifier>${face.javacv.classifier}</classifier>
             <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>org.bytedeco</groupId>
             <artifactId>ffmpeg</artifactId>
+            <version>${smartjavaai.ffmpeg.version}</version>
             <classifier>${face.javacv.classifier}</classifier>
             <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>org.bytedeco</groupId>
             <artifactId>openblas</artifactId>
+            <version>${smartjavaai.openblas.version}</version>
             <classifier>${face.javacv.classifier}</classifier>
             <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>org.bytedeco</groupId>
             <artifactId>opencv</artifactId>
+            <version>${smartjavaai.opencv.native.version}</version>
             <classifier>${face.javacv.classifier}</classifier>
             <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>cn.smartjavaai</groupId>
             <artifactId>smartjavaai-face</artifactId>
+            <version>${smartjavaai.version}</version>
             <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>cn.smartjavaai</groupId>
             <artifactId>smartjavaai-common</artifactId>
+            <version>${smartjavaai.version}</version>
             <scope>runtime</scope>
         </dependency>
     </dependencies>
