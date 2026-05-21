@@ -5,26 +5,7 @@
     <option name="originalFiles">
       <list>
         <option value="$PROJECT_DIR$/pom.xml" />
-        <option value="$PROJECT_DIR$/quick-start-dashscope/pom.xml" />
-        <option value="$PROJECT_DIR$/interceptors/pom.xml" />
-        <option value="$PROJECT_DIR$/hooks/pom.xml" />
-        <option value="$PROJECT_DIR$/tools/pom.xml" />
-        <option value="$PROJECT_DIR$/skills/pom.xml" />
-        <option value="$PROJECT_DIR$/prompt/pom.xml" />
-        <option value="$PROJECT_DIR$/user/pom.xml" />
-        <option value="$PROJECT_DIR$/agent/pom.xml" />
-        <option value="$PROJECT_DIR$/model/pom.xml" />
-        <option value="$PROJECT_DIR$/core/pom.xml" />
-        <option value="$PROJECT_DIR$/a2a/pom.xml" />
-        <option value="$PROJECT_DIR$/Graph/pom.xml" />
-        <option value="$PROJECT_DIR$/mcp/pom.xml" />
-        <option value="$PROJECT_DIR$/opencv/pom.xml" />
       </list>
-    </option>
-    <option name="ignoredFiles">
-      <set>
-        <option value="$PROJECT_DIR$/model/pom.xml" />
-      </set>
     </option>
   </component>
   <component name="ProjectRootManager" version="2" languageLevel="JDK_21" project-jdk-name="21" project-jdk-type="JavaSDK">
