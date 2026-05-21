@@ -34,6 +34,7 @@
         <module>graph</module>
         <module>mcp</module>
         <module>opencv</module>
+        <module>flowable</module>
     </modules>
 
     <properties>

@@ -15,6 +15,7 @@
         <module name="core" />
         <module name="a2a" />
         <module name="common" />
+        <module name="flowable" />
         <module name="websocket" />
         <module name="vectorStore" />
         <module name="logging" />
@@ -36,6 +37,7 @@
       <module name="agent" options="-parameters" />
       <module name="common" options="-parameters" />
       <module name="core" options="-parameters" />
+      <module name="flowable" options="-parameters" />
       <module name="graph" options="-parameters" />
       <module name="hooks" options="-parameters" />
       <module name="interceptors" options="-parameters" />

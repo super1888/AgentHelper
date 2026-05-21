@@ -127,7 +127,7 @@ public class RequestTraceLogFilter extends OncePerRequestFilter {
         }
         return Collections.list(headerNames).stream()
                 .map(name -> name + "=" + truncate(maskHeaderValue(name, request.getHeader(name))))
-                .collect(Collectors.toList())
+                .toList()
                 .toString();
     }
 

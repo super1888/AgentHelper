@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:flowable="http://flowable.org/bpmn"
+             xsi:schemaLocation="http://www.omg.org/spec/BPMN/20100524/MODEL BPMN20.xsd"
+             targetNamespace="http://spring.ai.flowable/approval">
+    <process id="approvalProcess" name="流程审批流程" isExecutable="true">
+        <startEvent id="startEvent" name="开始"/>
+        <sequenceFlow id="flowStartToTask" sourceRef="startEvent" targetRef="approvalTask"/>
+
+        <userTask id="approvalTask" name="部门审批" flowable:assignee="${approverUserId}"/>
+        <sequenceFlow id="flowTaskToGateway" sourceRef="approvalTask" targetRef="approvalGateway"/>
+
+        <exclusiveGateway id="approvalGateway" name="审批结果"/>
+        <sequenceFlow id="flowApproved" sourceRef="approvalGateway" targetRef="approvedEnd">
+            <conditionExpression xsi:type="tFormalExpression">${approved == true}</conditionExpression>
+        </sequenceFlow>
+        <sequenceFlow id="flowRejected" sourceRef="approvalGateway" targetRef="rejectedEnd">
+            <conditionExpression xsi:type="tFormalExpression">${approved == false}</conditionExpression>
+        </sequenceFlow>
+
+        <endEvent id="approvedEnd" name="通过结束"/>
+        <endEvent id="rejectedEnd" name="驳回结束"/>
+    </process>
+</definitions>

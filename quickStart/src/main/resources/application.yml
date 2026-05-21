@@ -54,6 +54,15 @@ app:
   mybatis-plus:
     enable-sql-log: false
 
+flowable:
+  check-process-definitions: true
+  database-schema-update: true
+  history-level: audit
+  process-definition-location-prefix: classpath*:/processes/
+  process-definition-location-suffixes:
+    - "**.bpmn20.xml"
+    - "**.bpmn"
+
 logging:
   level:
     root: INFO
