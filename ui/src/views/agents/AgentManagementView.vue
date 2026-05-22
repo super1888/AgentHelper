@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { MessageSquareText, Plus, RefreshCw, Rocket, Search, ShieldBan, Trash2 } from 'lucide-vue-next'

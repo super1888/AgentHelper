@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import { FileCode2, FileText, FolderOpen, Hash } from 'lucide-vue-next'
 import AppDialog from '@/components/AppDialog.vue'

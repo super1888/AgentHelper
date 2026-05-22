@@ -34,6 +34,15 @@ This is a multi-module Maven project.
 - For custom agent internal step data, use explicit DTO classes in `agent/domain/dto` rather than private inner classes in manager files
 - Cross-cutting enterprise logging should live in an independent `logging` module, while the runtime entry module keeps only startup-level config such as `logback-spring.xml`
 
+## Manager Boundary Rules
+
+These rules are mandatory for backend module work in this repository.
+
+- `ApplicationManager` classes must focus on orchestration: validation, transaction boundary, repository/cache calls, and business flow only.
+- Do not keep reusable string processing, digest generation, normalization, truncation, or blank handling inside managers; use `common` utilities such as `CommonTextUtils` and `CommonDigestUtils`, or add reusable helpers to `common` first.
+- Do not assemble entity/response/log beans inside managers; create a module-local `application/assmbler/*Assembler` and put `toCreateRecord`, `toResponse`, `toLogResponse`, `mergeRecord`, and similar mapping methods there.
+- Controllers must not assemble business beans either; controllers only receive request data and wrap manager results.
+- When reviewing changes, reject manager-local helper methods named like `toResponse`, `toLogResponse`, `blankToNull`, `truncate`, `sha256`, or other reusable conversion helpers unless there is a clear non-reusable business reason.
 ## Backend Rules
 
 - Use `@RestController`
@@ -89,12 +98,15 @@ Add Chinese comments when the logic is non-trivial.
 - Public methods: add Chinese comments above them
 - Complex logic blocks: explain the intent in Chinese
 - Page styles: comment by region/module when needed
+- All source/config/document files must be saved as UTF-8 without BOM. Hidden BOM characters such as `\ufeff` / bytes `EF BB BF` are forbidden because Java may report `illegal character: '\ufeff'`.
+- Chinese comments and Chinese user-facing text must be stored as valid UTF-8 text; mojibake/garbled text is forbidden and must be fixed before submitting.
 
 Do not add meaningless comments.
 
 - Do not write comments like "define variable" or "execute method"
 - Do not mix Chinese and English in one comment
 - Do not end with only `TODO`
+- Do not submit files containing garbled Chinese comments or messages caused by encoding conversion issues
 
 ## Data And Response Rules
 
@@ -118,6 +130,7 @@ Before submitting, confirm:
 6. If it cannot compile, state the blocking reason clearly
 7. If adding custom agent orchestration, confirm manager/service/assembler responsibilities are separated cleanly
 8. If extracting common helpers or DTOs, confirm package ownership is coherent and no avoidable coupling is introduced
+9. Before submitting generated or edited source files, scan for hidden BOM bytes `EF BB BF` and remove all `\ufeff` characters from source files
 
 ## Current Stack
 

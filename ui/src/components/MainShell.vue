@@ -9,6 +9,7 @@ import {
   FileCode2,
   GitBranch,
   Image,
+  Link2,
   LogOut,
   PlugZap,
   ScanSearch,
@@ -43,7 +44,7 @@ const navItems = [
   },
   {
     to: '/image-studio',
-    label: 'gpt-image-2 图片生成',
+    label: '图片生成',
     description: '提示、渲染、预览和导出',
     icon: Image,
     isActive: () => route.name === 'image-studio',
@@ -51,7 +52,7 @@ const navItems = [
   {
     to: '/opencv',
     label: 'OpenCV 识别',
-    description: '上传图片，识别食材并叠加框选',
+    description: '上传图片，识别食材并叠加标注',
     icon: ScanSearch,
     isActive: () => route.name === 'opencv',
   },
@@ -75,6 +76,13 @@ const navItems = [
     description: '工具注册、调试、发布与风险控制',
     icon: Wrench,
     isActive: () => route.name === 'tools',
+  },
+  {
+    to: '/links',
+    label: '短链接管理',
+    description: '短链生成、重定向、访问统计与风控洞察',
+    icon: Link2,
+    isActive: () => route.name === 'links',
   },
   {
     to: '/mcp',
@@ -149,7 +157,7 @@ async function handleLogout() {
             <ShieldCheck :size="20" />
           </div>
           <div class="shell__brand-copy">
-            <p class="section-kicker">控制中枢</p>
+            <p class="section-kicker">控制中心</p>
             <h1>Agent Helper Console</h1>
             <p>统一管理智能体、模型、提示词、知识库、租户与平台扩展能力。</p>
           </div>
@@ -547,3 +555,10 @@ async function handleLogout() {
   }
 }
 </style>
+
+
+
+
+
+
+

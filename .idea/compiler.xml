@@ -9,6 +9,7 @@
         <outputRelativeToContentRoot value="true" />
         <module name="quickStart" />
         <module name="agent" />
+        <module name="link" />
         <module name="tools" />
         <module name="graph" />
         <module name="skills" />
@@ -41,6 +42,7 @@
       <module name="graph" options="-parameters" />
       <module name="hooks" options="-parameters" />
       <module name="interceptors" options="-parameters" />
+      <module name="link" options="-parameters" />
       <module name="logging" options="-parameters" />
       <module name="mcp" options="-parameters" />
       <module name="model" options="-parameters" />

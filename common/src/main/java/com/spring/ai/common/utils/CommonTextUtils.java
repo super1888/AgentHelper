@@ -34,7 +34,7 @@ public final class CommonTextUtils {
     }
 
     /**
-     * 清洗字符串列表，空值过滤并去重。
+     * 清洗字符串列表，过滤空值并去重。
      */
     public static List<String> emptyIfNull(List<String> value) {
         if (value == null) {
@@ -103,6 +103,15 @@ public final class CommonTextUtils {
                 .toList();
     }
 
+    /**
+     * 截断文本到指定长度，空值原样返回。
+     */
+    public static String truncate(String value, int maxLength) {
+        if (value == null || maxLength < 0 || value.length() <= maxLength) {
+            return value;
+        }
+        return value.substring(0, maxLength);
+    }
     /**
      * 将 null 与空字符串视为等价，便于做表单字段比较。
      */

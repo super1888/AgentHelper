@@ -102,6 +102,10 @@
             <artifactId>opencv</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.spring.ai</groupId>
+            <artifactId>link</artifactId>
+        </dependency>
+        <dependency>
             <groupId>com.microsoft.onnxruntime</groupId>
             <artifactId>onnxruntime</artifactId>
             <scope>runtime</scope>
@@ -159,3 +163,4 @@
         </dependency>
     </dependencies>
 </project>
+

@@ -90,6 +90,14 @@ const router = createRouter({
       },
     },
     {
+      path: '/links',
+      name: 'links',
+      component: () => import('@/views/links/ShortLinkManagementView.vue'),
+      meta: {
+        requiresAuth: true,
+      },
+    },
+    {
       path: '/mcp',
       name: 'mcp',
       component: () => import('@/views/mcp/McpManagementView.vue'),
