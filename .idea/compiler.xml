@@ -27,6 +27,7 @@
         <module name="user" />
         <module name="opencv" />
         <module name="interceptors" />
+        <module name="statistics" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
@@ -53,6 +54,7 @@
       <module name="quickStart" options="-parameters" />
       <module name="skills" options="-parameters" />
       <module name="springAi" options="" />
+      <module name="statistics" options="-parameters" />
       <module name="tools" options="-parameters" />
       <module name="user" options="-parameters" />
       <module name="vectorStore" options="-parameters" />

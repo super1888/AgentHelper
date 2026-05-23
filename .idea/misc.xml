@@ -7,6 +7,7 @@
         <option value="$PROJECT_DIR$/pom.xml" />
         <option value="$PROJECT_DIR$/link/pom.xml" />
         <option value="$PROJECT_DIR$/bigfile/pom.xml" />
+        <option value="$PROJECT_DIR$/statistics/pom.xml" />
       </list>
     </option>
   </component>
