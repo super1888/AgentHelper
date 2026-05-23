@@ -32,6 +32,11 @@ public class VectorStoreController {
         return ApiResponse.success(vectorStoreService.upload(file));
     }
 
+    @Operation(summary = "导入已合并的大文件到向量库")
+    @PostMapping("/importBigFile")
+    public ApiResponse<VectorStoreUploadResponse> importBigFile(@RequestParam String fileId) {
+        return ApiResponse.success(vectorStoreService.importBigFile(fileId));
+    }
     @Operation(summary = "查询向量文件列表")
     @GetMapping("/files")
     public ApiResponse<VectorStoreFileListResponse> listFiles() {

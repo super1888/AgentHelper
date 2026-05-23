@@ -138,6 +138,14 @@ const router = createRouter({
       },
     },
     {
+      path: '/big-files',
+      name: 'big-files',
+      component: () => import('@/views/bigfiles/BigFileManagementView.vue'),
+      meta: {
+        requiresAuth: true,
+      },
+    },
+    {
       path: '/tenants',
       name: 'tenants',
       component: () => import('@/views/tenants/TenantManagementView.vue'),

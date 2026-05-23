@@ -15,6 +15,8 @@ public interface VectorStoreService {
 
     VectorStoreUploadResponse upload(MultipartFile file);
 
+    VectorStoreUploadResponse importBigFile(String fileId);
+
     VectorStoreFileListResponse listFiles();
 
     VectorStoreDocumentListResponse listDocuments(String fileName);

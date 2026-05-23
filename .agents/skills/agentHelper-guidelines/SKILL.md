@@ -90,6 +90,16 @@ These rules are mandatory for backend module work in this repository.
 - Avoid long methods and oversized classes
 - Keep folder structure aligned with existing module structure
 
+## Encoding Rules
+
+These rules are mandatory for every file created or modified in this repository.
+
+- Save all source, config, Markdown, Vue, TypeScript, JavaScript, CSS, YAML, XML, and JSON files as valid UTF-8 without BOM.
+- Never submit files containing `\ufeff` or BOM bytes `EF BB BF`; Java source files with BOM may fail with `illegal character: '\ufeff'`.
+- Never submit mojibake/garbled Chinese text. If Chinese comments or UI copy look garbled, restore the file from Git and rewrite only the intended change with UTF-8.
+- On Windows PowerShell, do not rely on default `Set-Content` or `Out-File` encoding. Prefer `.NET` writes with `New-Object System.Text.UTF8Encoding($false)` or verified tooling that writes UTF-8 without BOM.
+- After generating or editing files, run a strict UTF-8/no-BOM scan on changed text files before reporting completion.
+
 ## Comment Rules
 
 Add Chinese comments when the logic is non-trivial.

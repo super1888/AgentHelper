@@ -60,3 +60,11 @@ export async function deleteAllVectorFiles() {
   const response = await apiClient.post('/vectorStore/deleteAll')
   return unwrapResponse<VectorStoreDeleteResult>(response)
 }
+
+export async function importBigFileToVectorStore(fileId: string) {
+  const response = await apiClient.post('/vectorStore/importBigFile', null, {
+    params: { fileId },
+    timeout: 120000,
+  })
+  return unwrapResponse<VectorStoreUploadResult>(response)
+}

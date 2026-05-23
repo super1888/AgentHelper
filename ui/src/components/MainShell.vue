@@ -6,6 +6,7 @@ import {
   Building2,
   Cpu,
   Database,
+  FileArchive,
   FileCode2,
   GitBranch,
   Image,
@@ -118,6 +119,13 @@ const navItems = [
     description: '知识入库、切片、检索与文件治理',
     icon: Database,
     isActive: () => route.name === 'vectors',
+  },
+  {
+    to: '/big-files',
+    label: '大文件上传',
+    description: '分片上传、断点续传、合并校验与容量管理',
+    icon: FileArchive,
+    isActive: () => route.name === 'big-files',
   },
   {
     to: '/tenants',

@@ -9,6 +9,8 @@ import static com.spring.ai.common.constants.VectorStoreManagerConstants.METADAT
 import static com.spring.ai.common.constants.VectorStoreManagerConstants.METADATA_UPLOADED_AT;
 import static com.spring.ai.common.constants.VectorStoreManagerConstants.MODULE_NAME;
 
+import com.spring.ai.bigfile.domain.response.BigFileResourceResponse;
+import com.spring.ai.bigfile.service.BigFileService;
 import com.spring.ai.common.config.async.CommonAsyncConfig;
 import com.spring.ai.common.repository.enitiy.VectorStoreFileRecord;
 import com.spring.ai.common.repository.service.VectorStoreFileRecordService;
@@ -28,6 +30,9 @@ import com.spring.ai.vectorstore.reader.MultipartDocumentReaderRegistry;
 import com.spring.ai.vectorstore.service.VectorStoreService;
 import com.spring.ai.vectorstore.store.RedisVectorStoreCapabilityChecker;
 import jakarta.annotation.Resource;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -72,6 +77,54 @@ public class VectorStoreServiceImpl implements VectorStoreService {
     // 文件列表扫描数量
     private static final int FILE_LIST_SCAN_COUNT = 200;
 
+    private static class PathMultipartFile implements MultipartFile {
+
+        private final BigFileResourceResponse resource;
+
+        private PathMultipartFile(BigFileResourceResponse resource) {
+            this.resource = resource;
+        }
+
+        @Override
+        public String getName() {
+            return "file";
+        }
+
+        @Override
+        public String getOriginalFilename() {
+            return resource.getFileName();
+        }
+
+        @Override
+        public String getContentType() {
+            return StringUtils.hasText(resource.getContentType()) ? resource.getContentType() : DEFAULT_CONTENT_TYPE;
+        }
+
+        @Override
+        public boolean isEmpty() {
+            return getSize() <= 0;
+        }
+
+        @Override
+        public long getSize() {
+            return resource.getFileSize() == null ? 0L : resource.getFileSize();
+        }
+
+        @Override
+        public byte[] getBytes() throws IOException {
+            return Files.readAllBytes(resource.getStoragePath());
+        }
+
+        @Override
+        public InputStream getInputStream() throws IOException {
+            return Files.newInputStream(resource.getStoragePath());
+        }
+
+        @Override
+        public void transferTo(java.io.File dest) throws IOException, IllegalStateException {
+            Files.copy(resource.getStoragePath(), dest.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        }
+    }
     // 注入向量存储组件
     @Resource
     private VectorStore vectorStore;
@@ -112,6 +165,17 @@ public class VectorStoreServiceImpl implements VectorStoreService {
     @Override
     public VectorStoreUploadResponse upload(MultipartFile file) {
         validateFile(file);
+        return storeMultipartFile(file);
+    }
+
+    @Override
+    public VectorStoreUploadResponse importBigFile(String fileId) {
+        BigFileResourceResponse resource = bigFileService.getCompletedFile(normalizeRequiredText(fileId, "文件唯一标识不能为空"));
+        MultipartFile file = new PathMultipartFile(resource);
+        return storeMultipartFile(file);
+    }
+
+    private VectorStoreUploadResponse storeMultipartFile(MultipartFile file) {
         capabilityChecker.ensureReady();
 
         String fileName = requireFileName(file);

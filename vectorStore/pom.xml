@@ -39,5 +39,9 @@
             <groupId>com.spring.ai</groupId>
             <artifactId>common</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.spring.ai</groupId>
+            <artifactId>bigfile</artifactId>
+        </dependency>
     </dependencies>
 </project>
