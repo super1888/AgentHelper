@@ -148,6 +148,9 @@ public class VectorStoreServiceImpl implements VectorStoreService {
     // 注入向量存储文件记录服务
     @Resource
     private VectorStoreFileRecordService vectorStoreFileRecordService;
+    // 注入向量存储文件记录服务
+    @Resource
+    private BigFileService bigFileService;
 
     // 注入公共异步执行器
     @Resource(name = CommonAsyncConfig.COMMON_ASYNC_EXECUTOR)
