@@ -340,11 +340,11 @@ public class ShortLinkApplicationManager {
     private boolean isRateLimited(String ipAddress) {
         try {
             String key = RATE_LIMIT_KEY_PREFIX + ipAddress;
-            Long count = stringRedisTemplate.opsForValue().increment(key);
-            if (count != null && count == 1L) {
+            long count = stringRedisTemplate.opsForValue().increment(key);
+            if (count == 1L) {
                 stringRedisTemplate.expire(key, Duration.ofMinutes(1));
             }
-            return count != null && count > RATE_LIMIT_PER_MINUTE;
+            return count > RATE_LIMIT_PER_MINUTE;
         } catch (Exception ex) {
             return false;
         }

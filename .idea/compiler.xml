@@ -18,6 +18,7 @@
         <module name="common" />
         <module name="flowable" />
         <module name="websocket" />
+        <module name="bigfile" />
         <module name="vectorStore" />
         <module name="logging" />
         <module name="mcp" />
@@ -36,6 +37,7 @@
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
       <module name="a2a" options="-parameters" />
       <module name="agent" options="-parameters" />
+      <module name="bigfile" options="-parameters" />
       <module name="common" options="-parameters" />
       <module name="core" options="-parameters" />
       <module name="flowable" options="-parameters" />

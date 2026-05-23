@@ -8,7 +8,6 @@ import com.spring.ai.link.domain.response.ShortLinkResponse;
 import com.spring.ai.link.domain.response.ShortLinkStatisticsResponse;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -17,11 +16,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.io.IOException;
 import java.util.List;
 
 /**
- * 短链接管理与跳转接口。
+ * 短链接管理接口。
  */
 @RestController
 public class ShortLinkController {
@@ -68,10 +66,5 @@ public class ShortLinkController {
     @GetMapping("/short-links/access-logs")
     public ApiResponse<List<ShortLinkAccessLogResponse>> listAccessLogs(@RequestParam(value = "shortCode", required = false) String shortCode) {
         return ApiResponse.success(shortLinkApplicationManager.listAccessLogs(shortCode));
-    }
-
-    @GetMapping("/s/{shortCode}")
-    public void redirect(@PathVariable String shortCode, HttpServletRequest request, HttpServletResponse response) throws IOException {
-        shortLinkApplicationManager.redirect(shortCode, request, response);
     }
 }

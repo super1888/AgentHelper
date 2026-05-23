@@ -36,6 +36,7 @@
         <module>opencv</module>
         <module>flowable</module>
         <module>link</module>
+        <module>bigfile</module>
     </modules>
 
     <properties>
@@ -419,6 +420,11 @@
             <dependency>
                 <groupId>com.spring.ai</groupId>
                 <artifactId>link</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.spring.ai</groupId>
+                <artifactId>bigfile</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
