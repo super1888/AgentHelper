@@ -146,6 +146,14 @@ const router = createRouter({
       },
     },
     {
+      path: '/statistics',
+      name: 'statistics',
+      component: () => import('@/views/statistics/StatisticsManagementView.vue'),
+      meta: {
+        requiresAuth: true,
+      },
+    },
+    {
       path: '/tenants',
       name: 'tenants',
       component: () => import('@/views/tenants/TenantManagementView.vue'),

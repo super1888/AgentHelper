@@ -5,6 +5,7 @@ import { setUnauthorizedHandler } from './api/client'
 import { appConfig } from './config/env'
 import { pinia } from './stores'
 import { useAuthStore } from './stores/auth'
+import { installStatisticsTracker } from './services/statisticsTracker'
 import './style.css'
 
 // 兼容仍依赖 Node 全局对象的浏览器端三方包，例如 sockjs-client。
@@ -21,6 +22,7 @@ const app = createApp(App)
 
 app.use(pinia)
 app.use(router)
+installStatisticsTracker(router)
 
 const authStore = useAuthStore(pinia)
 

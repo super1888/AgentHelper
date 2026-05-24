@@ -4,6 +4,7 @@ import { RouterLink, useRoute, useRouter } from 'vue-router'
 import {
   Bot,
   Building2,
+  ChartNoAxesCombined,
   Cpu,
   Database,
   FileArchive,
@@ -126,6 +127,13 @@ const navItems = [
     description: '分片上传、断点续传、合并校验与容量管理',
     icon: FileArchive,
     isActive: () => route.name === 'big-files',
+  },
+  {
+    to: '/statistics',
+    label: '访问统计',
+    description: 'PV、VV、UV、IP 趋势与访问看板',
+    icon: ChartNoAxesCombined,
+    isActive: () => route.name === 'statistics',
   },
   {
     to: '/tenants',

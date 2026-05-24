@@ -384,14 +384,14 @@ onMounted(() => {
 .panel-heading h2,
 .flow-card h2 {
   margin: 0;
-  color: #0f172a;
+  color: var(--color-ink-strong);
   line-height: 1.2;
   overflow-wrap: anywhere;
 }
 
 .hero__desc {
   max-width: 680px;
-  color: #64748b;
+  color: var(--color-ink-soft);
   line-height: 1.75;
   overflow-wrap: anywhere;
 }
@@ -421,7 +421,7 @@ onMounted(() => {
 }
 
 .hero__stats span {
-  color: #64748b;
+  color: var(--color-ink-soft);
   font-size: 12px;
 }
 
@@ -483,7 +483,7 @@ onMounted(() => {
 
 .drop-zone strong {
   max-width: 100%;
-  color: #0f172a;
+  color: var(--color-ink-strong);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -491,7 +491,7 @@ onMounted(() => {
 
 .drop-zone em {
   max-width: 100%;
-  color: #64748b;
+  color: var(--color-ink-soft);
   font-style: normal;
   overflow-wrap: anywhere;
 }
@@ -514,13 +514,13 @@ onMounted(() => {
 
 .file-inspector span {
   display: block;
-  color: #94a3b8;
+  color: var(--color-ink-muted);
   font-size: 12px;
 }
 
 .file-inspector strong {
   display: block;
-  color: #0f172a;
+  color: var(--color-ink-strong);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -538,7 +538,7 @@ onMounted(() => {
   display: grid;
   gap: 8px;
   min-width: 0;
-  color: #64748b;
+  color: var(--color-ink-soft);
   font-size: 13px;
 }
 
@@ -585,7 +585,7 @@ onMounted(() => {
   justify-content: space-between;
   gap: 12px;
   margin-top: 8px;
-  color: #64748b;
+  color: var(--color-ink-soft);
   font-size: 13px;
   overflow-wrap: anywhere;
 }
@@ -613,11 +613,11 @@ onMounted(() => {
 
 .flow-list strong {
   display: block;
-  color: #0f172a;
+  color: var(--color-ink-strong);
 }
 
 .flow-list span {
-  color: #64748b;
+  color: var(--color-ink-soft);
   font-size: 13px;
   overflow-wrap: anywhere;
 }
@@ -666,7 +666,7 @@ table {
 }
 
 th {
-  color: #64748b;
+  color: var(--color-ink-soft);
   font-size: 12px;
   text-align: left;
   padding: 12px 10px;
@@ -686,7 +686,7 @@ td {
   min-width: 0;
   padding: 14px 10px;
   border-bottom: 1px solid #edf2f7;
-  color: #334155;
+  color: var(--color-ink);
   vertical-align: middle;
   overflow-wrap: anywhere;
 }
@@ -701,7 +701,7 @@ td small {
 }
 
 td small {
-  color: #94a3b8;
+  color: var(--color-ink-muted);
   margin-top: 4px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 11px;
@@ -733,7 +733,7 @@ td small {
 
 .empty-cell {
   text-align: center;
-  color: #94a3b8;
+  color: var(--color-ink-muted);
   padding: 32px;
 }
 
@@ -780,4 +780,114 @@ td small {
     min-width: 680px;
   }
 }
+
+/* 局部视觉修正：对齐现有深色玻璃风格，收敛字号并避免外溢 */
+.bigfile-page > .panel-card,
+.hero,
+.upload-card,
+.flow-card,
+.records-card {
+  overflow: hidden;
+  border-color: var(--color-border);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.018)),
+    rgba(6, 12, 24, 0.76);
+  color: var(--color-ink);
+}
+
+.bigfile-page .section-kicker {
+  color: #b4f5ff;
+  font-size: 0.74rem;
+  letter-spacing: 0.2em;
+}
+
+.hero h1 {
+  color: var(--color-ink-strong);
+  font-family: var(--font-display);
+  font-size: clamp(1.65rem, 2.1vw, 2.25rem);
+  line-height: 1.2;
+}
+
+.panel-heading h2,
+.flow-card h2,
+.records-card h2 {
+  color: var(--color-ink-strong);
+  font-family: var(--font-display);
+  font-size: clamp(1.1rem, 1.4vw, 1.35rem);
+  line-height: 1.25;
+}
+
+.hero__desc,
+.drop-zone em,
+.progress-meta,
+.flow-list span,
+td,
+th {
+  color: var(--color-ink-soft);
+  font-size: 0.84rem;
+}
+
+.hero__stats div,
+.file-inspector div,
+.flow-list li {
+  background: rgba(255, 255, 255, 0.045);
+  border-color: rgba(150, 181, 255, 0.14);
+}
+
+.hero__stats strong {
+  color: var(--color-ink-strong);
+  font-size: clamp(1.25rem, 1.8vw, 1.55rem);
+}
+
+.hero__stats span,
+.file-inspector span {
+  color: var(--color-ink-muted);
+  font-size: 0.78rem;
+}
+
+.drop-zone {
+  background: rgba(77, 179, 255, 0.07);
+  border-color: rgba(154, 234, 255, 0.34);
+}
+
+.drop-zone__icon {
+  background: rgba(77, 179, 255, 0.14);
+  color: var(--color-accent-strong);
+}
+
+.drop-zone strong,
+.file-inspector strong,
+.flow-list strong,
+td strong {
+  color: var(--color-ink-strong);
+  font-size: 0.86rem;
+}
+
+.form-row label {
+  color: var(--color-ink-soft);
+}
+
+.form-row input,
+.filters input,
+.filters select {
+  color: var(--color-ink-strong);
+  border-color: rgba(150, 181, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.table-wrap {
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.025);
+  overflow: auto;
+}
+
+.records-card table,
+.records-card th,
+.records-card td {
+  font-size: 0.78rem;
+}
+
+.status-pill--completed { background: rgba(100, 216, 190, 0.16); color: var(--color-success); }
+.status-pill--uploading { background: rgba(77, 179, 255, 0.15); color: var(--color-accent-strong); }
+.status-pill--failed { background: rgba(255, 144, 151, 0.16); color: var(--color-danger); }
 </style>
