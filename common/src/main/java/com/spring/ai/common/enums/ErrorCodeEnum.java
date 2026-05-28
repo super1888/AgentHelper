@@ -1,10 +1,13 @@
 package com.spring.ai.common.enums;
 
+import lombok.Getter;
+
 /**
  * 全局错误码枚举。
  *
  * <p>用于在不同模块之间统一错误码语义，避免每个模块各自定义一套错误返回结构。</p>
  */
+@Getter
 public enum ErrorCodeEnum {
 
     SUCCESS("00000", "操作成功"),
@@ -28,11 +31,4 @@ public enum ErrorCodeEnum {
         this.message = message;
     }
 
-    public String getCode() {
-        return code;
-    }
-
-    public String getMessage() {
-        return message;
-    }
 }
