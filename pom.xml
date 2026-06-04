@@ -19,6 +19,7 @@
     <modules>
         <module>logging</module>
         <module>quickStart</module>
+        <module>gateway</module>
         <module>websocket</module>
         <module>common</module>
         <module>interceptors</module>
@@ -341,6 +342,11 @@
             <dependency>
                 <groupId>com.spring.ai</groupId>
                 <artifactId>quickStart</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.spring.ai</groupId>
+                <artifactId>gateway</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

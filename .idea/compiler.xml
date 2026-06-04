@@ -26,6 +26,7 @@
         <module name="prompt" />
         <module name="user" />
         <module name="opencv" />
+        <module name="gateway" />
         <module name="interceptors" />
         <module name="statistics" />
       </profile>
@@ -42,6 +43,7 @@
       <module name="common" options="-parameters" />
       <module name="core" options="-parameters" />
       <module name="flowable" options="-parameters" />
+      <module name="gateway" options="-parameters" />
       <module name="graph" options="-parameters" />
       <module name="hooks" options="-parameters" />
       <module name="interceptors" options="-parameters" />

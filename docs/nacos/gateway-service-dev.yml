@@ -1,0 +1,26 @@
+server:
+  port: 18080
+
+spring:
+  main:
+    web-application-type: reactive
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes:
+            - id: statistics-service
+              uri: lb://statistics-service
+              predicates:
+                - Path=/agentHelper/statistics/**
+              filters:
+                - StripPrefix=1
+
+gateway:
+  access:
+    enabled: true
+    public-paths:
+      - /agentHelper/statistics/track
+      - /agentHelper/statistics/overview
+      - /agentHelper/statistics/trend
+      - /actuator/**
