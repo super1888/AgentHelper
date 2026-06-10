@@ -9,6 +9,7 @@
         <outputRelativeToContentRoot value="true" />
         <module name="quickStart" />
         <module name="agent" />
+        <module name="sse" />
         <module name="link" />
         <module name="tools" />
         <module name="graph" />
@@ -55,6 +56,7 @@
       <module name="quickStart" options="-parameters" />
       <module name="skills" options="-parameters" />
       <module name="springAi" options="" />
+      <module name="sse" options="-parameters" />
       <module name="statistics" options="-parameters" />
       <module name="tools" options="-parameters" />
       <module name="user" options="-parameters" />

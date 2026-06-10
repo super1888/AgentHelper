@@ -20,6 +20,7 @@
         <module>logging</module>
         <module>quickStart</module>
         <module>websocket</module>
+        <module>sse</module>
         <module>common</module>
         <module>interceptors</module>
         <module>tools</module>
@@ -346,6 +347,11 @@
             <dependency>
                 <groupId>com.spring.ai</groupId>
                 <artifactId>websocket</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.spring.ai</groupId>
+                <artifactId>sse</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

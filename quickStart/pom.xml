@@ -75,6 +75,10 @@
         </dependency>
         <dependency>
             <groupId>com.spring.ai</groupId>
+            <artifactId>sse</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.spring.ai</groupId>
             <artifactId>prompt</artifactId>
         </dependency>
         <dependency>

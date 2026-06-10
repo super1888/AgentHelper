@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
@@ -18,10 +18,12 @@ import MainShell from '@/components/MainShell.vue'
 import AppFeedbackDialog from '@/components/AppFeedbackDialog.vue'
 import { closeAgentSession, fetchAgentDetail, reconnectAgentSession, recoverAgentTask } from '@/api/agent'
 import { AgentChatSocket } from '@/services/agentChatSocket'
+import { AgentChatSse } from '@/services/agentChatSse'
 import type { AgentChatEvent, AgentDetail } from '@/types/agent'
 import { getErrorMessage } from '@/utils/errors'
 
 type FeedbackTone = 'success' | 'error' | 'info'
+type ChatOutputMode = 'websocket' | 'sse'
 
 interface FeedbackState {
   tone: FeedbackTone
@@ -45,6 +47,7 @@ const router = useRouter()
 const agentDetail = ref<AgentDetail | null>(null)
 const sessionId = ref<string>('')
 const connected = ref(false)
+const outputMode = ref<ChatOutputMode>((window.localStorage.getItem('agent-chat-output-mode') as ChatOutputMode) || 'websocket')
 const loading = ref(false)
 const sending = ref(false)
 const recovering = ref(false)
@@ -58,6 +61,7 @@ const bubbles = ref<ChatBubble[]>([])
 const transcriptRef = ref<HTMLElement | null>(null)
 
 let socket: AgentChatSocket | null = null
+let sseClient: AgentChatSse | null = null
 let scrollFrame: number | null = null
 
 const streamQueues = new Map<string, string>()
@@ -67,8 +71,19 @@ const agentId = computed(() => String(route.params.agentId || ''))
 const routeSessionId = computed(() => String(route.query.sessionId || ''))
 const routeVersionNo = computed(() => Number(route.query.versionNo || 0) || 0)
 const headerTitle = computed(() => agentDetail.value?.agentName || 'Agent Chat')
-const connectionLabel = computed(() => (connected.value ? '实时连接中' : '连接已断开'))
-const canSend = computed(() => connected.value && inputMessage.value.trim().length > 0 && !sending.value)
+const connectionLabel = computed(() => {
+  if (outputMode.value === 'sse') {
+    return sending.value && connected.value ? 'SSE 输出中' : 'SSE 就绪'
+  }
+  return connected.value ? 'WebSocket 实时连接中' : 'WebSocket 连接已断开'
+})
+const outputModeLabel = computed(() => (outputMode.value === 'sse' ? 'SSE' : 'WebSocket'))
+const outputChannelTitle = computed(() => (outputMode.value === 'sse' ? '/sse/agent/chat' : '/app/agent/chat'))
+const outputChannelTarget = computed(() => (outputMode.value === 'sse' ? 'text/event-stream' : `/topic/session/${sessionId.value || routeSessionId.value}`))
+const canSend = computed(() => {
+  const ready = outputMode.value === 'sse' ? Boolean(sessionId.value) : connected.value
+  return ready && inputMessage.value.trim().length > 0 && !sending.value
+})
 const canRecover = computed(() => Boolean(sessionId.value && lastFailedTaskId.value) && !recovering.value)
 const currentVersion = computed(() => {
   if (!agentDetail.value?.versions?.length) {
@@ -84,6 +99,16 @@ const currentModelSummary = computed(() => {
   }
   return `${currentVersion.value.modelName} / ${currentVersion.value.providerName || currentVersion.value.providerEnum || '-'}`
 })
+
+watch(
+  outputMode,
+  (value) => {
+    window.localStorage.setItem('agent-chat-output-mode', value)
+    if (sessionId.value) {
+      connectRealtimeChannel()
+    }
+  },
+)
 
 watch(
   () => bubbles.value.length,
@@ -123,7 +148,7 @@ function upsertAssistantBubble(
       role: 'assistant',
       title: patch.title || 'Agent',
       content: patch.content || '',
-      meta: patch.meta || '刚刚',
+      meta: patch.meta || '鍒氬垰',
       taskId,
       tone: patch.tone,
       streaming: patch.streaming ?? false,
@@ -214,7 +239,7 @@ function resolveStreamDelay(appendedText: string) {
   if (!appendedText) {
     return 24
   }
-  if (/[，。！；：,.!?;:]\s*$/.test(appendedText)) {
+  if (/[锛屻€傦紒锛涳細,.!?;:]\s*$/.test(appendedText)) {
     return 88
   }
   if (/\s$/.test(appendedText)) {
@@ -326,7 +351,7 @@ function handleAgentEvent(event: AgentChatEvent) {
     pushBubble({
       id: `reasoning-${event.eventSequence}`,
       role: 'system',
-      title: '推理片段',
+      title: '鎺ㄧ悊鐗囨',
       content: extractText(event.data),
       meta: formatTimestamp(toSafeNumber(event.timestamp)),
       taskId: event.taskId,
@@ -339,7 +364,7 @@ function handleAgentEvent(event: AgentChatEvent) {
     pushBubble({
       id: `tool-${event.eventSequence}`,
       role: 'system',
-      title: '工具执行',
+      title: '宸ュ叿鎵ц',
       content: extractText(event.data),
       meta: formatTimestamp(toSafeNumber(event.timestamp)),
       taskId: event.taskId,
@@ -353,7 +378,7 @@ function handleAgentEvent(event: AgentChatEvent) {
     upsertAssistantBubble(event.taskId, {
       title: 'Agent',
       content: extractText(event.data),
-      meta: `完成于 ${formatTimestamp(toSafeNumber(event.timestamp))}`,
+      meta: `瀹屾垚浜?${formatTimestamp(toSafeNumber(event.timestamp))}`,
       streaming: false,
     })
     sending.value = false
@@ -436,7 +461,7 @@ async function prepareSession() {
     })
     sessionId.value = reconnectResult.session.sessionId
     reconnectResult.missedEvents.forEach(handleAgentEvent)
-    connectSocket()
+    connectRealtimeChannel()
   } catch (error) {
     showFeedback('error', getErrorMessage(error, '会话重连失败。'))
   } finally {
@@ -444,11 +469,23 @@ async function prepareSession() {
   }
 }
 
+function connectRealtimeChannel() {
+  if (outputMode.value === 'websocket') {
+    connectSocket()
+    return
+  }
+  socket?.disconnect()
+  socket = null
+  connected.value = Boolean(sessionId.value)
+}
+
 function connectSocket() {
   if (!sessionId.value) {
     return
   }
 
+  sseClient?.disconnect()
+  sseClient = null
   socket?.disconnect()
   socket = new AgentChatSocket({
     sessionId: sessionId.value,
@@ -467,7 +504,7 @@ function connectSocket() {
 }
 
 async function sendMessage() {
-  if (!socket || !canSend.value) {
+  if (!canSend.value) {
     return
   }
 
@@ -477,12 +514,31 @@ async function sendMessage() {
   clearFeedback()
 
   try {
-    socket.send({
+    const payload = {
       agentId: agentId.value,
       sessionId: sessionId.value,
       message: text,
       lastReceivedEventSequence: lastReceivedEventSequence.value || '0',
-    })
+    }
+    if (outputMode.value === 'sse') {
+      sseClient?.disconnect()
+      sseClient = new AgentChatSse({
+        onEvent: handleAgentEvent,
+        onConnectionChange: (value) => {
+          connected.value = value
+        },
+        onError: (message) => {
+          sending.value = false
+          showFeedback('error', message)
+        },
+      })
+      sseClient.connect(payload)
+      return
+    }
+    if (!socket) {
+      throw new Error('WebSocket 尚未连接')
+    }
+    socket.send(payload)
   } catch (error) {
     sending.value = false
     showFeedback('error', getErrorMessage(error, '消息发送失败。'))
@@ -517,6 +573,7 @@ async function closeSession() {
   try {
     await closeAgentSession(sessionId.value)
     socket?.disconnect()
+    sseClient?.disconnect()
     await router.push({ name: 'agents' })
   } catch (error) {
     showFeedback('error', getErrorMessage(error, '关闭会话失败。'))
@@ -544,6 +601,7 @@ onBeforeUnmount(() => {
     cancelAnimationFrame(scrollFrame)
   }
   socket?.disconnect()
+  sseClient?.disconnect()
 })
 </script>
 
@@ -561,7 +619,7 @@ onBeforeUnmount(() => {
         <div class="chat-workspace__headline">
           <button type="button" class="back-link" @click="router.push({ name: 'agents' })">
             <ArrowLeft :size="16" aria-hidden="true" />
-            返回 Agent 管理
+            杩斿洖 Agent 绠＄悊
           </button>
           <p class="section-kicker">Live Session</p>
           <div class="chat-workspace__title-row">
@@ -633,10 +691,35 @@ onBeforeUnmount(() => {
             <p>如果任务失败，可以直接触发恢复。</p>
           </div>
 
+          <div class="sidebar-block">
+            <span class="sidebar-block__label">输出模式</span>
+            <div class="mode-switch" role="group" aria-label="聊天输出模式">
+              <button
+                type="button"
+                class="mode-switch__item"
+                :class="{ 'mode-switch__item--active': outputMode === 'websocket' }"
+                :disabled="sending"
+                @click="outputMode = 'websocket'"
+              >
+                WebSocket
+              </button>
+              <button
+                type="button"
+                class="mode-switch__item"
+                :class="{ 'mode-switch__item--active': outputMode === 'sse' }"
+                :disabled="sending"
+                @click="outputMode = 'sse'"
+              >
+                SSE
+              </button>
+            </div>
+            <p>当前使用 {{ outputModeLabel }} 流式输出，发送中不可切换。</p>
+          </div>
+
           <div class="sidebar-block sidebar-block--accent">
             <span class="sidebar-block__label">投递通道</span>
-            <strong>/app/agent/chat</strong>
-            <p>/topic/session/{{ sessionId || routeSessionId }}</p>
+            <strong>{{ outputChannelTitle }}</strong>
+            <p>{{ outputChannelTarget }}</p>
           </div>
         </aside>
 
@@ -653,8 +736,8 @@ onBeforeUnmount(() => {
               :key="bubble.id"
               class="bubble"
               :class="[
-                `bubble--${bubble.role}`,
-                bubble.tone ? `bubble--${bubble.tone}` : '',
+                'bubble--' + bubble.role,
+                bubble.tone ? 'bubble--' + bubble.tone : '',
                 bubble.streaming ? 'bubble--streaming' : '',
               ]"
             >
@@ -823,6 +906,35 @@ onBeforeUnmount(() => {
   display: block;
   margin-top: 10px;
   color: var(--color-ink-strong);
+}
+
+.mode-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+  padding: 5px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.055);
+}
+
+.mode-switch__item {
+  min-height: 34px;
+  border-radius: 12px;
+  color: var(--color-ink-soft);
+  background: transparent;
+  cursor: pointer;
+}
+
+.mode-switch__item--active {
+  color: #05131f;
+  background: linear-gradient(135deg, rgba(126, 229, 199, 0.96), rgba(83, 184, 255, 0.92));
+  box-shadow: 0 10px 24px rgba(83, 184, 255, 0.2);
+}
+
+.mode-switch__item:disabled {
+  cursor: not-allowed;
+  opacity: 0.68;
 }
 
 .sidebar-block p {
@@ -1008,3 +1120,5 @@ onBeforeUnmount(() => {
   }
 }
 </style>
+
+
