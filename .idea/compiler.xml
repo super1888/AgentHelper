@@ -10,6 +10,7 @@
         <module name="quickStart" />
         <module name="agent" />
         <module name="sse" />
+        <module name="codeHelper" />
         <module name="link" />
         <module name="tools" />
         <module name="graph" />
@@ -41,6 +42,7 @@
       <module name="a2a" options="-parameters" />
       <module name="agent" options="-parameters" />
       <module name="bigfile" options="-parameters" />
+      <module name="codeHelper" options="-parameters" />
       <module name="common" options="-parameters" />
       <module name="core" options="-parameters" />
       <module name="flowable" options="-parameters" />

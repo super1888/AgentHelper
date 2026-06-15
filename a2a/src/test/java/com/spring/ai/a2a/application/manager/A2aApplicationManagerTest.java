@@ -1,4 +1,4 @@
-﻿package com.spring.ai.a2a.application.manager;
+package com.spring.ai.a2a.application.manager;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

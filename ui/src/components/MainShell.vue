@@ -9,6 +9,7 @@ import {
   Database,
   FileArchive,
   FileCode2,
+  Code2,
   GitBranch,
   Image,
   Link2,
@@ -78,6 +79,13 @@ const navItems = [
     description: '工具注册、调试、发布与风险控制',
     icon: Wrench,
     isActive: () => route.name === 'tools',
+  },
+  {
+    to: '/code-helper',
+    label: '编程助手',
+    description: '代码会话、上下文压缩与受控工具调用',
+    icon: Code2,
+    isActive: () => route.name === 'code-helper',
   },
   {
     to: '/links',
@@ -571,7 +579,6 @@ async function handleLogout() {
   }
 }
 </style>
-
 
 
 

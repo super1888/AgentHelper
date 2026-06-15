@@ -1,4 +1,4 @@
-﻿package com.spring.ai.a2a.controller;
+package com.spring.ai.a2a.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;

@@ -1,4 +1,4 @@
-﻿package com.spring.ai.sse.controller;
+package com.spring.ai.sse.controller;
 
 import com.spring.ai.agent.domain.request.SimpleAgentChatRequest;
 import com.spring.ai.sse.application.manager.SseAgentChatApplicationManager;

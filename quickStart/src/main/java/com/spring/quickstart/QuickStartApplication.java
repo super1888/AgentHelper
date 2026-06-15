@@ -13,7 +13,7 @@ import org.springframework.context.annotation.ComponentScan;
  */
 @SpringBootApplication
 @ComponentScan({"com.spring.ai", "com.spring.quickstart"})
-@MapperScan("com.spring.ai.common.repository.dao")
+@MapperScan({"com.spring.ai.common.repository.dao", "com.spring.ai.codehelper.mapper"})
 public class QuickStartApplication {
 
     public static void main(String[] args) {

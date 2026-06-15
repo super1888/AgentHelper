@@ -1,4 +1,4 @@
-﻿import { appConfig } from '@/config/env'
+import { appConfig } from '@/config/env'
 import type { AgentChatEvent, AgentChatPayload } from '@/types/agent'
 import { loadAuthSnapshot } from '@/utils/storage'
 

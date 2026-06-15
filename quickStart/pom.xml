@@ -118,6 +118,10 @@
             <artifactId>statistics</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.spring.ai</groupId>
+            <artifactId>codeHelper</artifactId>
+        </dependency>
+        <dependency>
             <groupId>com.microsoft.onnxruntime</groupId>
             <artifactId>onnxruntime</artifactId>
             <scope>runtime</scope>

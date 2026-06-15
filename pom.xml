@@ -39,6 +39,7 @@
         <module>link</module>
         <module>bigfile</module>
         <module>statistics</module>
+        <module>codeHelper</module>
     </modules>
 
     <properties>
@@ -437,6 +438,11 @@
             <dependency>
                 <groupId>com.spring.ai</groupId>
                 <artifactId>bigfile</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.spring.ai</groupId>
+                <artifactId>codeHelper</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

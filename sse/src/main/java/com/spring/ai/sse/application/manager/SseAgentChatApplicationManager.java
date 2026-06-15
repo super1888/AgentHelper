@@ -1,4 +1,4 @@
-﻿package com.spring.ai.sse.application.manager;
+package com.spring.ai.sse.application.manager;
 
 import com.spring.ai.agent.application.manager.SimpleAgentChatApplicationManager;
 import com.spring.ai.agent.application.manager.SimpleAgentSupportManager;

@@ -6,13 +6,13 @@ import org.springframework.stereotype.Component;
 @Component
 public class BigFileProperties {
 
-    @Value("${agent-helper.big-file.storage-root:${user.dir}/data/bigfile}")
+    @Value("${app.big-file.storage-root:${user.dir}/data/bigfile}")
     private String storageRoot;
 
-    @Value("${agent-helper.big-file.max-file-size:2147483648}")
+    @Value("${app.big-file.max-file-size:2147483648}")
     private long maxFileSize;
 
-    @Value("${agent-helper.big-file.default-chunk-size:5242880}")
+    @Value("${app.big-file.default-chunk-size:5242880}")
     private long defaultChunkSize;
 
     public String getStorageRoot() {

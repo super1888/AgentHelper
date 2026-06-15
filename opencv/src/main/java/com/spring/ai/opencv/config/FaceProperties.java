@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
  */
 @Data
 @Component
-@ConfigurationProperties(prefix = "agent-helper.opencv.face")
+@ConfigurationProperties(prefix = "app.opencv.face")
 public class FaceProperties {
 
     private String detectorModelPath;

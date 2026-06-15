@@ -90,6 +90,14 @@ const router = createRouter({
       },
     },
     {
+      path: '/code-helper',
+      name: 'code-helper',
+      component: () => import('@/views/codeHelper/CodeHelperWorkbenchView.vue'),
+      meta: {
+        requiresAuth: true,
+      },
+    },
+    {
       path: '/links',
       name: 'links',
       component: () => import('@/views/links/ShortLinkManagementView.vue'),

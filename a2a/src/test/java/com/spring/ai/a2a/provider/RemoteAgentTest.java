@@ -1,4 +1,4 @@
-﻿package com.spring.ai.a2a.provider;
+package com.spring.ai.a2a.provider;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

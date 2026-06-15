@@ -94,6 +94,7 @@ README 中所有接口如果没有特别说明，均需要在前面加 `/agentHe
 | `user` | 业务模块 | 用户、租户、登录、登出、人脸绑定和人脸登录 |
 | `core` | 核心模块 | 模型连接、模型选项、图片生成和编辑代理 |
 | `agent` | 业务模块 | 简单智能体、会话、聊天、自定义智能体、厨房智能体 |
+| `codeHelper` | AI 编程助手模块 | Java 编程助手会话、上下文压缩、模型决策、受控工具调用 |
 | `vectorStore` | 业务模块 | 文件向量化、向量检索、文件和切片管理 |
 | `bigfile` | 业务模块 | 大文件分片上传、校验、合并、记录管理 |
 | `a2a` | 协议模块 | Agent Card、路由、任务分发、执行日志、统计 |
@@ -330,6 +331,79 @@ README 中所有接口如果没有特别说明，均需要在前面加 `/agentHe
 - `GET /agentHelper/big-files`
 - `GET /agentHelper/big-files/statistics`
 - `DELETE /agentHelper/big-files/{fileId}`
+
+### `codeHelper`
+
+`codeHelper` 是独立的 Java 编程助手模块，参考 Agent 分层提示词、上下文管理、工具执行和权限确认思路实现。它不直接把代码放进 `quickStart`，业务编排在 `codeHelper`，文件、搜索、Git、命令等可复用能力在 `tools` 模块。
+
+**功能**
+
+- 创建编程助手会话，绑定工作区、项目、分支、任务目标和模型编码。
+- 基于会话历史、任务摘要、工作区信息和工具清单生成分层系统提示词。
+- 调用 `core` 模块的 `ChatModel`，要求模型输出 JSON 决策。
+- 支持模型驱动工具调用；未配置模型时使用规则规划兜底。
+- 支持 `read_file`、`write_file`、`edit_file`、`list_directory`、`glob`、`grep`、`shell`、`git_status`、`git_diff`、`todo_update`、`compact_context`。
+- 对工具调用做工作区边界校验、命令白名单校验和高风险操作确认。
+- 持久化会话、消息事件、工具执行日志，便于回放、审计和上下文压缩。
+
+**主要接口**
+
+- `POST /agentHelper/code-helper/sessions`：创建编程助手会话。
+- `GET /agentHelper/code-helper/sessions`：查询当前租户会话列表。
+- `POST /agentHelper/code-helper/sessions/send?sessionId=xxx`：向会话发送用户消息。
+- `GET /agentHelper/code-helper/context?sessionId=xxx`：查看会话上下文。
+- `POST /agentHelper/code-helper/context/compact?sessionId=xxx`：压缩上下文摘要。
+- `GET /agentHelper/code-helper/prompt?sessionId=xxx`：查看当前系统提示词。
+- `GET /agentHelper/code-helper/tools`：查看内置工具清单。
+- `POST /agentHelper/code-helper/tool/execute`：显式执行工具调用。
+- `GET /agentHelper/code-helper/tool/logs?sessionId=xxx`：查询工具日志。
+- `POST /agentHelper/code-helper/permission/check`：检查工具风险和命令权限。
+
+**模型决策协议**
+
+模型应返回 JSON 对象，`assistantReply` 是助手回复，`requireConfirmation` 表示是否需要用户确认，`toolCalls` 是要调用的工具列表：
+
+```json
+{
+  "assistantReply": "我会先搜索 Controller 相关代码。",
+  "requireConfirmation": false,
+  "toolCalls": [
+    {
+      "toolName": "grep",
+      "arguments": {
+        "keyword": "Controller"
+      }
+    }
+  ]
+}
+```
+
+低风险工具会自动执行并写入工具日志；`shell`、`git_status`、`git_diff` 等高风险工具会被标记为需要确认，不会在普通消息流程中自动执行。确认后可通过 `/code-helper/tool/execute` 显式提交工具调用。
+
+**配置项**
+
+```yaml
+agent-helper:
+  code-helper:
+    workspace-root: ${user.dir}
+    default-model-code:
+    max-session-history-size: 200
+    max-tool-output-length: 20000
+    default-allowed-commands:
+      - mvn
+      - git
+      - java
+      - gradlew
+      - ./mvnw
+      - mvnw
+```
+
+**使用示例**
+
+1. 执行 `docs/sql/code_helper.sql` 创建三张表：`code_helper_session`、`code_helper_session_event`、`code_helper_tool_log`。
+2. 创建会话时传入 `workspacePath`、`taskDescription` 和可选 `modelCode`。
+3. 调用 `/code-helper/sessions/send` 输入“帮我查找 Controller 入口”，模型或规则会生成 `grep`、`list_directory` 等工具计划。
+4. 对需要命令执行的步骤，先看助手回复中的确认提示，再调用 `/code-helper/tool/execute` 显式执行。
 
 ### `a2a`
 
@@ -688,6 +762,7 @@ WebSocket 适合智能体聊天、任务状态变更、多人协作等需要双�
 - `docs/sy_user_face_template.sql`：人脸模板相关 SQL。
 - `docs/nacos/*.yml`：Nacos 配置模板。
 - `docs/operations/logging-guide.md`：日志运维说明。
+- `docs/codeHelper/api.md`：codeHelper 编程助手 API、模型协议和前端使用说明。
 
 ## bigfile 大文件分片上传详解
 
@@ -1014,6 +1089,10 @@ async function uploadBigFile(file) {
 | 导入大文件到向量库 | `POST /agentHelper/vectorStore/importBigFile` |
 | 技能列表 | `GET /agentHelper/skills` |
 | 工具列表 | `GET /agentHelper/tools` |
+| 编程助手工作台 | `GET /code-helper` |
+| 创建编程助手会话 | `POST /agentHelper/code-helper/sessions` |
+| 编程助手发送消息 | `POST /agentHelper/code-helper/sessions/send` |
+| 编程助手工具执行 | `POST /agentHelper/code-helper/tool/execute` |
 | Hook 列表 | `GET /agentHelper/hooks` |
 | MCP Server 列表 | `GET /agentHelper/mcp/servers` |
 | A2A Agent Card 列表 | `GET /agentHelper/a2a/agents` |

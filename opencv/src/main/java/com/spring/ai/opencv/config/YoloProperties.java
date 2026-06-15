@@ -11,7 +11,7 @@ import java.util.List;
  */
 @Data
 @Component
-@ConfigurationProperties(prefix = "agent-helper.opencv.yolo")
+@ConfigurationProperties(prefix = "app.opencv.yolo")
 public class YoloProperties {
 
     private String runtime = "onnxruntime";

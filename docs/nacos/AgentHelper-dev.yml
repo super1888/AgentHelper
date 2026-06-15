@@ -101,6 +101,24 @@ app:
       detect-model-path: D:/models/smartjavaai/retinaface.zip
       # FaceNet 特征提取模型路径，可填本地绝对路径
       rec-model-path: D:/models/smartjavaai/face_feature.zip
+  big-file:
+    storage-root: ${user.dir}/data/bigfile
+    max-file-size: 2147483648
+    default-chunk-size: 5242880
+  code-helper:
+    workspace-root: ${user.dir}
+    default-model-code:
+    max-session-history-size: 200
+    max-tool-output-length: 20000
+    default-allowed-commands:
+      - mvn
+      - git
+      - java
+      - gradlew
+      - ./mvnw
+      - mvnw
+      - cmd
+      - powershell
 logging:
   level:
     root: INFO
@@ -123,3 +141,13 @@ sa-token:
   token-style: uuid
   # 是否输出操作日志
   is-log: true
+
+flowable:
+  check-process-definitions: true
+  database-schema-update: true
+  history-level: audit
+  process-definition-location-prefix: classpath*:/processes/
+  process-definition-location-suffixes:
+    - "**.bpmn20.xml"
+    - "**.bpmn"
+
