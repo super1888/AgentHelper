@@ -128,11 +128,15 @@ public class CodeHelperApplicationManager {
         appendEvent(record, "user", request.getContent());
         CodeHelperSessionDTO session = loadSession(record);
         CodeHelperAgentDecisionDTO decision = normalizeDecision(decideNextStep(session, request), session);
+        String assistantReply = formatAssistantReply(decision);
         if (decision.isRequireConfirmation()) {
-            appendEvent(record, "assistant", formatAssistantReply(decision) + "\n当前操作需要确认，请先确认高风险步骤。");
+            appendEvent(record, "assistant", assistantReply + "\n当前操作需要确认，请先确认高风险步骤。");
         } else {
-            appendEvent(record, "assistant", formatAssistantReply(decision));
-            executeToolCalls(record, session, decision.getToolCalls());
+            appendEvent(record, "assistant", assistantReply);
+            List<CodeHelperToolResult> toolResults = executeToolCalls(record, session, decision.getToolCalls());
+            if (decision.getToolCalls() != null && !decision.getToolCalls().isEmpty()) {
+                appendEvent(record, "assistant", buildToolCompletionReply(toolResults));
+            }
         }
         refreshSummary(record);
         return CodeHelperAssembler.toSessionResponse(loadSession(record));
@@ -302,6 +306,10 @@ public class CodeHelperApplicationManager {
                     .arguments(Map.of("path", "."))
                     .allowedCommands(session.getAllowedCommands())
                     .build());
+            assistantReply = "我会先列出工作区目录，帮助确认项目结构。";
+        }
+        if (toolCalls.isEmpty()) {
+            assistantReply = "我已收到你的指令。当前没有匹配到自动工具动作，你可以继续说明要查看、修改、测试或构建的目标。";
         }
         return CodeHelperAgentDecisionDTO.builder()
                 .assistantReply(assistantReply)
@@ -339,10 +347,43 @@ public class CodeHelperApplicationManager {
                 .filter(call -> call != null && StringUtils.hasText(call.getToolName()))
                 .map(call -> normalizeToolCall(call, session))
                 .toList();
+        if (!StringUtils.hasText(decision.getAssistantReply())) {
+            decision.setAssistantReply(buildFallbackAssistantReply(normalizedCalls));
+        }
         boolean requireConfirmation = decision.isRequireConfirmation() || normalizedCalls.stream().anyMatch(this::isHighRiskToolCall);
         decision.setToolCalls(normalizedCalls);
         decision.setRequireConfirmation(requireConfirmation);
         return decision;
+    }
+
+    private String buildFallbackAssistantReply(List<CodeHelperToolCallDTO> toolCalls) {
+        if (toolCalls == null || toolCalls.isEmpty()) {
+            return "已收到任务，当前没有生成工具调用。";
+        }
+        String firstTool = toolCalls.get(0).getToolName();
+        return "我会先执行 " + firstTool + "，并根据结果继续处理。";
+    }
+
+    private String buildToolCompletionReply(List<CodeHelperToolResult> toolResults) {
+        if (toolResults == null || toolResults.isEmpty()) {
+            return "本次没有执行工具。你可以继续补充要查看、修改或验证的目标。";
+        }
+        long successCount = toolResults.stream().filter(CodeHelperToolResult::isSuccess).count();
+        String toolNames = toolResults.stream()
+                .map(CodeHelperToolResult::getToolName)
+                .filter(StringUtils::hasText)
+                .distinct()
+                .collect(Collectors.joining("、"));
+        if (!StringUtils.hasText(toolNames)) {
+            return "本次工具调用已完成。";
+        }
+        String summary = toolResults.stream()
+                .map(this::summarizeToolResult)
+                .filter(StringUtils::hasText)
+                .collect(Collectors.joining("\n"));
+        return "工具执行完成：" + toolNames + "。成功 " + successCount + "/" + toolResults.size() + "。\n"
+                + summary
+                + "\n你可以继续下达下一步指令，例如让我读取某个文件、解释结果或生成修改方案。";
     }
 
     private CodeHelperToolCallDTO normalizeToolCall(CodeHelperToolCallDTO toolCall, CodeHelperSessionDTO session) {
@@ -361,7 +402,11 @@ public class CodeHelperApplicationManager {
         return "HIGH".equals(resolveRiskLevel(toolCall.getToolName(), command == null ? null : String.valueOf(command)));
     }
 
-    private void executeToolCalls(CodeHelperSessionRecord record, CodeHelperSessionDTO session, List<CodeHelperToolCallDTO> toolCalls) {
+    private List<CodeHelperToolResult> executeToolCalls(CodeHelperSessionRecord record, CodeHelperSessionDTO session, List<CodeHelperToolCallDTO> toolCalls) {
+        List<CodeHelperToolResult> results = new ArrayList<>();
+        if (toolCalls == null || toolCalls.isEmpty()) {
+            return results;
+        }
         for (CodeHelperToolCallDTO toolCall : toolCalls) {
             CodeHelperToolRequest request = CodeHelperToolRequest.builder()
                     .toolName(toolCall.getToolName())
@@ -369,9 +414,46 @@ public class CodeHelperApplicationManager {
                     .arguments(toolCall.getArguments())
                     .allowedCommands(toolCall.getAllowedCommands())
                     .build();
-            CodeHelperToolResult result = workspaceToolExecutor.execute(request);
+            CodeHelperToolResult result;
+            try {
+                result = workspaceToolExecutor.execute(request);
+            } catch (RuntimeException exception) {
+                result = CodeHelperToolResult.builder()
+                        .toolName(toolCall.getToolName())
+                        .riskLevel(resolveRiskLevel(toolCall.getToolName(), null))
+                        .success(false)
+                        .message(exception.getMessage())
+                        .output(null)
+                        .durationMillis(0L)
+                        .build();
+            }
             appendToolResult(record, request, result);
+            results.add(result);
         }
+        return results;
+    }
+
+    private String summarizeToolResult(CodeHelperToolResult result) {
+        if (result == null) {
+            return "";
+        }
+        String prefix = result.isSuccess() ? "- " + result.getToolName() + "：成功" : "- " + result.getToolName() + "：失败";
+        String content = result.isSuccess() ? result.getOutput() : result.getMessage();
+        String summary = trimForToolSummary(content);
+        return StringUtils.hasText(summary) ? prefix + "，" + summary : prefix;
+    }
+
+    private String trimForToolSummary(String value) {
+        if (!StringUtils.hasText(value)) {
+            return "无详细输出";
+        }
+        String normalized = value.trim().replace("\r\n", "\n");
+        String[] lines = normalized.split("\n");
+        String compact = java.util.Arrays.stream(lines)
+                .filter(StringUtils::hasText)
+                .limit(5)
+                .collect(Collectors.joining("；"));
+        return compact.length() > 420 ? compact.substring(0, 420) + "..." : compact;
     }
 
     private void appendToolResult(CodeHelperSessionRecord record, CodeHelperToolRequest request, CodeHelperToolResult result) {
@@ -494,6 +576,9 @@ public class CodeHelperApplicationManager {
     }
 
     private String guessKeyword(String content) {
+        if (!StringUtils.hasText(content)) {
+            return "";
+        }
         if (content.contains("Controller")) {
             return "Controller";
         }
@@ -503,7 +588,8 @@ public class CodeHelperApplicationManager {
         if (content.contains("测试")) {
             return "Test";
         }
-        return content.split("\\s+")[0];
+        String[] words = content.trim().split("\\s+");
+        return words.length == 0 ? content.trim() : words[0];
     }
 
     private String resolveRiskLevel(String toolName, String command) {

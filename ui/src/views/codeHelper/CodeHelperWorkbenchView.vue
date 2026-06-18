@@ -101,15 +101,24 @@
             </div>
 
             <div class="message-list">
-              <article v-for="(message, index) in activeMessages" :key="`${message.role}-${index}`" class="message-card" :class="`message-card--${message.role}`">
+              <article
+                v-for="(message, index) in activeMessages"
+                :key="`${message.role}-${index}`"
+                class="message-card"
+                :class="[`message-card--${message.role}`, { 'message-card--tool-summary': isToolSummary(message.content) }]"
+              >
                 <div class="message-meta">
                   <strong>{{ roleLabel(message.role) }}</strong>
                   <span>{{ message.timestamp || '-' }}</span>
                 </div>
+                <p v-if="isToolSummary(message.content)" class="message-tag">工具结果摘要</p>
                 <pre>{{ message.content }}</pre>
               </article>
               <p v-if="!activeMessages.length" class="empty-hint">会话消息会展示在这里。</p>
             </div>
+            <p v-if="activeSessionId && !activeMessages.length" class="reply-hint">
+              当前会话还没有助手回复，请先发送消息或检查后端模型配置。
+            </p>
 
             <form class="composer" @submit.prevent="sendMessage">
               <textarea v-model="messageText" class="app-textarea" rows="4" placeholder="例如：帮我查找 a2a 模块 Controller，并说明入口调用链" />
@@ -313,7 +322,7 @@ async function sendMessage() {
   }
   sending.value = true
   try {
-    const session = await sendCodeHelperMessage(activeSessionId.value, {
+  const session = await sendCodeHelperMessage(activeSessionId.value, {
       content: messageText.value.trim(),
       modelCode: messageModelCode.value.trim() || undefined,
       autoToolCall: true,
@@ -322,6 +331,7 @@ async function sendMessage() {
     messageText.value = ''
     showFeedback('success', '消息发送成功')
     await loadLogs()
+    await loadSessions()
   } catch (error) {
     showFeedback('error', getErrorMessage(error, '消息发送失败'))
   } finally {
@@ -471,6 +481,10 @@ function roleLabel(role: string) {
   return labels[role] ?? role
 }
 
+function isToolSummary(content: string) {
+  return content.includes('工具执行完成') || content.includes('成功 ')
+}
+
 function modelLabel(model: ModelOption) {
   const defaultTag = model.defaultModel ? '默认 · ' : ''
   const provider = model.providerName || model.providerEnum
@@ -524,6 +538,12 @@ function showFeedback(tone: FeedbackTone, message: string) {
   margin: 0;
   color: var(--color-ink-soft);
   line-height: 1.65;
+}
+
+.reply-hint {
+  margin: 0;
+  color: #9edfff;
+  font-size: 0.92rem;
 }
 
 .workspace-grid {
@@ -634,6 +654,22 @@ function showFeedback(tone: FeedbackTone, message: string) {
 
 .message-card--assistant {
   border-color: rgba(166, 255, 203, 0.22);
+}
+
+.message-card--tool-summary {
+  background: rgba(137, 228, 255, 0.055);
+  border-color: rgba(137, 228, 255, 0.28);
+}
+
+.message-tag {
+  display: inline-flex;
+  width: fit-content;
+  margin: 0 0 8px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  color: #9edfff;
+  background: rgba(137, 228, 255, 0.1);
+  font-size: 0.75rem;
 }
 
 .message-meta {
