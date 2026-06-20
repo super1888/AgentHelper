@@ -223,6 +223,10 @@ README 中所有接口如果没有特别说明，均需要在前面加 `/agentHe
 - 图片生成代理。
 - 图片编辑代理。
 
+**图片生成示例**
+
+![Image Studio 生成示例](docs/assets/image-1.png)
+
 **主要接口**
 
 - `GET /agentHelper/core/provider-catalog`

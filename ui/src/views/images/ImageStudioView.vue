@@ -39,6 +39,25 @@ interface ImageApiResponse {
   [key: string]: unknown
 }
 
+interface ImageGenerationTaskResult {
+  fileName: string
+  filePath: string
+  downloadUrl: string
+  mimeType: string
+  fileSize: number
+}
+
+interface ImageGenerationTaskResponse {
+  taskId: string
+  status: 'PENDING' | 'RUNNING' | 'SUCCESS' | 'FAILED'
+  message: string
+  createTime: string
+  updateTime: string
+  durationMillis: number
+  results: ImageGenerationTaskResult[]
+  rawResponse?: string | null
+}
+
 const IMAGE_STUDIO_STORAGE_KEY = 'spring-ai:image-studio-config'
 
 const imageSizeOptions = [
@@ -117,6 +136,8 @@ const maskDragOver = ref(false)
 const referenceDragOver = ref(false)
 const lastSuccessfulGeneratePayload = ref<Record<string, unknown> | null>(null)
 const lastSuccessfulEditPayload = ref<Record<string, unknown> | null>(null)
+const asyncGenerationTask = ref<ImageGenerationTaskResponse | null>(null)
+const taskPollingTimer = ref<number | null>(null)
 
 const generationPresets = [
   { key: 'icon', label: '图标', prompt: '生成一个极简、扁平、清晰的应用图标，几何构图，纯净背景，适合小尺寸展示', size: '1024x1024', quality: 'medium', background: 'transparent' },
@@ -399,6 +420,7 @@ async function setReferenceFiles(files: File[], mode: 'replace' | 'append' = 're
 
 onBeforeUnmount(() => {
   stopProgressTracking()
+  stopTaskPolling()
   revokePreviewList(primaryImagePreviews.value)
   revokePreview(maskImagePreview.value)
   revokePreviewList(referenceImagePreviews.value)
@@ -743,6 +765,51 @@ function resetResultState() {
   lastRequestPayload.value = null
 }
 
+function stopTaskPolling() {
+  if (taskPollingTimer.value !== null) {
+    window.clearInterval(taskPollingTimer.value)
+    taskPollingTimer.value = null
+  }
+}
+
+function taskResultsToImages(task: ImageGenerationTaskResponse) {
+  return task.results.map((item, index) => ({
+    id: `task-${task.taskId}-${index}`,
+    src: item.downloadUrl,
+    mimeType: item.mimeType,
+    revisedPrompt: null,
+    raw: item as unknown as Record<string, unknown>,
+  }))
+}
+
+async function fetchTaskStatus(taskId: string) {
+  const response = await fetch(`/agentHelper/core/image-proxy/generation-tasks/${taskId}`)
+  const payload = await response.json() as { success: boolean, message: string, data: ImageGenerationTaskResponse }
+  if (!response.ok || !payload.success) {
+    throw new Error(payload.message || `任务查询失败，HTTP ${response.status}`)
+  }
+  asyncGenerationTask.value = payload.data
+  if (payload.data.status === 'SUCCESS') {
+    stopTaskPolling()
+    responseTimeMs.value = payload.data.durationMillis
+    resultImages.value = taskResultsToImages(payload.data)
+    rawResponse.value = payload.data.rawResponse || ''
+    setMessage('success', `异步图片生成完成，本地已保存 ${payload.data.results.length} 张图片。`)
+  } else if (payload.data.status === 'FAILED') {
+    stopTaskPolling()
+    setMessage('error', payload.data.message || '异步图片生成失败。')
+  } else {
+    setMessage('info', payload.data.message || '图片生成任务处理中。')
+  }
+}
+
+function startTaskPolling(taskId: string) {
+  stopTaskPolling()
+  taskPollingTimer.value = window.setInterval(() => {
+    void fetchTaskStatus(taskId)
+  }, 3000)
+}
+
 function startProgressTracking() {
   stopProgressTracking()
   requestStartedAt.value = Date.now()
@@ -808,6 +875,56 @@ async function handleGenerate() {
   } finally {
     stopProgressTracking()
     loading.value = false
+  }
+}
+
+async function handleAsyncGenerate() {
+  if (!endpointForm.baseUrl.trim()) return setMessage('error', '请先填写 SUB2API_BASE。')
+  if (!endpointForm.apiKey.trim()) return setMessage('error', '请先填写 SUB2API_KEY。')
+  if (!generationForm.model.trim()) return setMessage('error', '请先填写图片模型名称。')
+  if (!generationForm.prompt.trim()) return setMessage('error', '请先填写生成提示词。')
+
+  loading.value = true
+  resetResultState()
+  stopTaskPolling()
+
+  try {
+    const payload = buildGenerationPayload()
+    lastRequestPayload.value = payload
+    const response = await fetch('/agentHelper/core/image-proxy/generation-tasks', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        baseUrl: endpointForm.baseUrl.trim(),
+        apiKey: endpointForm.apiKey.trim(),
+        endpointPath: endpointForm.generationPath,
+        payload,
+      }),
+    })
+    const submitPayload = await response.json() as { success: boolean, message: string, data: ImageGenerationTaskResponse }
+    if (!response.ok || !submitPayload.success) {
+      throw new Error(submitPayload.message || `异步任务提交失败，HTTP ${response.status}`)
+    }
+    asyncGenerationTask.value = submitPayload.data
+    setMessage('info', `异步任务已提交：${submitPayload.data.taskId}。页面会自动轮询结果。`)
+    startTaskPolling(submitPayload.data.taskId)
+  } catch (error) {
+    setMessage('error', getErrorMessage(error, '异步图片生成任务提交失败。'))
+  } finally {
+    loading.value = false
+  }
+}
+
+async function refreshAsyncTask() {
+  if (!asyncGenerationTask.value?.taskId) {
+    return
+  }
+  try {
+    await fetchTaskStatus(asyncGenerationTask.value.taskId)
+  } catch (error) {
+    setMessage('error', getErrorMessage(error, '任务状态刷新失败。'))
   }
 }
 
@@ -891,6 +1008,8 @@ function resetForms() {
   void setMaskFile(null)
   void setReferenceFiles([])
   resetResultState()
+  asyncGenerationTask.value = null
+  stopTaskPolling()
   setMessage('info', '生成与编辑参数已重置。')
 }
 
@@ -1093,6 +1212,10 @@ function restoreLastSuccessfulRequest() {
             <Send :size="16" />
             {{ loading ? (activeMode === 'generate' ? '生成中...' : '编辑中...') : (activeMode === 'generate' ? '立即生成' : '立即编辑') }}
           </button>
+          <button v-if="activeMode === 'generate'" type="button" class="app-button app-button--secondary" :disabled="loading" @click="handleAsyncGenerate">
+            <Send :size="16" />
+            异步生成并保存
+          </button>
         </div>
       </header>
 
@@ -1115,6 +1238,15 @@ function restoreLastSuccessfulRequest() {
       </div>
 
       <p v-if="message" class="notice" :class="`notice--${messageTone}`">{{ message }}</p>
+      <section v-if="asyncGenerationTask" class="task-panel panel-card">
+        <div>
+          <p class="section-kicker">Async Task</p>
+          <strong>{{ asyncGenerationTask.status }} · {{ asyncGenerationTask.taskId }}</strong>
+          <p class="muted">{{ asyncGenerationTask.message }}</p>
+          <p class="muted">创建：{{ asyncGenerationTask.createTime }} / 更新：{{ asyncGenerationTask.updateTime }} / 耗时：{{ asyncGenerationTask.durationMillis || 0 }} ms</p>
+        </div>
+        <button type="button" class="app-button app-button--secondary" @click="refreshAsyncTask">刷新任务</button>
+      </section>
       <p v-if="transparentHint" class="hint">{{ transparentHint }}</p>
       <p v-if="uploadValidationMessage" class="hint hint--warning">{{ uploadValidationMessage }}</p>
 
@@ -1343,6 +1475,9 @@ function restoreLastSuccessfulRequest() {
 .notice--error { color: #ffb4b4; background: rgba(185,70,70,.16); }
 .notice--info, .hint { color: #9fd4ff; background: rgba(46,110,180,.16); }
 .hint--warning { color: #ffd7a3; background: rgba(186,118,32,.16); }
+.task-panel { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 16px var(--panel-padding); }
+.task-panel strong { display: block; margin-bottom: 6px; color: var(--color-ink-strong); }
+.task-panel p { margin: 0; line-height: 1.65; }
 .page-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
 .section-card { display: grid; gap: 16px; padding: var(--panel-padding); min-width: 0; }
 .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }

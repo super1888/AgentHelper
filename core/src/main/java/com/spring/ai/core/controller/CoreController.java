@@ -9,6 +9,7 @@ import com.spring.ai.core.domain.request.ModelConnectionTestRequest;
 import com.spring.ai.core.domain.response.ModelConnectionResponse;
 import com.spring.ai.core.domain.response.ModelOptionResponse;
 import com.spring.ai.core.domain.response.ModelTestResponse;
+import com.spring.ai.core.domain.response.ImageGenerationTaskResponse;
 import com.spring.ai.core.domain.response.ProviderCatalogResponse;
 import jakarta.annotation.Resource;
 import java.util.List;
@@ -83,6 +84,22 @@ public class CoreController {
     @PostMapping("/image-proxy/generations")
     public ResponseEntity<String> proxyImageGeneration(@RequestBody ImageGenerationProxyRequest request) {
         return imageProxyService.proxyGeneration(request);
+    }
+
+    @PostMapping("/image-proxy/generation-tasks")
+    public ApiResponse<ImageGenerationTaskResponse> submitImageGenerationTask(@RequestBody ImageGenerationProxyRequest request) {
+        return ApiResponse.success(imageProxyService.submitGenerationTask(request));
+    }
+
+    @GetMapping("/image-proxy/generation-tasks/{taskId}")
+    public ApiResponse<ImageGenerationTaskResponse> getImageGenerationTask(@PathVariable("taskId") String taskId) {
+        return ApiResponse.success(imageProxyService.getGenerationTask(taskId));
+    }
+
+    @GetMapping("/image-proxy/generation-tasks/{taskId}/files/{fileName}")
+    public ResponseEntity<byte[]> downloadGeneratedImage(@PathVariable("taskId") String taskId,
+                                                         @PathVariable("fileName") String fileName) {
+        return imageProxyService.readGeneratedImage(taskId, fileName);
     }
 
     /**
