@@ -41,6 +41,15 @@ interface ImageApiResponse {
 
 const IMAGE_STUDIO_STORAGE_KEY = 'spring-ai:image-studio-config'
 
+const imageSizeOptions = [
+  { value: 'auto', label: 'auto（模型自动）' },
+  { value: '1024x1024', label: '1024x1024 方图' },
+  { value: '1536x1024', label: '1536x1024 横图' },
+  { value: '1024x1536', label: '1024x1536 竖图' },
+  { value: '3840x2160', label: '3840x2160 4K 横图' },
+  { value: '2160x3840', label: '2160x3840 4K 竖图' },
+] as const
+
 const activeMode = ref<StudioMode>('generate')
 const loading = ref(false)
 const responseStatus = ref('')
@@ -113,6 +122,7 @@ const generationPresets = [
   { key: 'icon', label: '图标', prompt: '生成一个极简、扁平、清晰的应用图标，几何构图，纯净背景，适合小尺寸展示', size: '1024x1024', quality: 'medium', background: 'transparent' },
   { key: 'poster', label: '海报', prompt: '生成一张具有强烈视觉中心的品牌海报，层次清晰，文字留白充分，适合营销展示', size: '1024x1536', quality: 'high', background: 'opaque' },
   { key: 'banner', label: '横幅', prompt: '生成一张横向视觉横幅，主体突出，构图稳定，适合首页头图使用', size: '1536x1024', quality: 'high', background: 'opaque' },
+  { key: '4k-banner', label: '4K 横幅', prompt: '生成一张 4K 横向视觉主图，画面细节丰富、主体突出、适合大屏展示和高清物料使用', size: '3840x2160', quality: 'high', background: 'opaque' },
 ] as const
 
 const editPresets = [
@@ -515,7 +525,7 @@ const estimatedSecondsLabel = computed(() => `${estimatedDurationSeconds.value} 
 
 const performanceTips = computed(() => {
   const tips = [
-    '1024x1024 通常是最稳也最快的尺寸。',
+    '1024x1024 通常最快；gpt-image-2 可选择 3840x2160 或 2160x3840 输出 4K。',
     'quality 设为 low 或 medium，返回会明显快于 high。',
     '如果更关注速度，输出格式优先用 jpeg，其次 webp，再是 png。',
     '编辑模式会额外消耗输入图像 token，多图、mask、长提示词都会拉长等待时间。',
@@ -580,6 +590,21 @@ function parseExtraBody(rawValue: string) {
   }
 }
 
+function normalizeRequestSize(value: string) {
+  const size = String(value || '').trim()
+  return size || 'auto'
+}
+
+function normalizeRequestCount(value: number) {
+  const count = Number(value || 1)
+  return Math.max(1, Math.min(10, Number.isFinite(count) ? Math.round(count) : 1))
+}
+
+function normalizeOutputCompression(value: number) {
+  const compression = Number(value)
+  return Math.max(0, Math.min(100, Number.isFinite(compression) ? Math.round(compression) : 100))
+}
+
 function buildGenerationPayload() {
   if (generationForm.model.trim().toLowerCase() === 'gpt-image-2' && generationForm.background === 'transparent') {
     throw new Error('gpt-image-2 当前不支持 transparent 背景，请改用 opaque 或 auto。')
@@ -588,17 +613,17 @@ function buildGenerationPayload() {
   const payload: Record<string, unknown> = {
     model: generationForm.model.trim(),
     prompt: generationForm.prompt.trim(),
-    size: generationForm.size,
+    size: normalizeRequestSize(generationForm.size),
     quality: generationForm.quality,
     background: generationForm.background,
     moderation: generationForm.moderation,
     output_format: generationForm.outputFormat,
-    n: generationForm.n,
+    n: normalizeRequestCount(generationForm.n),
     ...parseExtraBody(generationForm.extraBody),
   }
 
   if (generationForm.outputFormat === 'jpeg' || generationForm.outputFormat === 'webp') {
-    payload.output_compression = generationForm.outputCompression
+    payload.output_compression = normalizeOutputCompression(generationForm.outputCompression)
   }
 
   if (generationForm.user.trim()) {
@@ -618,12 +643,12 @@ function buildEditRequest() {
   const summary: Record<string, unknown> = {
     model: editForm.model.trim(),
     prompt: editForm.prompt.trim(),
-    size: editForm.size,
+    size: normalizeRequestSize(editForm.size),
     quality: editForm.quality,
     background: editForm.background,
     moderation: editForm.moderation,
     output_format: editForm.outputFormat,
-    n: editForm.n,
+    n: normalizeRequestCount(editForm.n),
     image: [],
     mask: null,
     ...extraBody,
@@ -631,16 +656,16 @@ function buildEditRequest() {
 
   formData.append('model', editForm.model.trim())
   formData.append('prompt', editForm.prompt.trim())
-  formData.append('size', editForm.size)
+  formData.append('size', normalizeRequestSize(editForm.size))
   formData.append('quality', editForm.quality)
   formData.append('background', editForm.background)
   formData.append('moderation', editForm.moderation)
   formData.append('output_format', editForm.outputFormat)
-  formData.append('n', String(editForm.n))
+  formData.append('n', String(normalizeRequestCount(editForm.n)))
 
   if (editForm.outputFormat === 'jpeg' || editForm.outputFormat === 'webp') {
-    formData.append('output_compression', String(editForm.outputCompression))
-    summary.output_compression = editForm.outputCompression
+    formData.append('output_compression', String(normalizeOutputCompression(editForm.outputCompression)))
+    summary.output_compression = normalizeOutputCompression(editForm.outputCompression)
   }
 
   if (editForm.user.trim()) {
@@ -1153,7 +1178,7 @@ function restoreLastSuccessfulRequest() {
             <label class="field"><span class="field__label">模型</span><div class="input-shell"><input v-model="generationForm.model" class="app-input" type="text" placeholder="gpt-image-2" /></div></label>
             <label class="field"><span class="field__label">返回数量</span><div class="input-shell"><input v-model.number="generationForm.n" class="app-input" type="number" min="1" max="10" /></div></label>
             <label class="field form-grid__full"><span class="field__label">提示词</span><div class="input-shell input-shell--textarea"><textarea v-model="generationForm.prompt" class="app-textarea code-area" rows="6" placeholder="描述你想生成的图片内容" /></div></label>
-            <label class="field"><span class="field__label">尺寸</span><select v-model="generationForm.size" class="app-select"><option value="1024x1024">1024x1024</option><option value="1536x1024">1536x1024</option><option value="1024x1536">1024x1536</option><option value="auto">auto</option></select></label>
+            <label class="field"><span class="field__label">尺寸</span><select v-model="generationForm.size" class="app-select"><option v-for="option in imageSizeOptions" :key="option.value" :value="option.value">{{ option.label }}</option></select></label>
             <label class="field"><span class="field__label">质量</span><select v-model="generationForm.quality" class="app-select"><option value="low">low</option><option value="medium">medium</option><option value="high">high</option><option value="auto">auto</option></select></label>
             <label class="field"><span class="field__label">背景</span><select v-model="generationForm.background" class="app-select"><option value="auto">auto</option><option value="opaque">opaque</option><option value="transparent">transparent</option></select></label>
             <label class="field"><span class="field__label">审核强度</span><select v-model="generationForm.moderation" class="app-select"><option value="auto">auto</option><option value="low">low</option></select></label>
@@ -1174,7 +1199,7 @@ function restoreLastSuccessfulRequest() {
               <label class="field"><span class="field__label">模型</span><div class="input-shell"><input v-model="editForm.model" class="app-input" type="text" placeholder="gpt-image-2" /></div></label>
               <label class="field"><span class="field__label">返回数量</span><div class="input-shell"><input v-model.number="editForm.n" class="app-input" type="number" min="1" max="10" /></div></label>
               <label class="field form-grid__full"><span class="field__label">编辑提示词</span><div class="input-shell input-shell--textarea"><textarea v-model="editForm.prompt" class="app-textarea code-area" rows="6" placeholder="描述你希望对图片进行的具体修改" /></div></label>
-              <label class="field"><span class="field__label">尺寸</span><select v-model="editForm.size" class="app-select"><option value="1024x1024">1024x1024</option><option value="1536x1024">1536x1024</option><option value="1024x1536">1024x1536</option><option value="auto">auto</option></select></label>
+              <label class="field"><span class="field__label">尺寸</span><select v-model="editForm.size" class="app-select"><option v-for="option in imageSizeOptions" :key="option.value" :value="option.value">{{ option.label }}</option></select></label>
               <label class="field"><span class="field__label">质量</span><select v-model="editForm.quality" class="app-select"><option value="low">low</option><option value="medium">medium</option><option value="high">high</option><option value="auto">auto</option></select></label>
               <label class="field"><span class="field__label">背景</span><select v-model="editForm.background" class="app-select"><option value="auto">auto</option><option value="opaque">opaque</option><option value="transparent">transparent</option></select></label>
               <label class="field"><span class="field__label">审核强度</span><select v-model="editForm.moderation" class="app-select"><option value="auto">auto</option><option value="low">low</option></select></label>

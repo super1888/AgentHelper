@@ -53,7 +53,7 @@ public class ImageProxyService {
 
         String requestBody;
         try {
-            requestBody = objectMapper.writeValueAsString(request.getPayload());
+            requestBody = objectMapper.writeValueAsString(normalizeGenerationPayload(request.getPayload()));
         } catch (JsonProcessingException exception) {
             throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "图片生成载荷序列化失败");
         }
@@ -115,6 +115,60 @@ public class ImageProxyService {
         }
         if (request.getPayload() == null || request.getPayload().isEmpty()) {
             throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "图片生成载荷不能为空");
+        }
+    }
+
+    /**
+     * 规范化图片生成请求体，确保 size、n、quality 等参数按上游接口要求透传。
+     */
+    private Map<String, Object> normalizeGenerationPayload(Map<String, Object> rawPayload) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        rawPayload.forEach((key, value) -> {
+            if (!StringUtils.hasText(key) || value == null) {
+                return;
+            }
+            if (value instanceof String text && !StringUtils.hasText(text)) {
+                return;
+            }
+            payload.put(key, value);
+        });
+        normalizeIntegerField(payload, "n", 1, 10);
+        normalizeIntegerField(payload, "output_compression", 0, 100);
+        normalizeStringField(payload, "model");
+        normalizeStringField(payload, "prompt");
+        normalizeStringField(payload, "size");
+        normalizeStringField(payload, "quality");
+        normalizeStringField(payload, "background");
+        normalizeStringField(payload, "moderation");
+        normalizeStringField(payload, "output_format");
+        normalizeStringField(payload, "user");
+        return payload;
+    }
+
+    private void normalizeStringField(Map<String, Object> payload, String fieldName) {
+        Object value = payload.get(fieldName);
+        if (value instanceof String text) {
+            String trimmed = text.trim();
+            if (StringUtils.hasText(trimmed)) {
+                payload.put(fieldName, trimmed);
+            } else {
+                payload.remove(fieldName);
+            }
+        }
+    }
+
+    private void normalizeIntegerField(Map<String, Object> payload, String fieldName, int min, int max) {
+        Object value = payload.get(fieldName);
+        if (value == null) {
+            return;
+        }
+        try {
+            int number = value instanceof Number numericValue
+                    ? numericValue.intValue()
+                    : Integer.parseInt(String.valueOf(value).trim());
+            payload.put(fieldName, Math.max(min, Math.min(max, number)));
+        } catch (RuntimeException exception) {
+            payload.remove(fieldName);
         }
     }
 
