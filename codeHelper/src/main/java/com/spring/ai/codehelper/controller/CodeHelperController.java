@@ -1,14 +1,18 @@
 package com.spring.ai.codehelper.controller;
 
 import com.spring.ai.codehelper.application.manager.CodeHelperApplicationManager;
+import com.spring.ai.codehelper.application.subagent.CodeHelperSubAgentManager;
+import com.spring.ai.codehelper.domain.dto.CodeHelperSubAgentDefinitionDTO;
 import com.spring.ai.codehelper.domain.request.CodeHelperCompactRequest;
 import com.spring.ai.codehelper.domain.request.CodeHelperMessageRequest;
 import com.spring.ai.codehelper.domain.request.CodeHelperPermissionCheckRequest;
 import com.spring.ai.codehelper.domain.request.CodeHelperSessionCreateRequest;
+import com.spring.ai.codehelper.domain.request.CodeHelperSubAgentRunRequest;
 import com.spring.ai.codehelper.domain.request.CodeHelperToolExecuteRequest;
 import com.spring.ai.codehelper.domain.response.CodeHelperContextResponse;
 import com.spring.ai.codehelper.domain.response.CodeHelperPermissionDecisionResponse;
 import com.spring.ai.codehelper.domain.response.CodeHelperSessionResponse;
+import com.spring.ai.codehelper.domain.response.CodeHelperSubAgentRunResponse;
 import com.spring.ai.codehelper.domain.response.CodeHelperToolExecutionResponse;
 import com.spring.ai.codehelper.domain.response.CodeHelperToolLogResponse;
 import com.spring.ai.common.web.ApiResponse;
@@ -32,6 +36,9 @@ public class CodeHelperController {
 
     @Resource
     private CodeHelperApplicationManager codeHelperApplicationManager;
+
+    @Resource
+    private CodeHelperSubAgentManager codeHelperSubAgentManager;
 
     @PostMapping("/sessions")
     public ApiResponse<CodeHelperSessionResponse> createSession(@RequestBody CodeHelperSessionCreateRequest request) {
@@ -73,6 +80,17 @@ public class CodeHelperController {
     @GetMapping("/tools")
     public ApiResponse<List<CodeHelperToolDescriptor>> listTools() {
         return ApiResponse.success(codeHelperApplicationManager.listTools());
+    }
+
+    @GetMapping("/sub-agents")
+    public ApiResponse<List<CodeHelperSubAgentDefinitionDTO>> listSubAgents() {
+        return ApiResponse.success(codeHelperSubAgentManager.listSubAgents());
+    }
+
+    @PostMapping("/sub-agents/run")
+    public ApiResponse<CodeHelperSubAgentRunResponse> runSubAgent(@RequestParam String sessionId,
+                                                                  @RequestBody CodeHelperSubAgentRunRequest request) {
+        return ApiResponse.success(codeHelperSubAgentManager.runSubAgent(sessionId, request));
     }
 
     @GetMapping("/models/options")

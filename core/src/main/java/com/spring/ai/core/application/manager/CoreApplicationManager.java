@@ -192,6 +192,41 @@ public class CoreApplicationManager {
     }
 
     /**
+     * 根据启用中的模型编码创建 ChatClient。
+     *
+     * @param modelCode 模型编码
+     * @return 可直接调用的 ChatClient
+     */
+    public ChatClient createChatClientByModelCode(String modelCode) {
+        return dynamicChatModelFactory.createChatClient(createChatModelRequestByModelCode(modelCode));
+    }
+
+    /**
+     * 根据启用中的模型编码构建动态模型请求。
+     *
+     * @param modelCode 模型编码
+     * @return 带明文密钥和模型参数的模型请求
+     */
+    public ChatModelRequest createChatModelRequestByModelCode(String modelCode) {
+        ModelDefinition model = requireEnabledModelByCode(modelCode);
+        ModelProviderConfig provider = requireEnabledProvider(model.getProviderConfigCode());
+        String apiKey = modelSecretCryptoService.decrypt(provider.getApiKeyCipherText());
+        if (!StringUtils.hasText(apiKey)) {
+            throw new BusinessException(ErrorCodeEnum.BAD_REQUEST, "当前模型提供商未配置 API Key");
+        }
+
+        ChatModelRequest modelRequest = new ChatModelRequest();
+        modelRequest.setProvider(normalizeProviderEnum(provider.getProviderEnum()));
+        modelRequest.setModel(model.getModelIdentifier());
+        modelRequest.setApiKey(apiKey);
+        modelRequest.setBaseUrl(provider.getBaseUrl());
+        ChatOptionsDTO options = toChatOptions(model);
+        options.setModel(model.getModelIdentifier());
+        modelRequest.setOptions(options);
+        return modelRequest;
+    }
+
+    /**
      * 删除模型配置。 若模型已被 Agent 版本引用，则禁止直接删除。
      */
     @Transactional(rollbackFor = Exception.class)

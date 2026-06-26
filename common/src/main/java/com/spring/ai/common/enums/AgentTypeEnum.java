@@ -16,6 +16,7 @@ public enum AgentTypeEnum {
     LLM_ROUTING_AGENT("4", "动态决定将请求路由到哪个子Agent"),
     SUPERVISOR_AGENT("5", "支持多步骤循环路由Agent"),
     CUSTOMIZED_AGENT("6", "自定义执行顺序Agent"),
+    AGENTSCOPE_REACT("7", "AgentScope ReAct范式Agent"),
     ;
 
     private String code;

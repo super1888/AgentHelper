@@ -218,6 +218,44 @@
 
 - 是否允许执行
 - 风险等级
+
+---
+
+### 4.12 查询子 Agent 列表
+
+`GET /agentHelper/code-helper/sub-agents`
+
+返回内置子 Agent：
+
+- `explorer`：探索型，只读分析、定位文件、梳理调用链。
+- `planner`：计划型，负责需求拆解、技术方案和执行步骤。
+- `coder`：编码型，负责输出改动建议或工具调用计划，写入操作需要确认。
+- `reviewer`：审查型，负责风险识别、测试缺口和回归影响分析。
+
+---
+
+### 4.13 运行子 Agent
+
+`POST /agentHelper/code-helper/sub-agents/run?sessionId=xxx`
+
+请求示例：
+
+```json
+{
+  "agentType": "explorer",
+  "task": "分析 codeHelper 模块是否已经具备子 Agent 分工能力",
+  "modelCode": "gpt-4.1",
+  "autoToolCall": true,
+  "allowedTools": ["glob", "grep", "read_file"]
+}
+```
+
+说明：
+
+- `agentType` 可选；不传时后端会根据任务内容自动选择子 Agent。
+- 子 Agent 复用当前会话的工作区、摘要、历史消息和模型配置。
+- 默认只自动执行低风险工具；写文件、Shell、Git 等操作会返回 `requireConfirmation=true`，等待用户确认。
+- 单次最多自动执行 3 个低风险工具，避免子 Agent 失控循环。
 - 拒绝原因
 
 ## 5. 模型输出协议

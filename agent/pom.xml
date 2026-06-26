@@ -51,5 +51,10 @@
             <groupId>com.spring.ai</groupId>
             <artifactId>opencv</artifactId>
         </dependency>
+        <dependency>
+            <groupId>io.agentscope</groupId>
+            <artifactId>agentscope</artifactId>
+            <version>${agentscope.version}</version>
+        </dependency>
     </dependencies>
 </project>

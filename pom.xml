@@ -79,6 +79,7 @@
         <graalvm.polyglot.version>24.1.0</graalvm.polyglot.version>
         <dashscope.sdk.version>2.22.16</dashscope.sdk.version>
         <spring-ai-alibaba-dashscope.version>1.1.2.2</spring-ai-alibaba-dashscope.version>
+        <agentscope.version>1.0.12</agentscope.version>
     </properties>
 
     <dependencies>

@@ -255,6 +255,7 @@ README 中所有接口如果没有特别说明，均需要在前面加 `/agentHe
 - 会话恢复。
 - 自定义文档专家智能体。
 - 厨房菜谱推荐智能体。
+- AgentScope ReAct 推理-行动智能体。
 
 **主要接口**
 
@@ -273,6 +274,7 @@ README 中所有接口如果没有特别说明，均需要在前面加 `/agentHe
 - `GET /agentHelper/agents/custom/document-expert/models`
 - `POST /agentHelper/agents/custom/document-expert/chat`
 - `POST /agentHelper/agents/kitchen/recipe/recommend`
+- `POST /agentHelper/agents/agentscope/react/chat`
 
 **原理**
 
@@ -1085,6 +1087,7 @@ async function uploadBigFile(file) {
 | 模型选项 | `GET /agentHelper/core/models/options` |
 | 创建简单智能体 | `POST /agentHelper/agents/simple` |
 | 创建智能体会话 | `POST /agentHelper/agents/simple/{agentId}/sessions` |
+| AgentScope ReAct 聊天 | `POST /agentHelper/agents/agentscope/react/chat` |
 | SSE 聊天 | `GET /agentHelper/sse/agent/chat` |
 | 向量文件上传 | `POST /agentHelper/vectorStore/upload` |
 | 大文件初始化 | `POST /agentHelper/big-files/init` |
@@ -1096,6 +1099,8 @@ async function uploadBigFile(file) {
 | 编程助手工作台 | `GET /code-helper` |
 | 创建编程助手会话 | `POST /agentHelper/code-helper/sessions` |
 | 编程助手发送消息 | `POST /agentHelper/code-helper/sessions/send` |
+| 编程助手子 Agent 列表 | `GET /agentHelper/code-helper/sub-agents` |
+| 编程助手运行子 Agent | `POST /agentHelper/code-helper/sub-agents/run` |
 | 编程助手工具执行 | `POST /agentHelper/code-helper/tool/execute` |
 | Hook 列表 | `GET /agentHelper/hooks` |
 | MCP Server 列表 | `GET /agentHelper/mcp/servers` |
