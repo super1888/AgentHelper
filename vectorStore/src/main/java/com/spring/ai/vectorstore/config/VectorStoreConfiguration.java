@@ -1,8 +1,18 @@
 package com.spring.ai.vectorstore.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.spring.ai.vectorstore.config.VectorStoreProperties.StoreType;
+import com.spring.ai.vectorstore.store.LocalFaissVectorStoreGateway;
+import com.spring.ai.vectorstore.store.RedisDocumentRepository;
+import com.spring.ai.vectorstore.store.RedisVectorStoreCapabilityChecker;
+import com.spring.ai.vectorstore.store.SpringAiVectorStoreGateway;
+import com.spring.ai.vectorstore.store.VectorStoreGateway;
 import java.time.Duration;
+import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.reader.ExtractedTextFormatter;
 import org.springframework.ai.transformer.splitter.TokenTextSplitter;
+import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.data.redis.RedisProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -15,14 +25,7 @@ import org.springframework.data.redis.connection.jedis.JedisConnectionFactory;
 import org.springframework.util.StringUtils;
 
 /**
- * 向量存储模块配置。
- *
- * <p>除了文本格式化器和切片器外，这里额外显式提供 `JedisConnectionFactory`。
- *
- * <p>原因是 Spring AI 1.1.2 的 `RedisVectorStoreAutoConfiguration` 依赖的是
- * `JedisConnectionFactory`，而不是通用的 `RedisConnectionFactory`。
- * 仅使用 Spring Boot 默认的 Lettuce 连接工厂时，`VectorStore` 自动配置不会生效，
- * 最终表现为容器里缺少 `org.springframework.ai.vectorstore.VectorStore` Bean。</p>
+ * 向量存储模块配置，负责文本格式化、切片器和多存储后端网关装配。
  */
 @Configuration
 @EnableConfigurationProperties(VectorStoreProperties.class)
@@ -58,6 +61,44 @@ public class VectorStoreConfiguration {
     }
 
     /**
+     * 多后端向量库网关。
+     */
+    @Bean
+    @ConditionalOnMissingBean(VectorStoreGateway.class)
+    public VectorStoreGateway vectorStoreGateway(
+            VectorStoreProperties properties,
+            ObjectProviderBridge objectProviderBridge,
+            ObjectMapper objectMapper
+    ) {
+        if (properties.getStoreType() == StoreType.FAISS) {
+            return new LocalFaissVectorStoreGateway(objectProviderBridge.embeddingModel(), properties, objectMapper);
+        }
+        VectorStore vectorStore = objectProviderBridge.vectorStore(properties.getStoreType());
+        return new SpringAiVectorStoreGateway(
+                vectorStore,
+                objectProviderBridge.redisVectorStoreCapabilityChecker(),
+                objectProviderBridge.redisDocumentRepository(),
+                properties.getStoreType() == StoreType.REDIS);
+    }
+
+    /**
+     * 延迟解析可选 Bean，避免 FAISS 模式强依赖 Redis VectorStore。
+     */
+    @Bean
+    public ObjectProviderBridge objectProviderBridge(
+            org.springframework.beans.factory.ObjectProvider<VectorStore> vectorStoreProvider,
+            org.springframework.beans.factory.ObjectProvider<EmbeddingModel> embeddingModelProvider,
+            org.springframework.beans.factory.ObjectProvider<RedisVectorStoreCapabilityChecker> capabilityCheckerProvider,
+            org.springframework.beans.factory.ObjectProvider<RedisDocumentRepository> redisDocumentRepositoryProvider
+    ) {
+        return new ObjectProviderBridge(
+                vectorStoreProvider,
+                embeddingModelProvider,
+                capabilityCheckerProvider,
+                redisDocumentRepositoryProvider);
+    }
+
+    /**
      * 文本格式化器。
      */
     @Bean
@@ -83,4 +124,37 @@ public class VectorStoreConfiguration {
                 .withKeepSeparator(properties.isKeepSeparator())
                 .build();
     }
+
+    /**
+     * 可选 Bean 解析桥接器。
+     */
+    public record ObjectProviderBridge(
+            org.springframework.beans.factory.ObjectProvider<VectorStore> vectorStoreProvider,
+            org.springframework.beans.factory.ObjectProvider<EmbeddingModel> embeddingModelProvider,
+            org.springframework.beans.factory.ObjectProvider<RedisVectorStoreCapabilityChecker> capabilityCheckerProvider,
+            org.springframework.beans.factory.ObjectProvider<RedisDocumentRepository> redisDocumentRepositoryProvider
+    ) {
+        public VectorStore vectorStore(StoreType storeType) {
+            String expectedName = storeType == StoreType.QDRANT ? "qdrant" : "redis";
+            return vectorStoreProvider.stream()
+                    .filter(vectorStore -> vectorStore.getClass().getName().toLowerCase().contains(expectedName))
+                    .findFirst()
+                    .orElseGet(() -> java.util.Objects.requireNonNull(
+                            vectorStoreProvider.getIfAvailable(),
+                            "当前存储后端需要 VectorStore Bean，请检查对应 starter 和 YAML 配置"));
+        }
+
+        public EmbeddingModel embeddingModel() {
+            return java.util.Objects.requireNonNull(embeddingModelProvider.getIfAvailable(), "FAISS 本地存储需要 EmbeddingModel Bean，请检查嵌入模型配置");
+        }
+
+        public RedisVectorStoreCapabilityChecker redisVectorStoreCapabilityChecker() {
+            return capabilityCheckerProvider.getIfAvailable();
+        }
+
+        public RedisDocumentRepository redisDocumentRepository() {
+            return redisDocumentRepositoryProvider.getIfAvailable();
+        }
+    }
 }
+

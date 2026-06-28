@@ -23,3 +23,71 @@ spring:
         refresh-enabled: true
         import-check:
           enabled: true
+  ai:
+    vectorstore:
+      redis:
+        initialize-schema: true
+      qdrant:
+        host: ${app.vector-store.qdrant.host}
+        port: ${app.vector-store.qdrant.port}
+        collection-name: ${app.vector-store.qdrant.collection-name}
+        use-tls: ${app.vector-store.qdrant.use-tls}
+
+app:
+  vector-store:
+    # store-type 可选 REDIS、QDRANT、FAISS
+    store-type: REDIS
+    default-top-k: 3
+    chunk-size: 800
+    min-chunk-size-chars: 350
+    min-chunk-length-to-embed: 5
+    max-num-chunks: 128
+    keep-separator: true
+    write-batch-size: 8
+    parallel-write-enabled: false
+    parallel-write-threshold: 64
+    split:
+      # mode 可选 AUTO、FIXED、RECURSIVE、SEMANTIC；Markdown/PDF/代码/FAQ 会优先走类型感知策略
+      mode: AUTO
+      fixed-length: 800
+      overlap: 80
+      recursive-separators:
+        - "\n\n"
+        - "\n"
+        - "。"
+        - "."
+        - " "
+      semantic-window-size: 3
+      semantic-breakpoint-percentile: 0.82
+      markdown-heading-enabled: true
+      pdf-paragraph-enabled: true
+      code-block-enabled: true
+      faq-pair-enabled: true
+    hybrid-search:
+      enabled: true
+      vector-enabled: true
+      keyword-enabled: true
+      vector-candidate-multiplier: 4
+      keyword-candidate-multiplier: 4
+      rrf-k: 60
+      rerank-enabled: true
+      rerank-candidate-multiplier: 3
+    ann:
+      enabled: true
+      # algorithm 可选 HNSW、IVF、PQ；Redis/Qdrant 会通过各自后端能力承载，FAISS 本地模式会参与近似策略
+      algorithm: HNSW
+      hnsw-m: 16
+      hnsw-ef-construction: 200
+      hnsw-ef-search: 64
+      ivf-nlist: 1024
+      ivf-nprobe: 16
+      pq-segments: 8
+      pq-bits: 8
+    qdrant:
+      host: localhost
+      port: 6334
+      collection-name: spring_ai_vector_store
+      use-tls: false
+    faiss:
+      index-path: data/faiss-vector-store.json
+      normalize-vectors: true

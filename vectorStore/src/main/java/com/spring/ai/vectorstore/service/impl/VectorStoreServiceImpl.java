@@ -28,13 +28,14 @@ import com.spring.ai.vectorstore.exception.VectorStoreException;
 import com.spring.ai.vectorstore.reader.MultipartDocumentReader;
 import com.spring.ai.vectorstore.reader.MultipartDocumentReaderRegistry;
 import com.spring.ai.vectorstore.service.VectorStoreService;
-import com.spring.ai.vectorstore.store.RedisVectorStoreCapabilityChecker;
+import com.spring.ai.vectorstore.search.HybridVectorSearchService;
+import com.spring.ai.vectorstore.splitter.VectorDocumentSplitter;
+import com.spring.ai.vectorstore.store.VectorStoreGateway;
 import jakarta.annotation.Resource;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -45,17 +46,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.ai.vectorstore.SearchRequest;
-import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.ai.vectorstore.filter.Filter.Expression;
 import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
-import redis.clients.jedis.JedisPooled;
-import redis.clients.jedis.params.ScanParams;
-import redis.clients.jedis.resps.ScanResult;
 
 /**
  * 向量存储服务实现类，提供文档上传、检索、删除等功能
@@ -74,8 +70,6 @@ public class VectorStoreServiceImpl implements VectorStoreService {
     private static final int MIN_ADAPTIVE_CHUNK_SIZE = 100;
     // 最大自适应分割深度
     private static final int MAX_ADAPTIVE_SPLIT_DEPTH = 3;
-    // 文件列表扫描数量
-    private static final int FILE_LIST_SCAN_COUNT = 200;
 
     private static class PathMultipartFile implements MultipartFile {
 
@@ -125,13 +119,13 @@ public class VectorStoreServiceImpl implements VectorStoreService {
             Files.copy(resource.getStoragePath(), dest.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
         }
     }
-    // 注入向量存储组件
+    // 注入向量存储网关
     @Resource
-    private VectorStore vectorStore;
+    private VectorStoreGateway vectorStoreGateway;
 
-    // 注入文本分割器
+    // 注入文档切分服务
     @Resource
-    private TokenTextSplitter tokenTextSplitter;
+    private VectorDocumentSplitter vectorDocumentSplitter;
 
     // 注入向量存储配置属性
     @Resource
@@ -141,9 +135,9 @@ public class VectorStoreServiceImpl implements VectorStoreService {
     @Resource
     private MultipartDocumentReaderRegistry readerRegistry;
 
-    // 注入Redis向量存储能力检查器
+    // 注入混合检索服务
     @Resource
-    private RedisVectorStoreCapabilityChecker capabilityChecker;
+    private HybridVectorSearchService hybridVectorSearchService;
 
     // 注入向量存储文件记录服务
     @Resource
@@ -156,9 +150,6 @@ public class VectorStoreServiceImpl implements VectorStoreService {
     @Resource(name = CommonAsyncConfig.COMMON_ASYNC_EXECUTOR)
     private Executor commonAsyncExecutor;
 
-    // Redis向量存储前缀
-    @Value("${spring.ai.vectorstore.redis.prefix:vector:}")
-    private String redisVectorPrefix;
 
     /**
      * 上传文件到向量存储
@@ -179,7 +170,7 @@ public class VectorStoreServiceImpl implements VectorStoreService {
     }
 
     private VectorStoreUploadResponse storeMultipartFile(MultipartFile file) {
-        capabilityChecker.ensureReady();
+        vectorStoreGateway.ensureReady();
 
         String fileName = requireFileName(file);
         String extension = resolveExtension(fileName);
@@ -201,7 +192,7 @@ public class VectorStoreServiceImpl implements VectorStoreService {
         }
 
         // 分块处理文档
-        List<Document> chunkDocuments = tokenTextSplitter.apply(normalizedDocuments);
+        List<Document> chunkDocuments = vectorDocumentSplitter.split(normalizedDocuments, extension);
         if (chunkDocuments.isEmpty()) {
             throw VectorStoreException.badRequest("文档切分后未生成任何分片");
         }
@@ -247,15 +238,11 @@ public class VectorStoreServiceImpl implements VectorStoreService {
      */
     @Override
     public VectorStoreDocumentListResponse listDocuments(String fileName) {
-        capabilityChecker.ensureReady();
+        vectorStoreGateway.ensureReady();
         String normalizedFileName = normalizeRequiredText(fileName, "文件名不能为空");
 
         try {
-            JedisPooled jedis = resolveJedisClient();
-            List<VectorStoreDocumentResponse> items = scanVectorKeys(jedis).stream()
-                    .map(key -> readStoredDocument(jedis, key))
-                    .filter(documentMap -> MODULE_NAME.equals(asString(documentMap.get(METADATA_MODULE))))
-                    .filter(documentMap -> normalizedFileName.equals(asString(documentMap.get(METADATA_FILE_NAME))))
+            List<VectorStoreDocumentResponse> items = vectorStoreGateway.listDocuments(normalizedFileName).stream()
                     .map(this::toDocumentResponse)
                     .sorted(Comparator.comparing(VectorStoreDocumentResponse::getId, Comparator.nullsLast(String::compareTo)))
                     .toList();
@@ -280,7 +267,7 @@ public class VectorStoreServiceImpl implements VectorStoreService {
      */
     @Override
     public VectorStoreSearchResponse search(String query, String fileName, Integer topK, Double similarityThreshold) {
-        capabilityChecker.ensureReady();
+        vectorStoreGateway.ensureReady();
 
         String normalizedQuery = normalizeRequiredText(query, "检索内容不能为空");
         String normalizedFileName = normalizeOptionalText(fileName);
@@ -297,7 +284,7 @@ public class VectorStoreServiceImpl implements VectorStoreService {
         }
 
         try {
-            List<VectorStoreDocumentResponse> items = vectorStore.similaritySearch(builder.build()).stream()
+            List<VectorStoreDocumentResponse> items = hybridVectorSearchService.search(builder.build(), normalizedFileName).stream()
                     .map(this::toDocumentResponse)
                     .toList();
 
@@ -347,9 +334,9 @@ public class VectorStoreServiceImpl implements VectorStoreService {
      */
     @Override
     public VectorStoreDeleteResponse deleteAll() {
-        capabilityChecker.ensureReady();
+        vectorStoreGateway.ensureReady();
         try {
-            vectorStore.delete(new FilterExpressionBuilder().eq(METADATA_MODULE, MODULE_NAME).build());
+            vectorStoreGateway.delete(new FilterExpressionBuilder().eq(METADATA_MODULE, MODULE_NAME).build());
             markAllRecordsDeleted();
             log.info("Deleted all vectors for module={}", MODULE_NAME);
             return VectorStoreDeleteResponse.builder()
@@ -368,12 +355,12 @@ public class VectorStoreServiceImpl implements VectorStoreService {
      */
     @Override
     public VectorStoreDeleteResponse deleteByFileName(String fileName) {
-        capabilityChecker.ensureReady();
+        vectorStoreGateway.ensureReady();
         String normalizedFileName = normalizeRequiredText(fileName, "File name must not be blank");
         FilterExpressionBuilder filterExpressionBuilder = new FilterExpressionBuilder();
 
         try {
-            vectorStore.delete(filterExpressionBuilder
+            vectorStoreGateway.delete(filterExpressionBuilder
                     .and(
                             filterExpressionBuilder.eq(METADATA_MODULE, MODULE_NAME),
                             filterExpressionBuilder.eq(METADATA_FILE_NAME, normalizedFileName))
@@ -414,7 +401,7 @@ public class VectorStoreServiceImpl implements VectorStoreService {
      */
     private void persistBatch(List<Document> batch, int splitDepth) {
         try {
-            vectorStore.add(batch);
+            vectorStoreGateway.add(batch);
         } catch (RuntimeException exception) {
             Throwable rootCause = unwrapCause(exception);
             if (isTokenLimitException(rootCause) && splitDepth < MAX_ADAPTIVE_SPLIT_DEPTH) {
@@ -627,55 +614,6 @@ public class VectorStoreServiceImpl implements VectorStoreService {
     }
 
     /**
-     * 解析Jedis客户端
-     * @return Jedis客户端
-     */
-    private JedisPooled resolveJedisClient() {
-        return vectorStore.getNativeClient()
-                .filter(JedisPooled.class::isInstance)
-                .map(JedisPooled.class::cast)
-                .orElseThrow(() -> new VectorStoreException(
-                        HttpStatus.SERVICE_UNAVAILABLE,
-                        "当前向量存储未提供 Jedis 客户端"));
-    }
-
-    /**
-     * 扫描向量键
-     * @param jedis Jedis客户端
-     * @return 向量键列表
-     */
-    private List<String> scanVectorKeys(JedisPooled jedis) {
-        List<String> keys = new ArrayList<>();
-        String cursor = ScanParams.SCAN_POINTER_START;
-        ScanParams scanParams = new ScanParams()
-                .match(redisVectorPrefix + "*")
-                .count(FILE_LIST_SCAN_COUNT);
-
-        do {
-            ScanResult<String> scanResult = jedis.scan(cursor, scanParams);
-            keys.addAll(scanResult.getResult());
-            cursor = scanResult.getCursor();
-        } while (!ScanParams.SCAN_POINTER_START.equals(cursor));
-
-        return keys;
-    }
-
-    /**
-     * 读取存储的文档
-     * @param jedis Jedis客户端
-     * @param key 文档键
-     * @return 文档映射
-     */
-    @SuppressWarnings("unchecked")
-    private Map<String, Object> readStoredDocument(JedisPooled jedis, String key) {
-        Object jsonObject = jedis.jsonGet(key);
-        if (jsonObject instanceof Map<?, ?> jsonMap) {
-            return (Map<String, Object>) jsonMap;
-        }
-        return Map.of();
-    }
-
-    /**
      * 保存或更新文件记录
      * @param file 上传的文件
      * @param fileName 文件名
@@ -765,7 +703,7 @@ public class VectorStoreServiceImpl implements VectorStoreService {
      */
     private VectorStoreDocumentResponse toDocumentResponse(Document document) {
         document.getMetadata();
-        Map<String, Object> metadata = new LinkedHashMap<>(document.getMetadata());
+        Map<String, Object> metadata = document.getMetadata() == null ? new LinkedHashMap<>() : new LinkedHashMap<>(document.getMetadata());
         return VectorStoreDocumentResponse.builder()
                 .id(document.getId())
                 .content(document.getText())
@@ -774,49 +712,6 @@ public class VectorStoreServiceImpl implements VectorStoreService {
                 .build();
     }
 
-    /**
-     * 转换文档映射为响应对象
-     * @param documentMap 文档映射
-     * @return 文档响应对象
-     */
-    private VectorStoreDocumentResponse toDocumentResponse(Map<String, Object> documentMap) {
-        Object content = documentMap.getOrDefault("content", documentMap.get("text"));
-        Map<String, Object> metadata = extractMetadata(documentMap);
-        return VectorStoreDocumentResponse.builder()
-                .id(asString(documentMap.get("id")))
-                .content(asString(content))
-                .metadata(metadata)
-                .build();
-    }
-
-    /**
-     * 提取文档元数据
-     * @param documentMap 文档映射
-     * @return 元数据映射
-     */
-    @SuppressWarnings("unchecked")
-    private Map<String, Object> extractMetadata(Map<String, Object> documentMap) {
-        Object metadata = documentMap.get("metadata");
-        if (metadata instanceof Map<?, ?> metadataMap) {
-            return (Map<String, Object>) metadataMap;
-        }
-        Map<String, Object> fallbackMetadata = new LinkedHashMap<>();
-        documentMap.forEach((key, value) -> {
-            if (key.startsWith("metadata.") || METADATA_FILE_NAME.equals(key) || METADATA_MODULE.equals(key)) {
-                fallbackMetadata.put(key, value);
-            }
-        });
-        return fallbackMetadata;
-    }
-
-    /**
-     * 将对象转换为字符串
-     * @param value 对象值
-     * @return 字符串值
-     */
-    private String asString(Object value) {
-        return value == null ? null : String.valueOf(value);
-    }
 
     /**
      * 转换向量存储异常
@@ -884,3 +779,9 @@ public class VectorStoreServiceImpl implements VectorStoreService {
         return current;
     }
 }
+
+
+
+
+
+

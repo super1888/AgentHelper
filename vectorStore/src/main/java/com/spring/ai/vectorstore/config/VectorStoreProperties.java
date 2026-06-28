@@ -1,14 +1,20 @@
 package com.spring.ai.vectorstore.config;
 
+import java.util.ArrayList;
+import java.util.List;
+import lombok.Getter;
+import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * 向量库模块配置参数。
- * 主要用于控制检索数量、切片策略、批量写入策略等行为。
+ * 向量库模块配置参数，统一控制存储后端、切分策略、混合检索、重排和 ANN 索引策略。
  */
+@Setter
+@Getter
 @ConfigurationProperties(prefix = "app.vector-store")
 public class VectorStoreProperties {
 
+    private StoreType storeType = StoreType.REDIS;
     private int defaultTopK = 3;
     private int chunkSize = 800;
     private int minChunkSizeChars = 350;
@@ -19,123 +25,96 @@ public class VectorStoreProperties {
     private int numberOfTopPagesToSkipBeforeDelete = 0;
     private int numberOfTopTextLinesToDelete = 0;
     private int numberOfBottomTextLinesToDelete = 0;
-
-    /**
-     * 单次写入向量库的批大小。
-     */
     private int writeBatchSize = 8;
-
-    /**
-     * 切片数量达到阈值后是否启用并行批量写入。
-     */
     private boolean parallelWriteEnabled = false;
-
-    /**
-     * 启用并行批量写入的最小切片数阈值。
-     */
     private int parallelWriteThreshold = 64;
+    private Split split = new Split();
+    private HybridSearch hybridSearch = new HybridSearch();
+    private Ann ann = new Ann();
+    private Qdrant qdrant = new Qdrant();
+    private Faiss faiss = new Faiss();
 
-    public int getDefaultTopK() {
-        return defaultTopK;
+    public enum StoreType {
+        REDIS,
+        QDRANT,
+        FAISS
     }
 
-    public void setDefaultTopK(int defaultTopK) {
-        this.defaultTopK = defaultTopK;
+    public enum SplitMode {
+        FIXED,
+        RECURSIVE,
+        SEMANTIC,
+        AUTO
     }
 
-    public int getChunkSize() {
-        return chunkSize;
+    public enum AnnAlgorithm {
+        HNSW,
+        IVF,
+        PQ
     }
 
-    public void setChunkSize(int chunkSize) {
-        this.chunkSize = chunkSize;
+    @Setter
+    @Getter
+    public static class Split {
+        private SplitMode mode = SplitMode.AUTO;
+        private int fixedLength = 800;
+        private int overlap = 80;
+        private List<String> recursiveSeparators = new ArrayList<>(List.of("\n\n", "\n", "。", ".", " "));
+        private int semanticWindowSize = 3;
+        private double semanticBreakpointPercentile = 0.82D;
+        private boolean markdownHeadingEnabled = true;
+        private boolean pdfParagraphEnabled = true;
+        private boolean codeBlockEnabled = true;
+        private boolean faqPairEnabled = true;
+
     }
 
-    public int getMinChunkSizeChars() {
-        return minChunkSizeChars;
+    @Setter
+    @Getter
+    public static class HybridSearch {
+        private boolean enabled = true;
+        private boolean vectorEnabled = true;
+        private boolean keywordEnabled = true;
+        private int keywordCandidateMultiplier = 4;
+        private int vectorCandidateMultiplier = 4;
+        private int rrfK = 60;
+        private boolean rerankEnabled = true;
+        private int rerankCandidateMultiplier = 3;
+
     }
 
-    public void setMinChunkSizeChars(int minChunkSizeChars) {
-        this.minChunkSizeChars = minChunkSizeChars;
+    @Setter
+    @Getter
+    public static class Ann {
+        private boolean enabled = true;
+        private AnnAlgorithm algorithm = AnnAlgorithm.HNSW;
+        private int hnswM = 16;
+        private int hnswEfConstruction = 200;
+        private int hnswEfSearch = 64;
+        private int ivfNlist = 1024;
+        private int ivfNprobe = 16;
+        private int pqSegments = 8;
+        private int pqBits = 8;
+
     }
 
-    public int getMinChunkLengthToEmbed() {
-        return minChunkLengthToEmbed;
+    @Setter
+    @Getter
+    public static class Qdrant {
+        private String host = "localhost";
+        private int port = 6334;
+        private String collectionName = "spring_ai_vector_store";
+        private String apiKey;
+        private boolean useTls = false;
+
     }
 
-    public void setMinChunkLengthToEmbed(int minChunkLengthToEmbed) {
-        this.minChunkLengthToEmbed = minChunkLengthToEmbed;
+    @Setter
+    @Getter
+    public static class Faiss {
+        private String indexPath = "data/faiss-vector-store.json";
+        private boolean normalizeVectors = true;
+
     }
 
-    public int getMaxNumChunks() {
-        return maxNumChunks;
-    }
-
-    public void setMaxNumChunks(int maxNumChunks) {
-        this.maxNumChunks = maxNumChunks;
-    }
-
-    public boolean isKeepSeparator() {
-        return keepSeparator;
-    }
-
-    public void setKeepSeparator(boolean keepSeparator) {
-        this.keepSeparator = keepSeparator;
-    }
-
-    public boolean isLeftAlignment() {
-        return leftAlignment;
-    }
-
-    public void setLeftAlignment(boolean leftAlignment) {
-        this.leftAlignment = leftAlignment;
-    }
-
-    public int getNumberOfTopPagesToSkipBeforeDelete() {
-        return numberOfTopPagesToSkipBeforeDelete;
-    }
-
-    public void setNumberOfTopPagesToSkipBeforeDelete(int numberOfTopPagesToSkipBeforeDelete) {
-        this.numberOfTopPagesToSkipBeforeDelete = numberOfTopPagesToSkipBeforeDelete;
-    }
-
-    public int getNumberOfTopTextLinesToDelete() {
-        return numberOfTopTextLinesToDelete;
-    }
-
-    public void setNumberOfTopTextLinesToDelete(int numberOfTopTextLinesToDelete) {
-        this.numberOfTopTextLinesToDelete = numberOfTopTextLinesToDelete;
-    }
-
-    public int getNumberOfBottomTextLinesToDelete() {
-        return numberOfBottomTextLinesToDelete;
-    }
-
-    public void setNumberOfBottomTextLinesToDelete(int numberOfBottomTextLinesToDelete) {
-        this.numberOfBottomTextLinesToDelete = numberOfBottomTextLinesToDelete;
-    }
-
-    public int getWriteBatchSize() {
-        return writeBatchSize;
-    }
-
-    public void setWriteBatchSize(int writeBatchSize) {
-        this.writeBatchSize = writeBatchSize;
-    }
-
-    public boolean isParallelWriteEnabled() {
-        return parallelWriteEnabled;
-    }
-
-    public void setParallelWriteEnabled(boolean parallelWriteEnabled) {
-        this.parallelWriteEnabled = parallelWriteEnabled;
-    }
-
-    public int getParallelWriteThreshold() {
-        return parallelWriteThreshold;
-    }
-
-    public void setParallelWriteThreshold(int parallelWriteThreshold) {
-        this.parallelWriteThreshold = parallelWriteThreshold;
-    }
 }
