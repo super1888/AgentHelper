@@ -153,8 +153,13 @@ public class VectorStoreServiceImpl implements VectorStoreService {
 
     /**
      * 上传文件到向量存储
-     * @param file 上传的文件
-     * @return 上传响应结果
+     *
+     * @param file 前端上传的 MultipartFile。必须包含原始文件名、文件内容和可选 contentType。
+     * @return 上传响应结果，包含文件名、后缀、源文档数量、切片数量、文件大小和上传时间。
+     *
+     * <p>处理步骤：</p>
+     * <p>1. 校验文件不能为空。</p>
+     * <p>2. 进入统一存储流程 storeMultipartFile，完成解析、切分、向量化和入库。</p>
      */
     @Override
     public VectorStoreUploadResponse upload(MultipartFile file) {
@@ -164,25 +169,33 @@ public class VectorStoreServiceImpl implements VectorStoreService {
 
     @Override
     public VectorStoreUploadResponse importBigFile(String fileId) {
+        // fileId：大文件模块中已经完成分片合并的文件唯一标识。
+        // 先从 bigFileService 读取已完成文件，再包装成 MultipartFile，复用普通上传入库流程。
         BigFileResourceResponse resource = bigFileService.getCompletedFile(normalizeRequiredText(fileId, "文件唯一标识不能为空"));
         MultipartFile file = new PathMultipartFile(resource);
         return storeMultipartFile(file);
     }
 
     private VectorStoreUploadResponse storeMultipartFile(MultipartFile file) {
+        // 第一步：检查当前向量库是否可用。Redis 会检查模块能力，FAISS 会检查 EmbeddingModel。
         vectorStoreGateway.ensureReady();
 
+        // fileName：原始文件名，用于文件台账、metadata 和后续按文件过滤检索。
         String fileName = requireFileName(file);
+        // extension：文件后缀，用于选择文档 reader 和切分策略。
         String extension = resolveExtension(fileName);
+        // uploadedAt：上传时间，写入 metadata 和文件台账，便于管理页展示。
         String uploadedAt = Instant.now().toString();
 
+        // 第二步：根据文件后缀选择对应 reader，例如 PDF、Word、Excel、文本等。
         MultipartDocumentReader reader = readerRegistry.getReader(extension);
+        // sourceDocuments：reader 解析出来的原始文档列表，此时通常还没有标准化 metadata。
         List<Document> sourceDocuments = reader.read(file);
         if (sourceDocuments.isEmpty()) {
             throw VectorStoreException.badRequest("文档解析后未获取到有效内容");
         }
 
-        // 标准化文档
+        // 第三步：标准化文档。给每个 Document 补充模块名、文件名、后缀、文件大小、上传时间等元数据。
         List<Document> normalizedDocuments = sourceDocuments.stream()
                 .map(document -> enrichDocument(document, file, fileName, extension, uploadedAt))
                 .filter(this::hasTextContent)
@@ -191,15 +204,15 @@ public class VectorStoreServiceImpl implements VectorStoreService {
             throw VectorStoreException.badRequest("文档标准化后内容为空");
         }
 
-        // 分块处理文档
+        // 第四步：分块处理文档。切分服务会根据文件类型和 YAML 配置选择固定、递归、语义或类型感知切分。
         List<Document> chunkDocuments = vectorDocumentSplitter.split(normalizedDocuments, extension);
         if (chunkDocuments.isEmpty()) {
             throw VectorStoreException.badRequest("文档切分后未生成任何分片");
         }
 
-        // 持久化文档
+        // 第五步：持久化文档。网关会根据当前 storeType 写入 Redis、Qdrant 或 FAISS。
         persistDocuments(chunkDocuments);
-        // 保存或更新文件记录
+        // 第六步：保存或更新文件台账。台账只保存文件维度统计，具体切片在向量库中。
         saveOrUpdateFileRecord(file, fileName, extension, uploadedAt, sourceDocuments.size(), chunkDocuments.size());
         log.info("Stored vector document, fileName={}, sourceDocuments={}, chunks={}",
                 fileName, sourceDocuments.size(), chunkDocuments.size());
@@ -233,8 +246,14 @@ public class VectorStoreServiceImpl implements VectorStoreService {
 
     /**
      * 列出指定文件的所有文档
-     * @param fileName 文件名
-     * @return 文档列表响应结果
+     *
+     * @param fileName 文件名过滤条件。不能为空，必须和上传时 metadata 中保存的文件名一致。
+     * @return 文档列表响应结果，包含该文件下所有切片内容和元数据。
+     *
+     * <p>处理含义：</p>
+     * <p>1. 该接口主要用于管理页查看某个文件被切成了哪些 chunk。</p>
+     * <p>2. Redis 和 FAISS 可以枚举已有切片；Qdrant 默认只能枚举运行期镜像。</p>
+     * <p>3. 返回前按切片 id 排序，便于前端稳定展示。</p>
      */
     @Override
     public VectorStoreDocumentListResponse listDocuments(String fileName) {
@@ -259,11 +278,18 @@ public class VectorStoreServiceImpl implements VectorStoreService {
 
     /**
      * 搜索文档
-     * @param query 查询内容
-     * @param fileName 文件名（可选）
-     * @param topK 返回结果数量
-     * @param similarityThreshold 相似度阈值
-     * @return 搜索响应结果
+     *
+     * @param query 用户检索内容，不能为空。该文本会同时作为向量检索 query 和关键词检索 query。
+     * @param fileName 文件名过滤条件，可为空。为空表示在当前模块全部文件中检索。
+     * @param topK 返回结果数量。为空时使用 app.vector-store.default-top-k。
+     * @param similarityThreshold 向量相似度阈值，可为空。非空时必须在 0 到 1 之间。
+     * @return 搜索响应结果，包含最终命中文档列表、topK、阈值和文件过滤条件。
+     *
+     * <p>处理步骤：</p>
+     * <p>1. 校验向量库可用，并规范化 query、fileName、topK、similarityThreshold。</p>
+     * <p>2. 构造 SearchRequest，写入 query、topK、相似度阈值和模块/文件过滤表达式。</p>
+     * <p>3. 调用 HybridVectorSearchService，内部执行向量检索、关键词检索、RRF 融合和可选 Rerank。</p>
+     * <p>4. 将 Spring AI Document 转成接口响应对象。</p>
      */
     @Override
     public VectorStoreSearchResponse search(String query, String fileName, Integer topK, Double similarityThreshold) {
@@ -379,7 +405,13 @@ public class VectorStoreServiceImpl implements VectorStoreService {
 
     /**
      * 持久化文档列表
-     * @param chunkDocuments 分块后的文档列表
+     *
+     * @param chunkDocuments 分块后的文档列表。每个文档都是最终需要进入向量库的 chunk。
+     *
+     * <p>处理含义：</p>
+     * <p>1. 根据 writeBatchSize 将 chunk 列表拆成多个批次，避免单次写入过大。</p>
+     * <p>2. 如果 parallelWriteEnabled=true 且切片数量达到 parallelWriteThreshold，则使用公共线程池并行写入。</p>
+     * <p>3. 如果未达到并行条件，则按批次串行写入，降低小文件上传时的线程调度成本。</p>
      */
     private void persistDocuments(List<Document> chunkDocuments) {
         List<List<Document>> batches = ParallelExecutionUtils.partition(chunkDocuments, validateWriteBatchSize());
@@ -396,8 +428,14 @@ public class VectorStoreServiceImpl implements VectorStoreService {
 
     /**
      * 持久化文档批次
-     * @param batch 文档批次
-     * @param splitDepth 分割深度
+     *
+     * @param batch 当前批次文档。该批次会一次性传给 VectorStoreGateway 写入。
+     * @param splitDepth 自适应切分深度。首次写入为 0，遇到嵌入模型 token 超限后递增。
+     *
+     * <p>处理含义：</p>
+     * <p>1. 正常情况下直接调用 vectorStoreGateway.add 写入向量库。</p>
+     * <p>2. 如果模型报 token 超限，并且还没有超过最大自适应深度，则把当前批次切得更小后重试。</p>
+     * <p>3. 如果重试后仍然无法变小，或者不是 token 超限错误，则继续抛出异常。</p>
      */
     private void persistBatch(List<Document> batch, int splitDepth) {
         try {
@@ -444,9 +482,15 @@ public class VectorStoreServiceImpl implements VectorStoreService {
 
     /**
      * 自适应分割文档
-     * @param batch 文档批次
-     * @param splitDepth 分割深度
-     * @return 分割后的文档列表
+     *
+     * @param batch 写入失败的原始批次。通常是因为某些 chunk 对嵌入模型来说仍然过长。
+     * @param splitDepth 当前自适应切分深度，用于计算下一轮更小的 chunkSize。
+     * @return 更细粒度的文档切片列表。
+     *
+     * <p>处理含义：</p>
+     * <p>1. 每深入一层，chunkSize 约减半，但不会低于 MIN_ADAPTIVE_CHUNK_SIZE。</p>
+     * <p>2. 使用 TokenTextSplitter 重新切分当前批次。</p>
+     * <p>3. maxNumChunks 会结合原配置和批次大小放大，避免自适应切分被数量上限过早截断。</p>
      */
     private List<Document> adaptiveSplit(List<Document> batch, int splitDepth) {
         int adaptiveChunkSize = Math.max(

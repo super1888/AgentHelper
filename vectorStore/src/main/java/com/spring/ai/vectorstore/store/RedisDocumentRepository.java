@@ -21,7 +21,12 @@ import redis.clients.jedis.params.ScanParams;
 import redis.clients.jedis.resps.ScanResult;
 
 /**
- * Redis 向量库文档仓储，用于管理页枚举切片和本地关键词检索。
+ * Redis 向量库文档仓储。
+ *
+ * <p>核心作用：</p>
+ * <p>1. Spring AI RedisVectorStore 写入的数据保存在 RedisJSON 中。</p>
+ * <p>2. 向量检索可以直接调用 VectorStore.similaritySearch，但关键词检索需要先拿到文本内容。</p>
+ * <p>3. 该仓储负责扫描 Redis 中的向量文档 key，读取 JSON 内容，并还原成 Spring AI Document。</p>
  */
 @Repository
 public class RedisDocumentRepository {
@@ -39,10 +44,20 @@ public class RedisDocumentRepository {
 
     /**
      * 列出 Redis 中当前模块的文档。
-     * @param fileName 文件名过滤，可为空
-     * @return 文档列表
+     *
+     * @param fileName 文件名过滤条件。为空时返回当前模块全部文档；非空时只返回指定文件的切片。
+     * @return Redis 中还原出来的文档切片列表。
+     *
+     * <p>处理步骤：</p>
+     * <p>1. 获取 Spring AI RedisVectorStore 暴露的 JedisPooled 原生客户端。</p>
+     * <p>2. 按 spring.ai.vectorstore.redis.prefix 扫描所有向量文档 key。</p>
+     * <p>3. 对每个 key 执行 JSON.GET，读取文档内容和元数据。</p>
+     * <p>4. 过滤模块名，避免读取到其他模块的数据。</p>
+     * <p>5. 如果传入 fileName，则继续按文件名过滤。</p>
+     * <p>6. 将 Redis JSON Map 还原为 Document，供关键词检索或管理接口使用。</p>
      */
     public List<Document> listDocuments(String fileName) {
+        // jedis：Redis 原生客户端，用于执行 SCAN 和 JSON.GET。
         JedisPooled jedis = resolveJedisClient();
         return scanVectorKeys(jedis).stream()
                 .map(key -> readStoredDocument(jedis, key))
@@ -54,6 +69,7 @@ public class RedisDocumentRepository {
     }
 
     private JedisPooled resolveJedisClient() {
+        // vectorStoreProvider：容器中可能同时存在 Redis 和 Qdrant VectorStore，这里明确选择类名包含 redis 的实现。
         VectorStore vectorStore = vectorStoreProvider.stream()
                 .filter(candidate -> candidate.getClass().getName().toLowerCase().contains("redis"))
                 .findFirst()
@@ -61,6 +77,7 @@ public class RedisDocumentRepository {
         if (vectorStore == null) {
             throw new VectorStoreException(HttpStatus.SERVICE_UNAVAILABLE, "当前存储后端未提供 Redis VectorStore Bean");
         }
+        // getNativeClient：Spring AI RedisVectorStore 暴露底层客户端，只有 Redis 模式才应该返回 JedisPooled。
         return vectorStore.getNativeClient()
                 .filter(JedisPooled.class::isInstance)
                 .map(JedisPooled.class::cast)
@@ -70,12 +87,15 @@ public class RedisDocumentRepository {
     }
 
     private List<String> scanVectorKeys(JedisPooled jedis) {
+        // keys：收集扫描到的 Redis key。使用 SCAN 而不是 KEYS，避免大量数据时阻塞 Redis。
         List<String> keys = new ArrayList<>();
         String cursor = ScanParams.SCAN_POINTER_START;
+        // redisVectorPrefix：Spring AI RedisVectorStore 写入向量文档时使用的 key 前缀。
         ScanParams scanParams = new ScanParams()
                 .match(redisVectorPrefix + "*")
                 .count(FILE_LIST_SCAN_COUNT);
         do {
+            // cursor：Redis SCAN 游标。返回 0 表示本轮扫描完成。
             ScanResult<String> scanResult = jedis.scan(cursor, scanParams);
             keys.addAll(scanResult.getResult());
             cursor = scanResult.getCursor();
@@ -85,6 +105,7 @@ public class RedisDocumentRepository {
 
     @SuppressWarnings("unchecked")
     private Map<String, Object> readStoredDocument(JedisPooled jedis, String key) {
+        // key：Redis 中单个向量文档的 key。JSON.GET 返回值通常是 Map 结构。
         Object jsonObject = jedis.jsonGet(key);
         if (jsonObject instanceof Map<?, ?> jsonMap) {
             return (Map<String, Object>) jsonMap;
@@ -93,6 +114,7 @@ public class RedisDocumentRepository {
     }
 
     private Document toDocument(Map<String, Object> documentMap) {
+        // Redis JSON 里不同版本可能使用 content 或 text 字段保存正文，这里两者兼容读取。
         Object content = documentMap.getOrDefault("content", documentMap.get("text"));
         return Document.builder()
                 .id(asString(documentMap.get("id")))
@@ -103,6 +125,7 @@ public class RedisDocumentRepository {
 
     @SuppressWarnings("unchecked")
     private Map<String, Object> resolveMetadata(Map<String, Object> documentMap) {
+        // 优先读取标准 metadata 字段；如果不存在，则从扁平字段中兜底提取 metadata.*、fileName、module 等信息。
         Object metadata = documentMap.get("metadata");
         if (metadata instanceof Map<?, ?> metadataMap) {
             return (Map<String, Object>) metadataMap;
